@@ -169,7 +169,7 @@ Proyecto Integrado — IES Trafalgar, Barbate, Cádiz
 
 [![GitHub](https://img.shields.io/badge/GitHub-Haplee-181717?style=for-the-badge&logo=github)](https://github.com/Haplee)
 [![X](https://img.shields.io/badge/X-@FranVidalMateo-000000?style=for-the-badge&logo=x)](https://x.com/FranVidalMateo)
-[![Email](https://img.shields.io/badge/Email-franvidalmateo@gmail.com-D14836?style=for-the-badge&logo=gmail)](mailto:franvidalmateo@gmail.com)
+[![Email](https://img.shields.io/badge/Email-fvidalmateo@gmail.com-D14836?style=for-the-badge&logo=gmail)](mailto:franvidalmateo@gmail.com)
 
 ---
 
