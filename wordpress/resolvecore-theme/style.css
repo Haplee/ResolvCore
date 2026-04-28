@@ -1,0 +1,179 @@
+/*
+Theme Name: ResolveCore
+Theme URI: https://github.com/Haplee
+Author: Francisco Vidal Mateo
+Author URI: https://github.com/Haplee
+Description: Tema landing page para ResolveCore — plataforma cross-platform de mantenimiento y optimización de sistemas.
+Version: 3.0.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Tags: one-page, dark, full-width-template, custom-colors
+Text Domain: resolvecore
+*/
+
+/* ============================================================
+   VARIABLES GLOBALES
+============================================================ */
+:root {
+  --rc-bg:      #0a0c10;
+  --rc-surface: #111318;
+  --rc-surface2:#1a1d24;
+  --rc-border:  rgba(255,255,255,0.07);
+  --rc-border2: rgba(255,255,255,0.13);
+  --rc-accent:  #00e5a0;
+  --rc-accent2: #0099ff;
+  --rc-warn:    #ff6b35;
+  --rc-text:    #e8eaf0;
+  --rc-muted:   #7a7f8e;
+  --rc-mono:    'Space Mono', monospace;
+  --rc-sans:    'DM Sans', sans-serif;
+}
+
+/* ============================================================
+   ESTILOS COMPARTIDOS
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--rc-bg); color: var(--rc-text);
+  font-family: var(--rc-sans); font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: var(--rc-accent); text-decoration: none; transition: color .2s; }
+a:hover { text-decoration: underline; }
+
+/* ============================================================
+   DOCUMENTACIÓN (page-docs.php)
+============================================================ */
+.rc-docs-layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.rc-docs-sidebar {
+  position: fixed; width: 240px; height: 100vh;
+  background: var(--rc-surface); border-right: 1px solid var(--rc-border);
+  padding: 1.5rem; overflow-y: auto;
+}
+.rc-docs-logo {
+  font-family: var(--rc-mono); font-size: 14px; font-weight: 700;
+  color: var(--rc-accent); margin-bottom: 2rem; display: flex; align-items: center; gap: 8px;
+}
+.rc-docs-logo-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--rc-accent);
+}
+.rc-docs-nav { list-style: none; }
+.rc-docs-nav li { margin-bottom: 4px; }
+.rc-docs-nav a {
+  display: block; font-size: 13px; color: var(--rc-muted);
+  padding: 6px 10px; border-radius: 4px; transition: all .2s;
+}
+.rc-docs-nav a:hover { background: var(--rc-surface2); color: var(--rc-text); text-decoration: none; }
+.rc-docs-nav a.active { background: rgba(0,229,160,.08); color: var(--rc-accent); }
+
+.rc-docs-main { margin-left: 240px; padding: 2rem 3rem; max-width: 800px; }
+.rc-docs-header { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rc-border); }
+.rc-docs-title { font-family: var(--rc-mono); font-size: 1.8rem; font-weight: 700; margin-bottom: .5rem; }
+.rc-docs-subtitle { color: var(--rc-muted); font-size: 14px; }
+
+.rc-docs-section { margin-bottom: 3rem; }
+.rc-docs-h2 {
+  font-family: var(--rc-mono); font-size: 1.3rem; font-weight: 700;
+  margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--rc-border);
+}
+.rc-docs-h3 {
+  font-family: var(--rc-mono); font-size: 14px; font-weight: 700;
+  color: var(--rc-accent); margin: 1.5rem 0 .75rem;
+}
+.rc-docs-p { color: var(--rc-muted); font-size: 14px; line-height: 1.7; margin-bottom: 1rem; }
+
+.rc-code-block {
+  background: var(--rc-surface); border: 1px solid var(--rc-border);
+  padding: 1rem; margin: 1rem 0; overflow-x: auto;
+  border-radius: 6px;
+}
+.rc-code-block code {
+  font-family: var(--rc-mono); font-size: 13px; color: var(--rc-text);
+  white-space: pre;
+}
+.rc-code-header {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--rc-surface2); border: 1px solid var(--rc-border);
+  border-bottom: none; padding: 8px 12px;
+  font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted);
+  border-radius: 6px 6px 0 0;
+}
+.rc-copy-btn {
+  font-family: var(--rc-mono); font-size: 10px; color: var(--rc-muted);
+  background: none; border: 1px solid var(--rc-border2);
+  padding: 4px 8px; cursor: pointer; border-radius: 3px;
+  transition: all .2s;
+}
+.rc-copy-btn:hover { color: var(--rc-accent); border-color: var(--rc-accent); }
+
+.rc-module-card {
+  background: var(--rc-surface); border: 1px solid var(--rc-border);
+  padding: 1.25rem; margin-bottom: 1rem; border-radius: 6px;
+}
+.rc-module-icon { font-size: 18px; margin-bottom: .5rem; }
+.rc-module-name { font-family: var(--rc-mono); font-size: 14px; font-weight: 700; margin-bottom: .5rem; }
+.rc-module-desc { font-size: 13px; color: var(--rc-muted); }
+
+/* ============================================================
+   CHANGELOG (page-changelog.php)
+============================================================ */
+.rc-cl-layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.rc-cl-sidebar {
+  position: fixed; width: 240px; height: 100vh;
+  background: var(--rc-surface); border-right: 1px solid var(--rc-border);
+  padding: 1.5rem;
+}
+.rc-cl-logo {
+  font-family: var(--rc-mono); font-size: 14px; font-weight: 700;
+  color: var(--rc-accent); margin-bottom: 2rem; display: flex; align-items: center; gap: 8px;
+}
+.rc-cl-logo-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--rc-accent);
+}
+.rc-cl-nav { list-style: none; }
+.rc-cl-nav a {
+  display: block; font-size: 13px; color: var(--rc-muted);
+  padding: 6px 10px; border-radius: 4px;
+}
+.rc-cl-nav a:hover { background: var(--rc-surface2); color: var(--rc-text); text-decoration: none; }
+
+.rc-cl-main { margin-left: 240px; padding: 3rem; max-width: 800px; }
+.rc-cl-header { margin-bottom: 3rem; }
+.rc-cl-title { font-family: var(--rc-mono); font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+.rc-cl-subtitle { color: var(--rc-muted); }
+
+.rc-timeline { position: relative; padding-left: 2rem; border-left: 2px solid var(--rc-border); }
+.rc-timeline-item { position: relative; padding-bottom: 2.5rem; }
+.rc-timeline-item::before {
+  content: ''; position: absolute; left: -2.35rem; top: 4px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--rc-accent); border: 2px solid var(--rc-bg);
+}
+.rc-timeline-version { font-family: var(--rc-mono); font-size: 14px; font-weight: 700; margin-bottom: .25rem; }
+.rc-timeline-date { font-size: 12px; color: var(--rc-muted); margin-bottom: 1rem; }
+.rc-timeline-badge {
+  font-family: var(--rc-mono); font-size: 9px; letter-spacing: .08em;
+  padding: 3px 8px; border-radius: 3px; margin-left: .75rem;
+}
+.rc-badge-release { background: rgba(0,229,160,.12); color: var(--rc-accent); border: 1px solid rgba(0,229,160,.25); }
+.rc-badge-fix    { background: rgba(254,188,46,.12); color: #febc2e; border: 1px solid rgba(254,188,46,.25); }
+.rc-badge-feature { background: rgba(0,153,255,.12); color: var(--rc-accent2); border: 1px solid rgba(0,153,255,.25); }
+
+.rc-timeline-changes { list-style: none; }
+.rc-timeline-changes li {
+  font-size: 13px; color: var(--rc-muted); padding: 4px 0; padding-left: 1rem; position: relative;
+}
+.rc-timeline-changes li::before {
+  content: '›'; position: absolute; left: 0; color: var(--rc-accent);
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media (max-width: 768px) {
+  .rc-docs-layout, .rc-cl-layout { grid-template-columns: 1fr; }
+  .rc-docs-sidebar, .rc-cl-sidebar { display: none; }
+  .rc-docs-main, .rc-cl-main { margin-left: 0; padding: 1.5rem; }
+}
