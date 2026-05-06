@@ -20,6 +20,14 @@ function resolvecore_setup() {
 }
 add_action( 'after_setup_theme', 'resolvecore_setup' );
 
+function resolvecore_favicon() {
+    $uri = get_template_directory_uri();
+    echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $uri . '/assets/logo/resolvcore-icon.svg' ) . '">' . "\n";
+    echo '<link rel="icon" type="image/png" href="' . esc_url( $uri . '/assets/logo/resolvcore-icon.png' ) . '" sizes="32x32">' . "\n";
+    echo '<link rel="apple-touch-icon" href="' . esc_url( $uri . '/assets/logo/resolvcore-icon.png' ) . '">' . "\n";
+}
+add_action( 'wp_head', 'resolvecore_favicon' );
+
 function resolvecore_scripts() {
     wp_enqueue_style( 'resolvecore-fonts',
         'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap',

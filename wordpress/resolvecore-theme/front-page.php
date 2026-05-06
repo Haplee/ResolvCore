@@ -597,9 +597,12 @@
 <!-- ==================== NAV ==================== -->
 <nav class="rc-nav" id="rc-nav">
   <a href="<?php echo home_url('/'); ?>" class="rc-nav-logo" aria-label="ResolveCore — inicio">
-    <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
-         alt="ResolveCore — Solución a tus problemas informáticos"
-         class="rc-nav-logo-img">
+    <picture>
+      <source srcset="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.svg" type="image/svg+xml">
+      <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
+           alt="ResolveCore — Solución a tus problemas informáticos"
+           class="rc-nav-logo-img" width="180" height="45">
+    </picture>
   </a>
   <ul class="rc-nav-links">
     <li><a href="#servicios">Servicios</a></li>
@@ -985,9 +988,12 @@
   <footer class="rc-footer">
     <div>
       <div class="rc-footer-logo">
-        <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
-             alt="ResolveCore"
-             class="rc-footer-logo-img">
+        <picture>
+          <source srcset="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.svg" type="image/svg+xml">
+          <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
+               alt="ResolveCore"
+               class="rc-footer-logo-img" width="160" height="40">
+        </picture>
       </div>
       <div class="rc-footer-copy">© <?php echo date('Y'); ?> Francisco Vidal Mateo · TFG ASIR</div>
     </div>

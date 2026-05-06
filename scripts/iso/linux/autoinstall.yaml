@@ -1,0 +1,77 @@
+# ResolveCore — Ubuntu 24.04 LTS Autoinstall (preseed)
+# Para máquina física del técnico
+#
+# Uso:
+#   1. Descarga Ubuntu Server 24.04 ISO
+#   2. En el boot del instalador, añade al kernel:
+#      autoinstall ds=nocloud-net;s=http://TU_SERVIDOR/
+#   3. El instalador usa este YAML automáticamente
+#
+# Referencia: https://ubuntu.com/server/docs/install/autoinstall-reference
+
+version: 1
+
+identity:
+  hostname: resolvecore
+  username: tecnico
+  # Contraseña: ResolveCore2025! (cámbiala tras la instalación)
+  password: "$6$rounds=4096$resolvecore$tNd7Xb7X/m7BpJ8Bv3N5C.pIcSEL8Yq0a1W2E3R4T5Y6U7I8O9P"
+
+locale: es_ES.UTF-8
+keyboard:
+  layout: es
+  variant: ""
+
+timezone: Europe/Madrid
+
+network:
+  ethernets:
+    any:
+      match:
+        name: "en*"
+      dhcp4: true
+  version: 2
+
+storage:
+  layout:
+    name: lvm
+    sizing-policy: all
+
+packages:
+  - curl
+  - wget
+  - git
+  - unzip
+  - htop
+  - net-tools
+  - ufw
+
+late-commands:
+  # Copiar el script post-install para ejecutar al primer arranque
+  - curtin in-target -- bash -c "mkdir -p /opt/resolvecore-setup"
+  - curtin in-target -- bash -c "curl -fsSL https://raw.githubusercontent.com/Haplee/ResolveCore/main/scripts/iso/linux/post-install.sh -o /opt/resolvecore-setup/post-install.sh || true"
+  - curtin in-target -- bash -c "chmod +x /opt/resolvecore-setup/post-install.sh"
+  # Crear servicio systemd que ejecuta post-install al primer arranque
+  - |
+    cat > /target/etc/systemd/system/resolvecore-firstboot.service << 'EOF'
+    [Unit]
+    Description=ResolveCore First Boot Setup
+    After=network-online.target
+    Wants=network-online.target
+    ConditionPathExists=/opt/resolvecore-setup/post-install.sh
+
+    [Service]
+    Type=oneshot
+    ExecStart=/bin/bash /opt/resolvecore-setup/post-install.sh
+    ExecStartPost=/bin/rm -f /opt/resolvecore-setup/post-install.sh
+    RemainAfterExit=yes
+    StandardOutput=journal+console
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+  - curtin in-target -- systemctl enable resolvecore-firstboot.service
+
+user-data:
+  disable_root: true
+  ssh_pwauth: true
