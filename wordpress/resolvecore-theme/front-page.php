@@ -677,10 +677,10 @@
       </div>
       <div class="rc-vuln-section" style="margin-top:1.25rem" id="rc-vuln-table">
         <div class="rc-vuln-header">VULNERABILIDADES DETECTADAS <span class="rc-vuln-status">LIVE</span></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-crit">CRÍTICO</span><span class="rc-vuln-name">CVE-2024-3049 — Kernel privilege escalation</span><span class="rc-vuln-fix" onclick="fixVuln(this)">[REPARAR]</span></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-high">ALTO</span><span class="rc-vuln-name">CVE-2024-1871 — SMB remote code exec</span><span class="rc-vuln-fix" onclick="fixVuln(this)">[REPARAR]</span></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-med">MEDIO</span><span class="rc-vuln-name">CVE-2023-4911 — glibc buffer overflow</span><span class="rc-vuln-fix" onclick="fixVuln(this)">[PARCHE]</span></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-med">MEDIO</span><span class="rc-vuln-name">CVE-2023-2650 — OpenSSL DoS</span><span class="rc-vuln-fix" onclick="fixVuln(this)">[PARCHE]</span></div>
+        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-crit">CRÍTICO</span><span class="rc-vuln-name">CVE-2024-3049 — Kernel privilege escalation</span><span class="rc-vuln-fix" role="button" tabindex="0" aria-label="Reparar CVE-2024-3049" onclick="fixVuln(this)" onkeydown="if(event.key==='Enter'||event.key===' ')fixVuln(this)">[REPARAR]</span></div>
+        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-high">ALTO</span><span class="rc-vuln-name">CVE-2024-1871 — SMB remote code exec</span><span class="rc-vuln-fix" role="button" tabindex="0" aria-label="Reparar CVE-2024-1871" onclick="fixVuln(this)" onkeydown="if(event.key==='Enter'||event.key===' ')fixVuln(this)">[REPARAR]</span></div>
+        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-med">MEDIO</span><span class="rc-vuln-name">CVE-2023-4911 — glibc buffer overflow</span><span class="rc-vuln-fix" role="button" tabindex="0" aria-label="Aplicar parche CVE-2023-4911" onclick="fixVuln(this)" onkeydown="if(event.key==='Enter'||event.key===' ')fixVuln(this)">[PARCHE]</span></div>
+        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-med">MEDIO</span><span class="rc-vuln-name">CVE-2023-2650 — OpenSSL DoS</span><span class="rc-vuln-fix" role="button" tabindex="0" aria-label="Aplicar parche CVE-2023-2650" onclick="fixVuln(this)" onkeydown="if(event.key==='Enter'||event.key===' ')fixVuln(this)">[PARCHE]</span></div>
       </div>
     </div>
     <div class="rc-terminal">
@@ -722,7 +722,7 @@
           <div class="rc-download-card-ver">v1.0.0 · Windows 10/11</div>
           <div class="rc-download-card-size" style="margin-top:4px">~18 MB · .exe installer</div>
         </div>
-        <a href="#" class="rc-download-card-btn" data-platform="windows" title="Próximamente">↓ DESCARGAR .EXE</a>
+        <a href="#" class="rc-download-card-btn" data-platform="windows" title="Próximamente" aria-label="Descargar ResolveCore para Windows — Próximamente">↓ DESCARGAR .EXE</a>
       </div>
       <div class="rc-download-card">
         <div class="rc-download-card-icon">☰</div>
@@ -731,7 +731,7 @@
           <div class="rc-download-card-ver">v1.0.0 · Ubuntu / Debian / Arch</div>
           <div class="rc-download-card-size" style="margin-top:4px">~14 MB · .deb / .AppImage</div>
         </div>
-        <a href="#" class="rc-download-card-btn" data-platform="linux" title="Próximamente">↓ DESCARGAR .DEB</a>
+        <a href="#" class="rc-download-card-btn" data-platform="linux" title="Próximamente" aria-label="Descargar ResolveCore para Linux — Próximamente">↓ DESCARGAR .DEB</a>
       </div>
       <div class="rc-download-card">
         <div class="rc-download-card-icon">◈</div>
@@ -740,7 +740,7 @@
           <div class="rc-download-card-ver">v1.0.0 · Android 10+</div>
           <div class="rc-download-card-size" style="margin-top:4px">~9 MB · .apk</div>
         </div>
-        <a href="#" class="rc-download-card-btn" data-platform="android" title="Próximamente">↓ DESCARGAR .APK</a>
+        <a href="#" class="rc-download-card-btn" data-platform="android" title="Próximamente" aria-label="Descargar ResolveCore para Android — Próximamente">↓ DESCARGAR .APK</a>
       </div>
     </div>
     <div class="rc-download-github">
@@ -756,7 +756,7 @@
         <div class="rc-github-stat">⑂ Forks</div>
         <div class="rc-github-stat">◉ MIT License</div>
       </div>
-      <a href="https://github.com/Haplee" target="_blank" class="rc-download-card-btn">VER EN GITHUB ↗</a>
+      <a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer" aria-label="Ver ResolveCore en GitHub (abre en nueva pestaña)" class="rc-download-card-btn">VER EN GITHUB ↗</a>
     </div>
   </div>
 </div>
@@ -833,14 +833,14 @@
         <div class="rc-contact-item-icon">⌥</div>
         <div>
           <div class="rc-contact-item-label">GITHUB</div>
-          <div class="rc-contact-item-val"><a href="https://github.com/Haplee" target="_blank">github.com/Haplee</a></div>
+          <div class="rc-contact-item-val"><a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer">github.com/Haplee</a></div>
         </div>
       </div>
       <div class="rc-contact-item">
         <div class="rc-contact-item-icon">◈</div>
         <div>
           <div class="rc-contact-item-label">TWITTER / X</div>
-          <div class="rc-contact-item-val"><a href="https://x.com/FranVidalMateo" target="_blank">@FranVidalMateo</a></div>
+          <div class="rc-contact-item-val"><a href="https://x.com/FranVidalMateo" target="_blank" rel="noopener noreferrer">@FranVidalMateo</a></div>
         </div>
       </div>
       <div class="rc-contact-item">
@@ -892,8 +892,8 @@
       <div class="rc-footer-copy">© <?php echo date('Y'); ?> Francisco Vidal Mateo · TFG ASIR</div>
     </div>
     <ul class="rc-footer-links">
-      <li><a href="https://github.com/Haplee" target="_blank">GitHub</a></li>
-      <li><a href="https://x.com/FranVidalMateo" target="_blank">Twitter</a></li>
+      <li><a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer" aria-label="GitHub de Francisco Vidal Mateo (abre en nueva pestaña)">GitHub</a></li>
+      <li><a href="https://x.com/FranVidalMateo" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X de Francisco Vidal Mateo (abre en nueva pestaña)">Twitter</a></li>
       <li><a href="#contacto">Contacto</a></li>
     </ul>
     <div class="rc-footer-slogan">Solución a tus problemas informáticos.</div>

@@ -10,6 +10,7 @@ SCRIPT_VERSION="3.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="/var/tmp/resolvecore_optimizacion"
 LOG_FILE="${BACKUP_DIR}/optimizacion.log"
+SYSCTL_BACKUP="${BACKUP_DIR}/sysctl.conf.bak"
 
 NIVEL="${1:-estandar}"
 DRY_RUN=false
@@ -32,11 +33,11 @@ fi
 mkdir -p "$BACKUP_DIR"
 
 echo ""
-echo -e "  =============================================================="${NC}
-echo -e "  ResolveCore - Optimizacion Linux v$SCRIPT_VERSION" "${CYAN}"
-echo -e "  Nivel: $NIVEL" "${NC}"
-echo -e "  $(date '+%Y-%m-%d %H:%M:%S')" "${NC}"
-echo -e "  =============================================================="${NC}
+echo -e "${CYAN}  ==============================================================${NC}"
+echo -e "${CYAN}  ResolveCore - Optimizacion Linux v$SCRIPT_VERSION${NC}"
+echo -e "  Nivel: $NIVEL"
+echo -e "  $(date '+%Y-%m-%d %H:%M:%S')"
+echo -e "${CYAN}  ==============================================================${NC}"
 echo ""
 
 if [[ "$UNDO" == "true" ]]; then
@@ -107,7 +108,7 @@ esac
 echo ""
 echo -e "  ${CYAN}> Plan de energia${NC}"
 
-if command -v systemctl &> /dev/null; then
+if command -v systemctl &>/dev/null && systemctl list-unit-files thermald.service &>/dev/null; then
     systemctl start thermald 2>/dev/null
     systemctl enable thermald 2>/dev/null
     echo -e "    ${GREEN}[OK] Gestion termica activada${NC}"
@@ -117,24 +118,30 @@ fi
 echo ""
 echo -e "  ${CYAN}> Parametros del kernel${NC}"
 
-# Backup
-cp /etc/sysctl.conf "$BACKUP_DIR/sysctl.conf.bak" 2>/dev/null
+# Backup (solo si no existe ya)
+[[ ! -f "$SYSCTL_BACKUP" ]] && cp /etc/sysctl.conf "$SYSCTL_BACKUP" 2>/dev/null
+
+sysctl_set() {
+    local key="$1" val="$2"
+    if grep -qE "^${key}\s*=" /etc/sysctl.conf 2>/dev/null; then
+        sed -i "s|^${key}\s*=.*|${key}=${val}|" /etc/sysctl.conf
+    else
+        echo "${key}=${val}" >> /etc/sysctl.conf
+    fi
+}
 
 # Aplicar optimizaciones segun nivel
 if [[ "$NIVEL" == "rendimiento" ]] || [[ "$NIVEL" == "extreme" ]]; then
-    cat >> /etc/sysctl.conf << 'EOF'
-# Optimize network
-net.core.rmem_max=16777216
-net.core.wmem_max=16777216
-net.ipv4.tcp_rmem=4096 87380 16777216
-net.ipv4.tcp_wmem=4096 87380 16777216
-net.ipv4.tcp_congestion_control=htcp
-vm.swappiness=10
-vm.dirty_ratio=15
-vm.dirty_background_ratio=5
-EOF
+    sysctl_set "net.core.rmem_max"                  "16777216"
+    sysctl_set "net.core.wmem_max"                  "16777216"
+    sysctl_set "net.ipv4.tcp_rmem"                  "4096 87380 16777216"
+    sysctl_set "net.ipv4.tcp_wmem"                  "4096 87380 16777216"
+    sysctl_set "net.ipv4.tcp_congestion_control"    "htcp"
+    sysctl_set "vm.swappiness"                      "10"
+    sysctl_set "vm.dirty_ratio"                     "15"
+    sysctl_set "vm.dirty_background_ratio"          "5"
     sysctl -p 2>/dev/null
-    echo -e "    ${GREEN}[OK] Parametros de red optimizados${NC}"
+    echo -e "    ${GREEN}[OK] Parametros de red optimizados (sin duplicados)${NC}"
 fi
 
 if [[ "$NIVEL" == "extreme" ]]; then
@@ -142,10 +149,28 @@ if [[ "$NIVEL" == "extreme" ]]; then
     echo -e "    ${GREEN}[OK] Balanceo NUMA${NC}"
 fi
 
+# Output JSON
+SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUT_DIR="${SCRIPT_DIR_ABS}/../diagnosticos"
+mkdir -p "$OUT_DIR"
+HOSTNAME_STR=$(hostname 2>/dev/null || echo "linux")
+OUT_FILE="${OUT_DIR}/optimizacion_${HOSTNAME_STR}_$(date '+%Y%m%d_%H%M%S').json"
+cat > "$OUT_FILE" <<EOF
+{
+  "plataforma": "linux",
+  "hostname": "$HOSTNAME_STR",
+  "nivel": "$NIVEL",
+  "distro": "$DISTRO",
+  "generado_en": "$(date -Iseconds)",
+  "_meta": { "version": "$SCRIPT_VERSION" }
+}
+EOF
+
 # Resultado
 echo ""
-echo -e "  =============================================================="${NC}
+echo -e "${CYAN}  ==============================================================${NC}"
 echo -e "  ${GREEN}[OK] Optimizacion completada${NC}"
+echo -e "  Informe: $OUT_FILE"
 echo ""
 echo -e "  ${YELLOW}Recomendaciones:${NC}"
 echo -e "    - Reiniciar el sistema para aplicar todos los cambios"

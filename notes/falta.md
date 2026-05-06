@@ -1,5 +1,8 @@
 # ResolveCore — Lo que FALTA por hacer
 
+> **⚠ NOTA:** Este documento fue escrito para la versión React/Supabase (anterior a la migración a WordPress).
+> Los paths `src/`, `supabase/functions/`, etc. ya no existen. Ver `analiza.md` para el estado actual (stack WordPress).
+
 > Estado: 27 abril 2026 | Puntuación actual: 8.4/10 | Objetivo: 8.7/10
 
 ---

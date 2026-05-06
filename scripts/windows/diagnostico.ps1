@@ -157,7 +157,7 @@ Write-Section 'Memoria'
 
 $mem = Get-CimInstance Win32_ComputerSystem
 $totalRam = [math]::Round($mem.TotalPhysicalMemory / 1GB, 2)
-$availRam = [math]::Round($mem.AvailablePhysicalMemory / 1GB, 2)
+$availRam = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
 
 Write-Ok "Total: $totalRam GB - Disponible: $availRam GB"
 Write-Host "    Usada: $([math]::Round($totalRam - $availRam, 2)) GB" -ForegroundColor Gray
@@ -201,7 +201,10 @@ $discos = Get-CimInstance Win32_DiskDrive
 $diskList = @()
 foreach ($d in $discos) {
     $sizeGB = [math]::Round($d.Size / 1GB, 1)
-    $tipo = if ($d.Caption -match 'SSD|NVMe|Solid') { 'SSD' } elseif ($d.Caption -match 'HDD') { 'HDD' } else { 'Unknown' }
+    $tipo = switch ([int]$d.MediaType) {
+        4 { 'HDD' } 3 { 'SSD' } 5 { 'SSD' }
+        default { if ($d.Caption -match 'SSD|NVMe|Solid|Flash') { 'SSD' } elseif ($d.Caption -match 'HDD|SATA') { 'HDD' } else { 'Disk' } }
+    }
     $diskList += [ordered]@{
         modelo = $d.Caption
         capacidad_gb = $sizeGB
@@ -215,6 +218,29 @@ foreach ($d in $discos) {
 }
 
 Write-Host "    ---" -ForegroundColor Gray
+
+# S.M.A.R.T. via StorageReliabilityCounter
+try {
+    $smartData = Get-PhysicalDisk | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue
+    if ($smartData) {
+        foreach ($sd in $smartData) {
+            $matchDisk = $diskList | Where-Object { $_.modelo -and $sd.DeviceId }
+            if ($sd.Temperature) {
+                Write-Host "    S.M.A.R.T.: Temp $($sd.Temperature) C | Desgaste $($sd.Wear)% | ReadErrors $($sd.ReadErrorsTotal) | WriteErrors $($sd.WriteErrorsTotal) | Horas $($sd.PowerOnHours)" -ForegroundColor Gray
+                if ($sd.Temperature -gt 55) { Write-Warn "Temperatura disco alta: $($sd.Temperature) C" }
+                if ($sd.Wear -gt 80) { Write-Warn "Desgaste SSD > 80%: $($sd.Wear)%" }
+            }
+        }
+        $smartJson = @($smartData | ForEach-Object { [ordered]@{
+            temperatura_c    = $_.Temperature
+            desgaste_pct     = $_.Wear
+            read_errors      = $_.ReadErrorsTotal
+            write_errors     = $_.WriteErrorsTotal
+            horas_encendido  = $_.PowerOnHours
+        }})
+        $report['smart'] = $smartJson
+    }
+} catch {}
 
 $drives = Get-PSDrive -PSProvider FileSystem
 $driveList = @()
@@ -365,19 +391,26 @@ if ($bat) {
     Write-Ok "$($bat.EstimatedChargeRemaining)%"
     Write-Host "    Estado: $($bat.BatteryStatus) - Voltage: $($bat.DesignVoltage)mV" -ForegroundColor Gray
 
+    $desgaste = $null
+    $batCiclos = $null
     try {
         $bf = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryFullChargedCapacity').FullChargedCapacity
         $bd = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryStaticData').DesignedCapacity
         if ($bf -and $bd -and $bd -gt 0) {
             $desgaste = [math]::Round((1 - $bf / $bd) * 100, 1)
             Write-Host "    Desgaste: $desgaste%" -ForegroundColor Gray
+            if ($desgaste -gt 80) { Write-Warn "Desgaste > 80% -- considere sustituir la bateria" }
         }
+        $bc = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryCycleCount' -ErrorAction SilentlyContinue)
+        if ($bc) { $batCiclos = $bc.CycleCount }
     } catch {}
 
     $report['bateria'] = [ordered]@{
-        carga_pct = $bat.EstimatedChargeRemaining
-        estado = $bat.BatteryStatus
-        voltage = $bat.DesignVoltage
+        carga_pct   = $bat.EstimatedChargeRemaining
+        estado      = $bat.BatteryStatus
+        voltage     = $bat.DesignVoltage
+        desgaste_pct = $desgaste
+        ciclos      = $batCiclos
     }
 } else {
     Write-Host "    Escritorio (sin bateria)" -ForegroundColor Gray
@@ -431,8 +464,11 @@ $report['servicios'] = [ordered]@{
 
 Write-Section 'Software Instalado'
 
-$apps = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
-    Where-Object { $_.DisplayName } | Select-Object -First 30
+$apps = @(
+    Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue
+    Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue
+    Get-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue
+) | Where-Object { $_.DisplayName } | Sort-Object DisplayName | Get-Unique -AsString | Select-Object -First 50
 
 Write-Host "    Aplicaciones: $($apps.Count)" -ForegroundColor Gray
 foreach ($a in $apps | Select-Object -First 15) {
@@ -458,7 +494,7 @@ $report['software'] = [ordered]@{
 
 Write-Section 'Rendimiento'
 
-$cpuLoad = (Get-CimInstance Win32_Processor).LoadPercentage
+$cpuLoad = [math]::Round(((Get-CimInstance Win32_Processor) | Measure-Object LoadPercentage -Average).Average, 0)
 Write-Ok "CPU: $cpuLoad%"
 
 $osMem = Get-CimInstance Win32_OperatingSystem
@@ -499,7 +535,7 @@ try {
     $fw = Get-NetFirewallProfile
     Write-Host "    Firewall: $($fw.Enabled.Count) perfiles activos" -ForegroundColor Gray
     foreach ($f in $fw) { Write-Host "    - $($f.Name): $(if($f.Enabled){'ACTIVO'}else{'inactivo'})" -ForegroundColor Gray }
-    $fwList = @($fw | ForEach-Object @{ nombre = $_.Name; activo = $_.Enabled })
+    $fwList = @($fw | ForEach-Object { [ordered]@{ nombre = $_.Name; activo = [bool]$_.Enabled } })
 } catch { $fwList = @() }
 
 $uac = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name EnableLUA
@@ -532,7 +568,7 @@ foreach ($u in $users) {
     Write-Host "    - $($u.Name): $estado | $($u.FullName)" -ForegroundColor Gray
 }
 
-$report['usuarios'] = @($users | ForEach-Object @{ nombre = $_.Name; completo = $_.FullName; disabled = $_.Disabled })
+$report['usuarios'] = @($users | ForEach-Object { [ordered]@{ nombre = $_.Name; completo = $_.FullName; disabled = [bool]$_.Disabled } })
 
 # ============================================
 # METADATA
@@ -560,11 +596,22 @@ $outFile = Join-Path $OutputDir "diagnostico_$($env:COMPUTERNAME)_$timestamp.jso
 
 $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $outFile -Encoding UTF8
 
+# Generar informe HTML
+$templatePath = Join-Path $PSScriptRoot '../informe.html'
+$htmlFile = $outFile -replace '\.json$', '.html'
+if (Test-Path $templatePath) {
+    $jsonContent = Get-Content $outFile -Raw -Encoding UTF8
+    $html = (Get-Content $templatePath -Raw -Encoding UTF8) -replace '__JSON_DATA__', $jsonContent
+    $html | Out-File -FilePath $htmlFile -Encoding UTF8
+    if (-not $Silent) { Start-Process $htmlFile }
+}
+
 if (-not $Silent) {
     Write-Host ''
     Write-Host '  ---------------------------------------------------------------' -ForegroundColor DarkGray
     Write-Host '  [OK] Diagnostico completado' -ForegroundColor Green
-    Write-Host "  Archivo: $outFile" -ForegroundColor White
+    Write-Host "  JSON:  $outFile" -ForegroundColor White
+    if (Test-Path $htmlFile) { Write-Host "  HTML:  $htmlFile" -ForegroundColor Cyan }
     Write-Host ''
 }
 

@@ -32,13 +32,24 @@
 
 ## 🖥️ Capturas
 
-| Sección | Descripción |
-|---------|-------------|
-| Landing | Hero animado con grid, partículas y estadísticas |
-| Demo | Terminal interactiva con 4 escenarios |
-| Docs | Documentación con sidebar y código copiable |
-| Changelog | Timeline de versiones |
-| Contacto | Formulario AJAX con validación |
+> **Capturas pendientes de añadir tras despliegue definitivo.**
+
+### Landing — Hero animado
+<!-- ![Landing](docs/screenshots/landing.png) -->
+
+### Demo interactiva — Terminal con 4 escenarios
+<!-- ![Demo](docs/screenshots/demo.png) -->
+
+### Documentación — Sidebar navegable
+<!-- ![Docs](docs/screenshots/docs.png) -->
+
+### Changelog — Timeline de versiones
+<!-- ![Changelog](docs/screenshots/changelog.png) -->
+
+### Contacto — Formulario AJAX con validación
+<!-- ![Contacto](docs/screenshots/contacto.png) -->
+
+> Para añadir capturas reales: guardar en `docs/screenshots/` y descomentar las líneas anteriores.
 
 ---
 

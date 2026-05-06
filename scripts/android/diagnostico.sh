@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  ResolveCore — Diagnóstico de dispositivo Android (vía ADB)
-#  Versión: 1.0.0
+#  Versión: 2.0.0
 #
 #  Genera diagnostico_android_<serial>_<timestamp>.json compatible con ResolveCore.
 #
@@ -227,7 +227,7 @@ if [[ -n "$bat_raw" ]]; then
 fi
 
 # ═════════════════════════════════════════════════════════════════════════════
-# 4. RED
+# 4. TEMPERATURA CPU Y SEGURIDAD
 # ═════════════════════════════════════════════════════════════════════════════
 
 # Temperatura CPU desde thermal zones
@@ -418,10 +418,28 @@ cat > "$OUTPUT_FILE" << EOF
 }
 EOF
 
+# Generar informe HTML (disponible en el host que ejecute adb)
+_tmpl="${SCRIPT_DIR}/../informe.html"
+_html_file="${OUTPUT_FILE%.json}.html"
+if [[ -f "$_tmpl" ]]; then
+    _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
+    if [[ -n "$_split" ]]; then
+        {
+            head -n "$((_split - 1))" "$_tmpl"
+            printf 'const RAW = '
+            cat "$OUTPUT_FILE"
+            printf ';\n'
+            tail -n +"$((_split + 1))" "$_tmpl"
+        } > "$_html_file"
+        command -v xdg-open &>/dev/null && xdg-open "$_html_file" 2>/dev/null &
+    fi
+fi
+
 echo ''
 echo -e "${GRAY}  ─────────────────────────────────────────────────────────────────${NC}"
 echo -e "${GREEN}  ✓  Diagnóstico Android completado${NC}"
-echo -e "${WHITE}  📄 $OUTPUT_FILE${NC}"
+echo -e "${WHITE}  📄 JSON: $OUTPUT_FILE${NC}"
+[[ -f "$_html_file" ]] && echo -e "${CYAN}  🌐 HTML: $_html_file${NC}"
 echo ''
 echo -e "${GRAY}  → Sube este archivo en ResolveCore: Diagnóstico del equipo → Importar JSON${NC}"
 echo ''

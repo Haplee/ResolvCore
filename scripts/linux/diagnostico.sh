@@ -287,16 +287,17 @@ ok "Uptime: ${uptime_h}h"
 # Actualizaciones pendientes
 pending_updates="null"
 if command -v apt &>/dev/null; then
-    apt update -qq 2>/dev/null
-    pending_updates=$(apt list --upgradable 2>/dev/null | grep -c "^" || echo "0")
-    pending_updates=$((pending_updates - 1))
-    [[ $pending_updates -lt 0 ]] && pending_updates=0
-    ok "Actualizaciones pendientes: $pending_updates"
+    # Usa cache local — no ejecuta apt update para evitar efectos secundarios en diagnóstico
+    pending_updates=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || echo "0")
+    ok "Actualizaciones pendientes: $pending_updates (caché local)"
 elif command -v dnf &>/dev/null; then
-    pending_updates=$(dnf check-update --quiet 2>/dev/null | grep -c "^" || echo "0")
+    pending_updates=$(dnf check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || echo "0")
     ok "Actualizaciones pendientes: $pending_updates"
 elif command -v yum &>/dev/null; then
-    pending_updates=$(yum check-update --quiet 2>/dev/null | grep -c "^" || echo "0")
+    pending_updates=$(yum check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || echo "0")
+    ok "Actualizaciones pendientes: $pending_updates"
+elif command -v pacman &>/dev/null; then
+    pending_updates=$(pacman -Qu 2>/dev/null | wc -l | xargs || echo "0")
     ok "Actualizaciones pendientes: $pending_updates"
 fi
 
@@ -525,11 +526,30 @@ if command -v jq &>/dev/null; then
     fi
 fi
 
+# Generar informe HTML
+_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_tmpl="${_script_dir}/../informe.html"
+_html_file="${out_file%.json}.html"
+if [[ -f "$_tmpl" ]]; then
+    _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
+    if [[ -n "$_split" ]]; then
+        {
+            head -n "$((_split - 1))" "$_tmpl"
+            printf 'const RAW = '
+            cat "$out_file"
+            printf ';\n'
+            tail -n +"$((_split + 1))" "$_tmpl"
+        } > "$_html_file"
+        command -v xdg-open &>/dev/null && xdg-open "$_html_file" 2>/dev/null &
+    fi
+fi
+
 if [[ "$SILENT" != "true" ]]; then
     echo ""
     echo -e "  ${GRAY}─────────────────────────────────────────────────────────────────${NC}"
     echo -e "  ${GREEN}✓  Diagnóstico completado${NC}"
-    echo -e "  ${WHITE}📄 $out_file${NC}"
+    echo -e "  ${WHITE}📄 JSON: $out_file${NC}"
+    [[ -f "$_html_file" ]] && echo -e "  ${CYAN}🌐 HTML: $_html_file${NC}"
     echo ""
     echo -e "  ${GRAY}→ Sube este archivo en ResolveCore: Diagnóstico del equipo → Importar JSON${NC}"
     echo ""

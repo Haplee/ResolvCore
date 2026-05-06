@@ -298,12 +298,8 @@ if [[ "$smart_status" != "Unknown" ]]; then
 fi
 
 # Espacio libre en disco raíz
-disk_free_gb=$(ssh $SSH_OPTS "$SSH_DEST" "
-    df -k / 2>/dev/null | awk 'NR==2{printf \"%.0f\", \$4/1048576}'
-" 2>/dev/null | tr -d '\r' | xargs)
-disk_used_pct=$(ssh $SSH_OPTS "$SSH_DEST" "
-    df / 2>/dev/null | awk 'NR==2{print \$5}' | tr -d '%'
-" 2>/dev/null | tr -d '\r' | xargs)
+disk_free_gb=$(mac "df -k / 2>/dev/null | awk 'NR==2{printf \"%.0f\", \$4/1048576}'")
+disk_used_pct=$(mac "df / 2>/dev/null | awk 'NR==2{print \$5}' | tr -d '%'")
 ok "Disco libre: ${disk_free_gb}GB (uso: ${disk_used_pct}%)"
 
 battery_json='null'
@@ -545,10 +541,28 @@ cat > "$OUTPUT_FILE" << EOF
 }
 EOF
 
+# Generar informe HTML
+_tmpl="${SCRIPT_DIR}/../informe.html"
+_html_file="${OUTPUT_FILE%.json}.html"
+if [[ -f "$_tmpl" ]]; then
+    _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
+    if [[ -n "$_split" ]]; then
+        {
+            head -n "$((_split - 1))" "$_tmpl"
+            printf 'const RAW = '
+            cat "$OUTPUT_FILE"
+            printf ';\n'
+            tail -n +"$((_split + 1))" "$_tmpl"
+        } > "$_html_file"
+        open "$_html_file" 2>/dev/null &
+    fi
+fi
+
 echo ''
 echo -e "${GRAY}  ─────────────────────────────────────────────────────────────────${NC}"
 echo -e "${GREEN}  ✓  Diagnóstico macOS completado${NC}"
-echo -e "${WHITE}  📄 $OUTPUT_FILE${NC}"
+echo -e "${WHITE}  📄 JSON: $OUTPUT_FILE${NC}"
+[[ -f "$_html_file" ]] && echo -e "${CYAN}  🌐 HTML: $_html_file${NC}"
 echo ''
 echo -e "${GRAY}  → Sube este archivo en ResolveCore: Diagnóstico del equipo → Importar JSON${NC}"
 echo ''

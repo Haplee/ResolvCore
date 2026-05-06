@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ResolveCore — Informe de diagnóstico</title>
+<style>
+:root{
+  --bg:#0a0c10;--surface:#0f1117;--surface2:#141720;--border:#1e2330;
+  --accent:#00e5a0;--accent-d:rgba(0,229,160,.12);
+  --text:#e8eaf0;--muted:#7a7f8e;
+  --red:#ff4757;--red-d:rgba(255,71,87,.13);
+  --yellow:#ffc107;--yellow-d:rgba(255,193,7,.12);
+  --mono:'Space Mono','Courier New',monospace;
+  --sans:'DM Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:2rem 2.5rem}
+/* Header */
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.logo{font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--accent);letter-spacing:.08em}
+.logo span{color:var(--muted)}.logo-sub{font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-top:.3rem}
+.host-box{text-align:right}.host-name{font-family:var(--mono);font-size:.95rem}
+.host-meta{font-size:.78rem;color:var(--muted);margin-top:.25rem}
+/* Section label */
+.sec-lbl{font-family:var(--mono);font-size:.68rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin:2rem 0 1rem}
+/* Scores */
+.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:.5rem}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.4rem;text-align:center;position:relative;overflow:hidden}
+.score-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.score-card.warn::before{background:var(--yellow)}.score-card.crit::before{background:var(--red)}
+.gauge{width:88px;height:88px;margin:0 auto .6rem;position:relative}
+.gauge svg{transform:rotate(-90deg)}
+.gauge-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:1rem;font-weight:700}
+.score-lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono)}
+/* Cards grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;margin-bottom:.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.card-head{padding:.65rem 1.1rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.07em;display:flex;align-items:center;gap:.5rem}
+.card-body{padding:1.1rem}
+.row{display:flex;justify-content:space-between;align-items:center;padding:.38rem 0;border-bottom:1px solid var(--border);font-size:.83rem;gap:.5rem}
+.row:last-child{border-bottom:none}
+.row-lbl{color:var(--muted);font-size:.78rem;flex-shrink:0}
+.row-val{font-family:var(--mono);font-size:.8rem;text-align:right;word-break:break-all}
+/* Badge */
+.badge{display:inline-block;padding:.12rem .45rem;border-radius:3px;font-family:var(--mono);font-size:.67rem;font-weight:700;margin-left:.4rem;flex-shrink:0}
+.ok{background:var(--accent-d);color:var(--accent)}.warn{background:var(--yellow-d);color:var(--yellow)}.crit{background:var(--red-d);color:var(--red)}.info{background:rgba(122,127,142,.13);color:var(--muted)}
+/* Progress bar */
+.bar-wrap{height:5px;background:var(--border);border-radius:3px;margin-top:.5rem;overflow:hidden}
+.bar{height:100%;border-radius:3px;background:var(--accent);transition:width .7s ease}
+.bar.warn{background:var(--yellow)}.bar.crit{background:var(--red)}
+.bar-row{margin:.3rem 0 .8rem}
+.bar-row-top{display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem}
+.bar-row-lbl{color:var(--muted)}.bar-row-pct{font-family:var(--mono)}
+/* Recommendations */
+.recs{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:2rem}
+.recs-head{padding:.65rem 1.1rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.07em}
+.rec-item{display:flex;align-items:flex-start;gap:.9rem;padding:.85rem 1.1rem;border-bottom:1px solid var(--border)}
+.rec-item:last-child{border-bottom:none}
+.rec-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;margin-top:.1rem;font-weight:700}
+.rec-icon.crit{background:var(--red-d);color:var(--red)}.rec-icon.warn{background:var(--yellow-d);color:var(--yellow)}.rec-icon.ok{background:var(--accent-d);color:var(--accent)}
+.rec-title{font-size:.88rem;font-weight:600;margin-bottom:.18rem}
+.rec-desc{font-size:.78rem;color:var(--muted);line-height:1.5}
+/* Footer */
+.ftr{text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--muted);padding-top:1.5rem;border-top:1px solid var(--border);margin-top:2rem}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app"><div style="text-align:center;padding:4rem;font-family:var(--mono);color:var(--muted)">Cargando informe...</div></div>
+<script>
+const RAW = __JSON_DATA__;
+
+/* ── Normalizar: Windows vs Linux/macOS/Android ── */
+function norm(d){
+  const p=d._meta?.plataforma||'unknown';
+  if(p==='windows'){
+    return{
+      plataforma:'windows',hostname:d._meta?.hostname||'—',generado:d._meta?.generado_en||'',admin:d._meta?.admin??false,
+      os:d.sistema?.nombre||'—',uptime:d.sistema?.uptime_horas??null,parches:d.sistema?.parches_count??0,
+      cpu:d.cpu?.processors?.[0]?.nombre||'—',cpu_cores:d.cpu?.nucleos_total??null,cpu_pct:d.rendimiento?.cpu_pct??null,cpu_temp:null,
+      ram_total:d.memoria?.total_gb??null,ram_libre:d.memoria?.disponible_gb??null,ram_pct:d.rendimiento?.memoria_pct??null,
+      discos:d.discos?.fisicos||[],particiones:d.discos?.logicos||[],
+      smart_rows:d.smart||[],smart_status:null,disk_free:null,disk_uso:null,
+      gpu:d.gpu?.[0]?.nombre||null,
+      bat_pct:d.bateria?.carga_pct??null,bat_desgaste:d.bateria?.desgaste_pct??null,bat_ciclos:d.bateria?.ciclos??null,bat_salud:null,
+      lat:null,loss:null,wifi:null,
+      firewall:Array.isArray(d.seguridad?.firewall)&&d.seguridad.firewall.some(f=>f.activo),
+      defender:d.seguridad?.windows_defender?.activo??false,
+      defender_dias:d.seguridad?.windows_defender?.firmas_dias??null,
+      uac:d.seguridad?.uac??false,
+      selinux:null,filevault:null,gatekeeper:null,rooteado:false,
+      sec_patch:null,bootloader_locked:null,apps_total:null,
+      svc_detenidos:d.servicios?.automaticos_detenidos??0,
+    };
+  }
+  const hw=d.hardware||{},so=d.sistema_operativo||{},red=d.red||{},seg=d.seguridad||{};
+  const smart_rows=(hw.discos||[]).filter(x=>x?.smart_atributos).map(x=>x.smart_atributos);
+  return{
+    plataforma:p,hostname:d._meta?.hostname||'—',generado:d._meta?.generado_en||'',admin:d._meta?.admin??d._meta?.root??false,
+    os:so.nombre||'—',uptime:so.uptime_horas??null,parches:so.actualizaciones_pendientes??null,
+    cpu:hw.cpu_nombre||'—',cpu_cores:hw.cpu_cores??null,cpu_pct:null,cpu_temp:hw.cpu_temp_c??null,
+    ram_total:hw.ram_gb??null,ram_libre:null,ram_pct:null,
+    discos:hw.discos||[],particiones:[],
+    smart_rows,smart_status:hw.smart_status??null,disk_free:hw.disk_free_gb??null,disk_uso:hw.disk_uso_pct??null,
+    gpu:(typeof hw.gpu==='string'?hw.gpu:hw.gpu?.nombre)||null,
+    bat_pct:hw.bateria?.carga_pct??null,bat_desgaste:hw.bateria?.desgaste_pct??null,
+    bat_ciclos:hw.bateria?.ciclos??null,bat_salud:hw.bateria?.salud_pct??null,
+    lat:red.latencia_ms??null,loss:red.perdida_paquetes_pct??null,wifi:red.wifi_ssid||null,
+    firewall:seg.firewall===true||seg.firewall==='true',
+    defender:seg.defender_activo===true||seg.defender_activo==='true',
+    defender_dias:seg.defender_firma_dias??null,uac:null,selinux:seg.selinux||null,
+    filevault:seg.filevault??null,gatekeeper:seg.gatekeeper??null,rooteado:seg.rooteado??false,
+    sec_patch:so.parche_seguridad||null,bootloader_locked:seg.bootloader_bloqueado??null,
+    apps_total:d.aplicaciones?.total??null,svc_detenidos:0,
+  };
+}
+
+/* ── Score ── */
+function calcScore(n){
+  let s=100,ded=[];
+  const dec=(v,r)=>{s-=v;if(r)ded.push(r)};
+  if(n.parches>20)dec(15,'Actualizaciones: '+n.parches+' pendientes');
+  else if(n.parches>5)dec(7);
+  if(n.ram_pct>90)dec(12,'RAM crítica: '+n.ram_pct+'%');
+  else if(n.ram_pct>75)dec(6);
+  if(n.cpu_pct>90)dec(10,'CPU crítica: '+n.cpu_pct+'%');
+  else if(n.cpu_pct>75)dec(5);
+  if(n.cpu_temp>90)dec(15,'Temperatura CPU crítica: '+n.cpu_temp+'°C');
+  else if(n.cpu_temp>75)dec(8);
+  const sr=n.smart_rows||[];
+  if(sr.some(x=>x?.uncorrectable_errors>0))dec(20,'Errores disco no corregibles');
+  if(sr.some(x=>x?.reallocated_sectors>0))dec(15,'Sectores reasignados en disco');
+  if(n.smart_status==='FAILED')dec(20);
+  if(n.bat_desgaste>80)dec(10,'Batería: '+n.bat_desgaste+'% desgaste');
+  else if(n.bat_desgaste>60)dec(5);
+  if(!n.firewall)dec(10,'Firewall desactivado');
+  if(!n.defender&&n.plataforma==='windows')dec(8,'Antivirus inactivo');
+  if(n.defender_dias>7)dec(5,'Firmas antivirus: '+n.defender_dias+' días');
+  if(n.loss>20)dec(8,'Pérdida paquetes: '+n.loss+'%');
+  if(n.lat>150)dec(5);
+  if(n.disk_uso>90)dec(8,'Disco casi lleno: '+n.disk_uso+'%');
+  else if(n.disk_uso>80)dec(4);
+  if(n.rooteado)dec(10,'Dispositivo rooteado');
+  if(n.bootloader_locked===false)dec(8,'Bootloader desbloqueado');
+  if(n.svc_detenidos>3)dec(5);
+  return{score:Math.max(0,Math.round(s)),ded};
+}
+
+/* ── Recomendaciones ── */
+function makeRecs(n){
+  const r=[],add=(lvl,t,d)=>r.push({lvl,t,d});
+  if(n.parches>20)add('crit','Actualizar el sistema',`${n.parches} actualizaciones pendientes. Pueden contener parches de seguridad críticos. Ejecutar actualización inmediata.`);
+  else if(n.parches>0)add('warn','Actualizaciones disponibles',`${n.parches} actualizaciones listas para instalar. Mantener el sistema al día reduce la superficie de ataque.`);
+  const sr=n.smart_rows||[];
+  if(sr.some(x=>x?.uncorrectable_errors>0))add('crit','Backup urgente — errores de disco no corregibles','Se detectaron errores que el disco no puede corregir. Riesgo inminente de pérdida de datos. Hacer backup ahora y planificar sustitución del disco.');
+  if(sr.some(x=>x?.reallocated_sectors>0))add('crit','Disco con sectores reasignados',`${sr.find(x=>x?.reallocated_sectors>0)?.reallocated_sectors} sectores con errores físicos reasignados a reserva. Señal clara de degradación. Sustituir disco.`);
+  const hotDisk=sr.find(x=>x?.temperatura_c>55);
+  if(hotDisk)add('warn','Temperatura de disco alta',`${hotDisk.temperatura_c}°C detectados. Los discos HDD degradan por encima de 55°C. Mejorar ventilación o revisar sistema de refrigeración.`);
+  const wornDisk=sr.find(x=>x?.desgaste_pct>80);
+  if(wornDisk)add('warn','Desgaste SSD elevado',`${wornDisk.desgaste_pct}% de desgaste. El SSD ha consumido la mayoría de sus ciclos de escritura. Planificar sustitución preventiva.`);
+  if(n.cpu_temp>90)add('crit','CPU en temperatura crítica',`${n.cpu_temp}°C. Por encima de 90°C el procesador hace throttling (baja rendimiento para protegerse). Limpiar ventiladores y revisar pasta térmica.`);
+  else if(n.cpu_temp>75)add('warn','Temperatura CPU elevada',`${n.cpu_temp}°C. Limpiar polvo del disipador y revisar el flujo de aire del chasis.`);
+  if(n.ram_pct>90)add('crit','RAM al límite',`${n.ram_pct}% en uso. El sistema usa memoria de intercambio (swap) lo que degrada el rendimiento. Cerrar aplicaciones o ampliar RAM.`);
+  else if(n.ram_pct>75)add('warn','Uso de RAM elevado',`${n.ram_pct}%. Revisar procesos en segundo plano. Considerar cerrar aplicaciones no necesarias.`);
+  if(n.bat_desgaste>80)add('warn','Batería muy desgastada',`${n.bat_desgaste}% de degradación. La batería ha perdido más del 80% de su capacidad original. Sustituirla mejorará significativamente la autonomía.`);
+  else if(n.bat_desgaste>60)add('warn','Batería desgastada',`${n.bat_desgaste}% de degradación acumulada. Considerar sustitución preventiva.`);
+  if(!n.firewall)add('crit','Activar firewall urgentemente','El firewall está desactivado. El sistema está expuesto a conexiones no autorizadas desde la red local e internet.');
+  if(n.plataforma==='windows'&&!n.defender)add('crit','Activar antivirus','Windows Defender está desactivado. El sistema no tiene protección contra malware en tiempo real. Activar desde Seguridad de Windows.');
+  if(n.defender_dias>14)add('warn','Firmas antivirus desactualizadas',`${n.defender_dias} días sin actualizar. Las firmas antiguas no detectan amenazas recientes. Forzar actualización.`);
+  if(n.disk_uso>90)add('crit','Disco casi lleno',`${n.disk_uso}% del espacio usado. Con menos del 10% libre el sistema puede fallar o ralentizarse gravemente. Liberar espacio urgentemente.`);
+  else if(n.disk_uso>80)add('warn','Poco espacio en disco',`${n.disk_uso}% usado. Limpiar archivos temporales, caché y aplicaciones no usadas.`);
+  if(n.loss>20)add('warn','Pérdida de paquetes de red elevada',`${n.loss}% de pérdida. Señal de problema en el cable, router, o interferencias WiFi. Revisar infraestructura de red.`);
+  if(n.lat>150)add('warn','Latencia de red alta',`${n.lat}ms a 8.8.8.8. Puede indicar DNS lento o congestión en la red. Probar cambiar a DNS 1.1.1.1 o 8.8.8.8.`);
+  if(n.rooteado)add('crit','Dispositivo rooteado',`El dispositivo tiene acceso root activo. Cualquier app maliciosa puede tener control total del sistema. Riesgo de malware y pérdida de garantía.`);
+  if(n.bootloader_locked===false)add('crit','Bootloader desbloqueado','Permite instalar ROMs y software no verificado. Aumenta significativamente la superficie de ataque.');
+  if(n.plataforma==='macos'&&n.filevault===false)add('warn','Activar FileVault','El disco no está cifrado. Si el equipo es robado, los datos son accesibles sin contraseña. Activar en Ajustes del Sistema → Privacidad y Seguridad.');
+  if(n.plataforma==='macos'&&n.gatekeeper===false)add('warn','Activar Gatekeeper','Gatekeeper desactivado permite instalar apps no verificadas por Apple. Riesgo de malware.');
+  if(n.svc_detenidos>3)add('warn','Servicios automáticos detenidos',`${n.svc_detenidos} servicios configurados como automáticos no están en ejecución. Revisar con Services.msc.`);
+  if(r.length===0)add('ok','Sistema en buen estado','No se detectaron problemas relevantes. Continúa con mantenimiento preventivo periódico para mantener este estado.');
+  return r;
+}
+
+/* ── Helpers HTML ── */
+function scColor(s){return s>=80?'#00e5a0':s>=60?'#ffc107':'#ff4757'}
+function scClass(s){return s>=80?'':s>=60?'warn':'crit'}
+function gauge(v,max,c){
+  const r=36,circ=2*Math.PI*r,dash=(Math.min(1,v/max)*circ).toFixed(1);
+  return `<svg width="88" height="88" viewBox="0 0 90 90"><circle cx="45" cy="45" r="${r}" fill="none" stroke="#1e2330" stroke-width="7"/><circle cx="45" cy="45" r="${r}" fill="none" stroke="${c}" stroke-width="7" stroke-dasharray="${dash} ${circ.toFixed(1)}" stroke-linecap="round"/></svg>`;
+}
+function barHtml(pct,lbl){
+  if(pct==null)return'';
+  const cls=pct>90?'crit':pct>75?'warn':'';
+  return`<div class="bar-row"><div class="bar-row-top"><span class="bar-row-lbl">${lbl}</span><span class="bar-row-pct">${Math.round(pct)}%</span></div><div class="bar-wrap"><div class="bar ${cls}" style="width:${Math.min(100,pct)}%"></div></div></div>`;
+}
+function rowHtml(lbl,val,badgeCls,badgeTxt){
+  if(val==null||val===''||val==='null'||val==='undefined')return'';
+  const b=badgeCls?`<span class="badge ${badgeCls}">${badgeTxt}</span>`:'';
+  return`<div class="row"><span class="row-lbl">${lbl}</span><span class="row-val">${val}${b}</span></div>`;
+}
+function b(cls,txt){return`<span class="badge ${cls}">${txt}</span>`}
+function statusBadge(ok,okTxt,failTxt){return ok?b('ok',okTxt):b('crit',failTxt)}
+
+/* ── Render ── */
+function render(){
+  const n=norm(RAW);
+  const {score}=calcScore(n);
+  const recs=makeRecs(n);
+  const platIcon={windows:'⊞',linux:'☰',macos:'⌥',android:'◈'}[n.plataforma]||'⬡';
+  const ts=n.generado?new Date(n.generado).toLocaleString('es-ES'):'—';
+
+  /* Score cards */
+  const scoreCards=[{lbl:'Salud global',v:score,max:100,unit:'/100',main:true}];
+  if(n.ram_pct!=null)scoreCards.push({lbl:'RAM',v:n.ram_pct,max:100,unit:'%'});
+  if(n.cpu_pct!=null)scoreCards.push({lbl:'CPU',v:n.cpu_pct,max:100,unit:'%'});
+  if(n.disk_uso!=null)scoreCards.push({lbl:'Disco',v:n.disk_uso,max:100,unit:'%'});
+  if(n.bat_pct!=null)scoreCards.push({lbl:'Batería',v:n.bat_pct,max:100,unit:'%'});
+
+  const scoresHtml=scoreCards.map(sc=>{
+    const v=Math.round(sc.v);
+    const c=sc.main?scColor(v):(v>90?'#ff4757':v>75?'#ffc107':'#00e5a0');
+    const cls=sc.main?scClass(v):(v>90?'crit':v>75?'warn':'');
+    return`<div class="score-card ${cls}"><div class="gauge">${gauge(v,sc.max,c)}<div class="gauge-val" style="color:${c}">${v}${sc.unit}</div></div><div class="score-lbl">${sc.lbl}</div></div>`;
+  }).join('');
+
+  /* Cards */
+  const sysCard=`<div class="card"><div class="card-head">${platIcon} SISTEMA</div><div class="card-body">
+    ${rowHtml('Sistema operativo',n.os)}
+    ${rowHtml('Hostname',n.hostname)}
+    ${rowHtml('Uptime',n.uptime!=null?Math.round(n.uptime)+'h':null)}
+    ${rowHtml('Actualizaciones',n.parches!=null?(n.parches===0?null:n.parches+' pendientes'):null,n.parches>10?'crit':n.parches>0?'warn':null,n.parches>10?'URGENTE':n.parches>0?'Pendiente':null)}
+    ${n.parches===0?rowHtml('Actualizaciones','Al día','ok','✓'):''}
+    ${rowHtml('Privilegios',n.admin?'Administrador':'Usuario limitado',!n.admin?'warn':null,!n.admin?'Limitado':null)}
+    ${n.apps_total!=null?rowHtml('Apps instaladas',n.apps_total):''}
+    ${n.sec_patch?rowHtml('Parche seguridad',n.sec_patch):''}
+  </div></div>`;
+
+  const cpuCard=`<div class="card"><div class="card-head">⬡ PROCESADOR</div><div class="card-body">
+    ${rowHtml('Modelo',n.cpu)}
+    ${rowHtml('Núcleos / Hilos',n.cpu_cores!=null?n.cpu_cores+' núcleos':null)}
+    ${n.cpu_temp!=null?rowHtml('Temperatura',n.cpu_temp+'°C',n.cpu_temp>90?'crit':n.cpu_temp>75?'warn':'ok',n.cpu_temp>90?'Crítico':n.cpu_temp>75?'Elevado':'Normal'):''}
+    ${barHtml(n.cpu_pct,'Carga CPU')}
+  </div></div>`;
+
+  const ramCard=`<div class="card"><div class="card-head">◈ MEMORIA RAM</div><div class="card-body">
+    ${rowHtml('Total',n.ram_total!=null?n.ram_total+' GB':null)}
+    ${rowHtml('Disponible',n.ram_libre!=null?n.ram_libre+' GB':null)}
+    ${barHtml(n.ram_pct,'Uso de RAM')}
+  </div></div>`;
+
+  const smRows=(n.smart_rows||[]).filter(Boolean).map(s=>[
+    s.reallocated_sectors!=null?rowHtml('Sectores reasignados',s.reallocated_sectors,s.reallocated_sectors>0?'crit':'ok',s.reallocated_sectors>0?'ALERTA':'0'):'',
+    s.pending_sectors!=null&&s.pending_sectors>0?rowHtml('Sectores pendientes',s.pending_sectors,'warn','Revisar'):'',
+    s.uncorrectable_errors!=null?rowHtml('Errores no corregibles',s.uncorrectable_errors,s.uncorrectable_errors>0?'crit':'ok',s.uncorrectable_errors>0?'CRÍTICO':'0'):'',
+    s.temperatura_c!=null?rowHtml('Temperatura disco',s.temperatura_c+'°C',s.temperatura_c>55?'warn':null,s.temperatura_c>55?'Alta':null):'',
+    s.horas_encendido!=null?rowHtml('Horas encendido',s.horas_encendido+'h'):'',
+    s.desgaste_pct!=null?rowHtml('Desgaste SSD',s.desgaste_pct+'%',s.desgaste_pct>80?'crit':s.desgaste_pct>60?'warn':'ok',s.desgaste_pct>80?'Alto':s.desgaste_pct>60?'Moderado':'Bajo'):'',
+  ].join('')).join('');
+
+  const discoCard=`<div class="card"><div class="card-head">◇ ALMACENAMIENTO</div><div class="card-body">
+    ${n.discos.slice(0,4).map(d=>rowHtml(d.tipo||d.bus||'Disco',(d.modelo||d.letra||'?')+(d.capacidad_gb?'  ·  '+d.capacidad_gb+'GB':''))).join('')}
+    ${n.particiones.slice(0,4).map(p=>rowHtml('Partición '+p.letra+':',p.capacidad_gb+'GB total, '+p.libre_gb+'GB libre',p.usado_pct>90?'crit':p.usado_pct>80?'warn':null,p.usado_pct>90?'Lleno':p.usado_pct>80?'Casi lleno':null)).join('')}
+    ${n.smart_status?rowHtml('S.M.A.R.T.',n.smart_status,n.smart_status==='OK'?'ok':n.smart_status==='FAILED'?'crit':'warn',n.smart_status):''}
+    ${smRows}
+    ${barHtml(n.disk_uso,'Uso del disco /')}
+    ${n.disk_free!=null?rowHtml('Espacio libre',n.disk_free+' GB'):''}
+  </div></div>`;
+
+  const batCard=n.bat_pct!=null?`<div class="card"><div class="card-head">⚡ BATERÍA</div><div class="card-body">
+    ${barHtml(n.bat_pct,'Carga actual')}
+    ${n.bat_desgaste!=null?rowHtml('Desgaste acumulado',n.bat_desgaste+'%',n.bat_desgaste>80?'crit':n.bat_desgaste>60?'warn':'ok',n.bat_desgaste>80?'Alto':n.bat_desgaste>60?'Moderado':'Bajo'):''}
+    ${n.bat_ciclos!=null?rowHtml('Ciclos de carga',n.bat_ciclos):''}
+    ${n.bat_salud!=null?rowHtml('Salud',n.bat_salud+'%',n.bat_salud<70?'warn':'ok',n.bat_salud<70?'Degradada':'Buena'):''}
+  </div></div>`:'';
+
+  const redCard=`<div class="card"><div class="card-head">⋮ RED</div><div class="card-body">
+    ${n.wifi?rowHtml('WiFi',n.wifi):''}
+    ${n.lat!=null?rowHtml('Latencia',n.lat+'ms',n.lat>150?'warn':null,n.lat>150?'Alta':null):''}
+    ${n.loss!=null?rowHtml('Pérdida paquetes',n.loss+'%',n.loss>20?'crit':n.loss>5?'warn':'ok',n.loss>20?'Alta':n.loss>5?'Moderada':'Normal'):''}
+    ${n.lat==null&&n.loss==null?rowHtml('Estado','Sin datos de red','info','—'):''}
+  </div></div>`;
+
+  const segCard=`<div class="card"><div class="card-head">■ SEGURIDAD</div><div class="card-body">
+    ${rowHtml('Firewall',n.firewall?'Activo':'INACTIVO',n.firewall?'ok':'crit',n.firewall?'OK':'RIESGO')}
+    ${n.plataforma==='windows'?rowHtml('Windows Defender',n.defender?'Activo':'INACTIVO',n.defender?'ok':'crit',n.defender?'OK':'RIESGO'):''}
+    ${n.defender_dias!=null?rowHtml('Firmas antivirus',n.defender_dias+' días',n.defender_dias>14?'crit':n.defender_dias>7?'warn':'ok',n.defender_dias>14?'Antiguas':n.defender_dias>7?'Revisar':'OK'):''}
+    ${n.uac!=null?rowHtml('UAC',n.uac?'Activado':'DESACTIVADO',n.uac?'ok':'warn',n.uac?'OK':'RIESGO'):''}
+    ${n.selinux?rowHtml('SELinux/AppArmor',n.selinux):''}
+    ${n.filevault!=null?rowHtml('FileVault',n.filevault?'Habilitado':'DESACTIVADO',n.filevault?'ok':'warn',n.filevault?'OK':'RIESGO'):''}
+    ${n.gatekeeper!=null?rowHtml('Gatekeeper',n.gatekeeper?'Habilitado':'DESACTIVADO',n.gatekeeper?'ok':'warn',n.gatekeeper?'OK':'RIESGO'):''}
+    ${n.rooteado?rowHtml('Root','DETECTADO','crit','RIESGO'):''}
+    ${n.bootloader_locked!=null?rowHtml('Bootloader',n.bootloader_locked?'Bloqueado':'DESBLOQUEADO',n.bootloader_locked?'ok':'crit',n.bootloader_locked?'OK':'RIESGO'):''}
+    ${n.svc_detenidos>0?rowHtml('Servicios auto detenidos',n.svc_detenidos,n.svc_detenidos>3?'warn':null,n.svc_detenidos>3?'Revisar':null):''}
+  </div></div>`;
+
+  const gpuCard=n.gpu?`<div class="card"><div class="card-head">◈ GPU</div><div class="card-body">${rowHtml('Modelo',n.gpu)}</div></div>`:'';
+
+  /* Recommendations */
+  const icons={crit:'✗',warn:'!',ok:'✓'};
+  const recsHtml=recs.map(r=>`<div class="rec-item">
+    <div class="rec-icon ${r.lvl}">${icons[r.lvl]}</div>
+    <div><div class="rec-title">${r.t}</div><div class="rec-desc">${r.d}</div></div>
+  </div>`).join('');
+
+  const critCount=recs.filter(r=>r.lvl==='crit').length;
+  const warnCount=recs.filter(r=>r.lvl==='warn').length;
+  const recsLabel=`// RECOMENDACIONES${critCount?' · '+critCount+' CRÍTICAS':''}${warnCount?' · '+warnCount+' ADVERTENCIAS':''}`;
+
+  document.getElementById('app').innerHTML=`
+  <div class="hdr">
+    <div>
+      <div class="logo">RESOLVE<span>CORE</span></div>
+      <div class="logo-sub">// INFORME DE DIAGNÓSTICO DEL SISTEMA</div>
+    </div>
+    <div class="host-box">
+      <div class="host-name">${platIcon} ${n.hostname}</div>
+      <div class="host-meta">${n.plataforma.toUpperCase()} · Generado: ${ts}</div>
+      <div class="host-meta">${n.os}</div>
+    </div>
+  </div>
+
+  <div class="sec-lbl">// PUNTUACIONES DE SALUD</div>
+  <div class="scores">${scoresHtml}</div>
+
+  <div class="sec-lbl">// HARDWARE Y SISTEMA</div>
+  <div class="grid">${sysCard}${cpuCard}${ramCard}${discoCard}${batCard}${redCard}${segCard}${gpuCard}</div>
+
+  <div class="sec-lbl">${recsLabel}</div>
+  <div class="recs">${recsHtml}</div>
+
+  <div class="ftr">RESOLVECORE v1.0.0 · ${n.hostname} · ${ts}</div>
+  `;
+}
+render();
+</script>
+</body>
+</html>

@@ -26,10 +26,11 @@ param(
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference = 'SilentlyContinue'
 
-$SCRIPT_VERSION = "3.0.0"
+$SCRIPT_VERSION = "3.1.0"
 $LOG_DIR = "$env:TEMP\ResolveCore_Optimizacion"
 $LOG_FILE = "$LOG_DIR\optimizacion.log"
 $REG_BACKUP_DIR = "$LOG_DIR\backup"
+$REPORT = [ordered]@{ nivel = $Nivel; dry_run = [bool]$DryRun; acciones = @(); inicio = (Get-Date -Format 'o') }
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator
@@ -117,8 +118,22 @@ if ($Undo) {
 # Optimizacion
 
 Write-Section "Limpieza del sistema"
-Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
-Write-Ok "Limpieza TEMP"
+if (-not $DryRun) {
+    $freed = 0
+    $tempPaths = @("$env:TEMP", "$env:SystemRoot\Temp", "$env:LOCALAPPDATA\Temp")
+    foreach ($tp in $tempPaths) {
+        if (Test-Path $tp) {
+            $sizeBefore = (Get-ChildItem $tp -Recurse -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+            Remove-Item -Path "$tp\*" -Recurse -Force -ErrorAction SilentlyContinue
+            $freed += $sizeBefore
+        }
+    }
+    $freedMB = [math]::Round($freed / 1MB, 1)
+    Write-Ok "Limpieza TEMP/Windows/Temp -- liberados ~${freedMB}MB"
+    $REPORT.acciones += "limpieza_temp_mb:$freedMB"
+} else {
+    Write-Info "DryRun: limpiaria TEMP, $env:SystemRoot\Temp, LOCALAPPDATA\Temp"
+}
 
 Write-Section "Servicios del sistema"
 
@@ -127,14 +142,19 @@ switch ($Nivel) {
     'ligero' { $servicesToDisable = @('Spooler') }
     'estandar' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch') }
     'rendimiento' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch', 'DiagTrack', 'DPS') }
-    'extreme' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch', 'DiagTrack', 'DPS', 'SysMain', 'wuauserv') }
+    'extreme' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch', 'DiagTrack', 'DPS', 'SysMain') }
 }
 
 foreach ($svc in $servicesToDisable) {
     $svcObj = Get-Service -Name $svc -ErrorAction SilentlyContinue
     if ($svcObj) {
-        Set-Service -Name $svc -StartupType Disabled -ErrorAction SilentlyContinue
-        Write-Ok "Desactivado: $svc"
+        if (-not $DryRun) {
+            Set-Service -Name $svc -StartupType Disabled -ErrorAction SilentlyContinue
+            Write-Ok "Desactivado: $svc"
+            $REPORT.acciones += "servicio_desactivado:$svc"
+        } else {
+            Write-Info "DryRun: desactivaria servicio $svc (actual: $($svcObj.StartType))"
+        }
     }
 }
 
@@ -149,67 +169,109 @@ $plans = @{
 
 $plan = $plans[$Nivel]
 $exists = powercfg /list | Select-String -Pattern $plan
-if ($exists) {
-    powercfg /setactive $plan
-    Write-Ok "Plan de energia: $Nivel"
+if (-not $DryRun) {
+    if ($exists) {
+        powercfg /setactive $plan
+        Write-Ok "Plan de energia: $Nivel"
+        $REPORT.acciones += "plan_energia:$Nivel"
+    } else {
+        powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e
+        Write-Ok "Plan equilibrado"
+        $REPORT.acciones += "plan_energia:equilibrado"
+    }
+    if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
+        powercfg /change monitor-timeout-ac 10 2>$null
+        powercfg /change disk-timeout-ac 0 2>$null
+        Write-Ok "Ajustes de energia"
+    }
 } else {
-    powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e
-    Write-Ok "Plan equilibrado"
-}
-
-if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
-    powercfg /change monitor-timeout-ac 10 2>$null
-    powercfg /change disk-timeout-ac 0 2>$null
-    Write-Ok "Ajustes de energia"
+    Write-Info "DryRun: activaria plan de energia $Nivel ($plan)"
 }
 
 Write-Section "Registro - Memoria"
 
 $memPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management'
 if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
-    Set-ItemProperty -Path $memPath -Name DisablePagingExecutive -Value 1 -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $memPath -Name LargeSystemCache -Value 1 -ErrorAction SilentlyContinue
-    Write-Ok "Optimizacion memoria"
+    if (-not $DryRun) {
+        Set-ItemProperty -Path $memPath -Name DisablePagingExecutive -Value 1 -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $memPath -Name LargeSystemCache -Value 1 -ErrorAction SilentlyContinue
+        Write-Ok "Optimizacion memoria"
+        $REPORT.acciones += "registro_memoria"
+    } else {
+        Write-Info "DryRun: modificaria registro memoria (DisablePagingExecutive, LargeSystemCache)"
+    }
 }
 
 Write-Section "Explorador"
 
 if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
-    $expPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer'
-    Set-ItemProperty -Path $expPath -Name AlwaysUnloadDLL -Value 1 -ErrorAction SilentlyContinue
-    Write-Ok "AlwaysUnloadDLL"
+    if (-not $DryRun) {
+        $expPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer'
+        Set-ItemProperty -Path $expPath -Name AlwaysUnloadDLL -Value 1 -ErrorAction SilentlyContinue
+        Write-Ok "AlwaysUnloadDLL"
+        $REPORT.acciones += "registro_explorer"
+    } else {
+        Write-Info "DryRun: modificaria Explorer AlwaysUnloadDLL"
+    }
 }
 
 Write-Section "TCP/IP"
 
 if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
-    netsh int tcp set global autotuninglevel=normal 2>$null
-    netsh int tcp set global congestionprovider=ctcp 2>$null
-    Write-Ok "TCP optimizado"
-}
-
-if ($Nivel -eq 'extreme') {
-    netsh int tcp set global fastopen=3 2>$null
-    Write-Ok "TCP Fast Open"
+    if (-not $DryRun) {
+        netsh int tcp set global autotuninglevel=normal 2>$null
+        netsh int tcp set global congestionprovider=ctcp 2>$null
+        Write-Ok "TCP optimizado"
+        $REPORT.acciones += "tcp_tuning"
+        if ($Nivel -eq 'extreme') {
+            netsh int tcp set global fastopen=3 2>$null
+            Write-Ok "TCP Fast Open"
+            $REPORT.acciones += "tcp_fastopen"
+        }
+    } else {
+        Write-Info "DryRun: optimizaria TCP (autotuninglevel=normal, congestionprovider=ctcp)"
+    }
 }
 
 Write-Section "Desactivar telemetria"
 
 $telemetryPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection'
-if (-not (Test-Path $telemetryPath)) { New-Item -Path $telemetryPath -Force | Out-Null }
-Set-ItemProperty -Path $telemetryPath -Name AllowTelemetry -Value 0 -ErrorAction SilentlyContinue
-Write-Ok "Telemetria desactivada"
+if (-not $DryRun) {
+    if (-not (Test-Path $telemetryPath)) { New-Item -Path $telemetryPath -Force | Out-Null }
+    Set-ItemProperty -Path $telemetryPath -Name AllowTelemetry -Value 0 -ErrorAction SilentlyContinue
+    Write-Ok "Telemetria desactivada"
+    $REPORT.acciones += "telemetria_desactivada"
+} else {
+    Write-Info "DryRun: desactivaria telemetria (AllowTelemetry=0)"
+}
 
 Write-Section "Sistema de archivos"
 
-fsutil behavior set DisableLastAccess 1 2>$null
-Write-Ok "LastAccess deshabilitado"
+if (-not $DryRun) {
+    fsutil behavior set DisableLastAccess 1 2>$null
+    Write-Ok "LastAccess deshabilitado"
+    $REPORT.acciones += "last_access_disabled"
+} else {
+    Write-Info "DryRun: deshabilitaria LastAccess en NTFS"
+}
+
+# Output JSON
+$REPORT.fin = (Get-Date -Format 'o')
+$REPORT.plataforma = 'windows'
+$REPORT.hostname = $env:COMPUTERNAME
+$REPORT.acciones_count = $REPORT.acciones.Count
+
+$outDir = Join-Path (Split-Path $PSScriptRoot -Parent) "diagnosticos"
+if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
+$outFile = Join-Path $outDir "optimizacion_$($env:COMPUTERNAME)_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+$REPORT | ConvertTo-Json -Depth 5 | Out-File -FilePath $outFile -Encoding UTF8
 
 # Resultado
 
 Write-Host ""
 Write-Host "  ==============================================================" -ForegroundColor Cyan
 Write-Host "  [OK] Optimizacion completada" -ForegroundColor Green
+Write-Host "  Informe: $outFile" -ForegroundColor White
 Write-Host ""
 
 if (-not $DryRun) {
