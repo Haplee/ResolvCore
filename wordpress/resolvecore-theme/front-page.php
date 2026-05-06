@@ -96,15 +96,10 @@
       backdrop-filter: blur(16px);
       border-color: var(--rc-border);
     }
-    .rc-nav-logo {
-      font-family: var(--rc-mono); font-size: 16px; font-weight: 700;
-      color: var(--rc-accent); letter-spacing: .1em; text-decoration: none;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .rc-nav-logo span { color: var(--rc-muted); }
-    .rc-nav-logo-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--rc-accent); animation: rcPulse 2s infinite;
+    .rc-nav-logo { text-decoration: none; display: flex; align-items: center; }
+    .rc-nav-logo-img {
+      width: 180px; height: 45px;
+      object-fit: contain; object-position: left center;
     }
     .rc-nav-links { display: flex; gap: 2rem; list-style: none; }
     .rc-nav-links a {
@@ -499,7 +494,11 @@
     ============================================================ */
     .rc-footer-outer { border-top: 1px solid var(--rc-border); background: var(--rc-surface); }
     .rc-footer { padding: 2.5rem 2.5rem; max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
-    .rc-footer-logo { font-family: var(--rc-mono); font-size: 14px; font-weight: 700; color: var(--rc-accent); }
+    .rc-footer-logo { display: flex; align-items: center; }
+    .rc-footer-logo-img {
+      width: 160px; height: 40px;
+      object-fit: contain; object-position: left center;
+    }
     .rc-footer-copy { font-size: 12px; color: var(--rc-muted); margin-top: 4px; }
     .rc-footer-links { display: flex; gap: 1.5rem; list-style: none; }
     .rc-footer-links a { font-size: 12px; color: var(--rc-muted); text-decoration: none; transition: color .2s; }
@@ -523,6 +522,55 @@
     /* ============================================================
        RESPONSIVE
     ============================================================ */
+    /* ============================================================
+       CTA BAND
+    ============================================================ */
+    .rc-cta-band {
+      background: var(--rc-surface); border: 1px solid var(--rc-border);
+      padding: 3rem 2.5rem; position: relative; overflow: hidden;
+      display: grid; grid-template-columns: 1fr auto; gap: 3rem; align-items: center;
+    }
+    .rc-cta-band::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--rc-accent), var(--rc-accent2), transparent);
+    }
+    .rc-cta-band-stats { display: flex; gap: 2.5rem; flex-shrink: 0; }
+    .rc-cta-stat { text-align: center; }
+    @media (max-width: 768px) {
+      .rc-cta-band { grid-template-columns: 1fr; }
+      .rc-cta-band-stats { gap: 1.5rem; }
+    }
+
+    /* ============================================================
+       FLUJO DE SERVICIO (Cómo funciona)
+    ============================================================ */
+    .rc-flow { display: flex; align-items: flex-start; margin-top: 2.5rem; flex-wrap: wrap; }
+    .rc-flow-step {
+      flex: 1; min-width: 110px; text-align: center; padding: 1.5rem .5rem;
+    }
+    .rc-flow-step:hover .rc-flow-icon {
+      border-color: rgba(0,229,160,.45); background: rgba(0,229,160,.04);
+    }
+    .rc-flow-num {
+      font-family: var(--rc-mono); font-size: 10px; color: var(--rc-muted);
+      letter-spacing: .1em; margin-bottom: .75rem;
+    }
+    .rc-flow-icon {
+      width: 46px; height: 46px; border: 1px solid var(--rc-border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin: 0 auto .75rem;
+      transition: border-color .3s, background .3s;
+    }
+    .rc-flow-title {
+      font-family: var(--rc-mono); font-size: 10px; font-weight: 700;
+      margin-bottom: .4rem; letter-spacing: .06em;
+    }
+    .rc-flow-desc { font-size: 11px; color: var(--rc-muted); line-height: 1.5; }
+    .rc-flow-arrow {
+      display: flex; align-items: center; padding-top: 3.5rem;
+      color: var(--rc-border2); font-size: 18px; flex-shrink: 0;
+    }
+
     @media (max-width: 768px) {
       .rc-demo-layout, .rc-contact-layout { grid-template-columns: 1fr; }
       .rc-hero-stats { gap: 1.5rem; flex-wrap: wrap; }
@@ -531,6 +579,9 @@
       .rc-hamburger { display: flex; }
       .rc-form-row { grid-template-columns: 1fr; }
       .rc-download-github { flex-direction: column; }
+      .rc-flow { justify-content: center; gap: .25rem; }
+      .rc-flow-step { min-width: 90px; flex: 0 0 calc(33% - .5rem); }
+      .rc-flow-arrow { display: none; }
     }
   </style>
 </head>
@@ -545,18 +596,19 @@
 
 <!-- ==================== NAV ==================== -->
 <nav class="rc-nav" id="rc-nav">
-  <a href="<?php echo home_url('/'); ?>" class="rc-nav-logo">
-    <div class="rc-nav-logo-dot"></div>
-    RESOLVE<span>CORE</span>
+  <a href="<?php echo home_url('/'); ?>" class="rc-nav-logo" aria-label="ResolveCore — inicio">
+    <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
+         alt="ResolveCore — Solución a tus problemas informáticos"
+         class="rc-nav-logo-img">
   </a>
   <ul class="rc-nav-links">
     <li><a href="#servicios">Servicios</a></li>
-    <li><a href="#demo">Demo</a></li>
-    <li><a href="#descargar">Descargar</a></li>
+    <li><a href="#como-funciona">Proceso</a></li>
     <li><a href="#precios">Precios</a></li>
     <li><a href="#contacto">Contacto</a></li>
+    <li><a href="<?php echo esc_url( home_url('/docs/') ); ?>">Docs</a></li>
   </ul>
-  <a href="#descargar" class="rc-nav-cta">DESCARGAR</a>
+  <a href="#contacto" class="rc-nav-cta">SOLICITAR SOPORTE</a>
   <button class="rc-hamburger" id="rc-hamburger" aria-label="Menú">
     <span></span><span></span><span></span>
   </button>
@@ -565,10 +617,10 @@
 <!-- MOBILE MENU -->
 <div class="rc-mobile-menu" id="rc-mobile-menu">
   <a href="#servicios" onclick="closeMobileMenu()">Servicios</a>
-  <a href="#demo" onclick="closeMobileMenu()">Demo</a>
-  <a href="#descargar" onclick="closeMobileMenu()">Descargar</a>
+  <a href="#como-funciona" onclick="closeMobileMenu()">Proceso</a>
   <a href="#precios" onclick="closeMobileMenu()">Precios</a>
   <a href="#contacto" onclick="closeMobileMenu()">Contacto</a>
+  <a href="<?php echo esc_url( home_url('/docs/') ); ?>">Docs</a>
 </div>
 
 <!-- ==================== HERO ==================== -->
@@ -578,7 +630,7 @@
   <div class="rc-hero-glow2"></div>
   <div class="rc-hero-particles" id="rc-particles"></div>
   <div class="rc-hero-content">
-    <div class="rc-badge">PLATAFORMA CROSS-PLATFORM · v1.0.0</div>
+    <div class="rc-badge">SERVICIO TÉCNICO REMOTO · WINDOWS · LINUX · ANDROID</div>
     <h1>
       <span class="dim">Solución a tus</span><br>
       <span class="accent">problemas</span><br>
@@ -586,13 +638,13 @@
     </h1>
     <p class="rc-hero-sub">Diagnóstico automatizado, proyección de vida útil del hardware y análisis de vulnerabilidades del SO para Windows, Linux y Android.</p>
     <div class="rc-hero-actions">
-      <a href="#descargar" class="rc-btn-primary">↓ DESCARGAR GRATIS</a>
-      <a href="#demo" class="rc-btn-outline">▶ VER DEMO</a>
+      <a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
+      <a href="#servicios" class="rc-btn-outline">VER SERVICIOS</a>
     </div>
     <div class="rc-hero-stats">
-      <div><div class="rc-stat-num" data-count="3">0</div><div class="rc-stat-label">Plataformas</div></div>
+      <div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Tiempo de respuesta</div></div>
       <div><div class="rc-stat-num" data-count="500">0</div><div class="rc-stat-label">CVEs en base de datos</div></div>
-      <div><div class="rc-stat-num" data-count="100">0</div><div class="rc-stat-label">% automatizado</div></div>
+      <div><div class="rc-stat-num">Windows · Linux · Android</div><div class="rc-stat-label">Plataformas soportadas</div></div>
     </div>
   </div>
   <div class="rc-hero-scroll">
@@ -634,8 +686,8 @@
     <div class="rc-service-card" onmousemove="cardGlow(event,this)">
       <div class="rc-service-icon"><?php echo $s[0]; ?></div>
       <div class="rc-service-tag">MÓDULO <?php echo $s[1]; ?></div>
-      <div class="rc-service-title"><?php echo $s[2]; ?></div>
-      <p class="rc-service-desc"><?php echo $s[3]; ?></p>
+      <div class="rc-service-title"><?php echo esc_html($s[2]); ?></div>
+      <p class="rc-service-desc"><?php echo esc_html($s[3]); ?></p>
       <div class="rc-service-features">
         <?php foreach ($s[4] as $f): ?>
         <div class="rc-sf-item"><?php echo esc_html($f); ?></div>
@@ -643,6 +695,67 @@
       </div>
     </div>
     <?php endforeach; ?>
+  </div>
+</div>
+
+<hr class="rc-section-divider">
+
+<!-- ==================== CÓMO FUNCIONA ==================== -->
+<div class="rc-section" id="como-funciona">
+  <div class="rc-reveal">
+    <div class="rc-section-label">// CÓMO FUNCIONA</div>
+    <h2 class="rc-section-title">El flujo de servicio</h2>
+    <p class="rc-section-desc">De la solicitud al cierre en 7 pasos. Proceso trazable, automatizado y documentado.</p>
+  </div>
+  <div class="rc-flow rc-reveal">
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">01</div>
+      <div class="rc-flow-icon">◎</div>
+      <div class="rc-flow-title">SOLICITUD</div>
+      <div class="rc-flow-desc">El usuario abre una petición vía formulario web o email</div>
+    </div>
+    <div class="rc-flow-arrow">→</div>
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">02</div>
+      <div class="rc-flow-icon">◈</div>
+      <div class="rc-flow-title">TICKET</div>
+      <div class="rc-flow-desc">Se crea incidencia en MantisBT con prioridad y categoría</div>
+    </div>
+    <div class="rc-flow-arrow">→</div>
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">03</div>
+      <div class="rc-flow-icon">⊞</div>
+      <div class="rc-flow-title">CONEXIÓN</div>
+      <div class="rc-flow-desc">Acceso remoto seguro al equipo del usuario vía AnyDesk</div>
+    </div>
+    <div class="rc-flow-arrow">→</div>
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">04</div>
+      <div class="rc-flow-icon">⬡</div>
+      <div class="rc-flow-title">DIAGNÓSTICO</div>
+      <div class="rc-flow-desc">Scripts PowerShell/Bash analizan el sistema y generan un informe JSON</div>
+    </div>
+    <div class="rc-flow-arrow">→</div>
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">05</div>
+      <div class="rc-flow-icon">◇</div>
+      <div class="rc-flow-title">RESOLUCIÓN</div>
+      <div class="rc-flow-desc">Optimización, parches de seguridad y corrección de fallos detectados</div>
+    </div>
+    <div class="rc-flow-arrow">→</div>
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">06</div>
+      <div class="rc-flow-icon">◎</div>
+      <div class="rc-flow-title">INFORME PDF</div>
+      <div class="rc-flow-desc">Informe técnico completo generado y adjunto al ticket en MantisBT</div>
+    </div>
+    <div class="rc-flow-arrow">→</div>
+    <div class="rc-flow-step">
+      <div class="rc-flow-num">07</div>
+      <div class="rc-flow-icon">⬡</div>
+      <div class="rc-flow-title">FACTURACIÓN</div>
+      <div class="rc-flow-desc">Factura automática por intervención o cargo a suscripción mensual</div>
+    </div>
   </div>
 </div>
 
@@ -706,57 +819,33 @@
 
 <hr class="rc-section-divider">
 
-<!-- ==================== DESCARGAR ==================== -->
-<div class="rc-section" id="descargar">
-  <div class="rc-reveal">
-    <div class="rc-section-label">// DESCARGAR</div>
-    <h2 class="rc-section-title">Descarga ResolveCore</h2>
-    <p class="rc-section-desc">Disponible para Windows, Linux y Android. Siempre gratuito en su versión base.</p>
-  </div>
-  <div class="rc-download-section rc-reveal">
-    <div class="rc-download-grid">
-      <div class="rc-download-card">
-        <div class="rc-download-card-icon">⊞</div>
-        <div>
-          <div class="rc-download-card-os">Windows</div>
-          <div class="rc-download-card-ver">v1.0.0 · Windows 10/11</div>
-          <div class="rc-download-card-size" style="margin-top:4px">~18 MB · .exe installer</div>
-        </div>
-        <a href="#" class="rc-download-card-btn" data-platform="windows" title="Próximamente" aria-label="Descargar ResolveCore para Windows — Próximamente">↓ DESCARGAR .EXE</a>
-      </div>
-      <div class="rc-download-card">
-        <div class="rc-download-card-icon">☰</div>
-        <div>
-          <div class="rc-download-card-os">Linux</div>
-          <div class="rc-download-card-ver">v1.0.0 · Ubuntu / Debian / Arch</div>
-          <div class="rc-download-card-size" style="margin-top:4px">~14 MB · .deb / .AppImage</div>
-        </div>
-        <a href="#" class="rc-download-card-btn" data-platform="linux" title="Próximamente" aria-label="Descargar ResolveCore para Linux — Próximamente">↓ DESCARGAR .DEB</a>
-      </div>
-      <div class="rc-download-card">
-        <div class="rc-download-card-icon">◈</div>
-        <div>
-          <div class="rc-download-card-os">Android</div>
-          <div class="rc-download-card-ver">v1.0.0 · Android 10+</div>
-          <div class="rc-download-card-size" style="margin-top:4px">~9 MB · .apk</div>
-        </div>
-        <a href="#" class="rc-download-card-btn" data-platform="android" title="Próximamente" aria-label="Descargar ResolveCore para Android — Próximamente">↓ DESCARGAR .APK</a>
+<!-- ==================== CTA ==================== -->
+<div class="rc-section" id="soporte">
+  <div class="rc-cta-band rc-reveal">
+    <div>
+      <div class="rc-section-label">// EMPEZAR</div>
+      <h2 class="rc-section-title" style="margin-bottom:.75rem">¿Tienes un problema con tu equipo?</h2>
+      <p style="color:var(--rc-muted);max-width:480px;margin-bottom:2rem;line-height:1.7">
+        Cuéntanos qué ocurre. Un técnico analizará tu sistema en remoto, aplicará la solución y te entregará un informe técnico completo.
+      </p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap">
+        <a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
+        <a href="#precios" class="rc-btn-outline">VER PLANES</a>
       </div>
     </div>
-    <div class="rc-download-github">
-      <div class="rc-download-github-info">
-        <div class="rc-github-icon">⌥</div>
-        <div>
-          <div class="rc-github-name">github.com/Haplee/ResolveCore</div>
-          <div class="rc-github-desc">Código fuente abierto — contribuciones bienvenidas</div>
-        </div>
+    <div class="rc-cta-band-stats">
+      <div class="rc-cta-stat">
+        <div class="rc-stat-num">&lt;2h</div>
+        <div class="rc-stat-label">Tiempo de respuesta</div>
       </div>
-      <div class="rc-github-stats">
-        <div class="rc-github-stat">★ Stars</div>
-        <div class="rc-github-stat">⑂ Forks</div>
-        <div class="rc-github-stat">◉ MIT License</div>
+      <div class="rc-cta-stat">
+        <div class="rc-stat-num">500+</div>
+        <div class="rc-stat-label">CVEs analizados</div>
       </div>
-      <a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer" aria-label="Ver ResolveCore en GitHub (abre en nueva pestaña)" class="rc-download-card-btn">VER EN GITHUB ↗</a>
+      <div class="rc-cta-stat">
+        <div class="rc-stat-num">3</div>
+        <div class="rc-stat-label">Plataformas</div>
+      </div>
     </div>
   </div>
 </div>
@@ -818,7 +907,7 @@
   <div class="rc-reveal">
     <div class="rc-section-label">// CONTACTO</div>
     <h2 class="rc-section-title">Escríbenos</h2>
-    <p class="rc-section-desc">¿Tienes dudas, quieres reportar un bug o colaborar en el proyecto?</p>
+    <p class="rc-section-desc">¿Necesitas soporte técnico? Cuéntanos el problema y te respondemos en menos de 2 horas.</p>
   </div>
   <div class="rc-contact-layout rc-reveal">
     <div class="rc-contact-info">
@@ -845,6 +934,13 @@
       </div>
       <div class="rc-contact-item">
         <div class="rc-contact-item-icon">⬡</div>
+        <div>
+          <div class="rc-contact-item-label">EMAIL</div>
+          <div class="rc-contact-item-val"><a href="mailto:fvidalmateo@gmail.com">fvidalmateo@gmail.com</a></div>
+        </div>
+      </div>
+      <div class="rc-contact-item">
+        <div class="rc-contact-item-icon">◎</div>
         <div>
           <div class="rc-contact-item-label">PROYECTO</div>
           <div class="rc-contact-item-val">TFG ASIR · Barbate, Cádiz</div>
@@ -888,12 +984,18 @@
 <div class="rc-footer-outer">
   <footer class="rc-footer">
     <div>
-      <div class="rc-footer-logo">RESOLVECORE</div>
+      <div class="rc-footer-logo">
+        <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
+             alt="ResolveCore"
+             class="rc-footer-logo-img">
+      </div>
       <div class="rc-footer-copy">© <?php echo date('Y'); ?> Francisco Vidal Mateo · TFG ASIR</div>
     </div>
     <ul class="rc-footer-links">
-      <li><a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer" aria-label="GitHub de Francisco Vidal Mateo (abre en nueva pestaña)">GitHub</a></li>
-      <li><a href="https://x.com/FranVidalMateo" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X de Francisco Vidal Mateo (abre en nueva pestaña)">Twitter</a></li>
+      <li><a href="<?php echo esc_url( home_url('/docs/') ); ?>">Docs</a></li>
+      <li><a href="#servicios">Servicios</a></li>
+      <li><a href="#precios">Precios</a></li>
+      <li><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer" aria-label="ResolveCore en GitHub (abre en nueva pestaña)">GitHub</a></li>
       <li><a href="#contacto">Contacto</a></li>
     </ul>
     <div class="rc-footer-slogan">Solución a tus problemas informáticos.</div>
@@ -1138,6 +1240,13 @@ function submitForm(e) {
       if (res.success) {
         msg.className = 'rc-form-msg success';
         msg.textContent = res.data.msg;
+        if (res.data.ticket_id) {
+          const link = document.createElement('a');
+          link.href = '#';
+          link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;';
+          link.textContent = '[VER TICKET #' + res.data.ticket_id + ']';
+          msg.appendChild(link);
+        }
         form.reset();
         charCount.textContent = '0 / ' + MAX_CHARS;
       } else {
