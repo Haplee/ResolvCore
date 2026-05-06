@@ -41,9 +41,9 @@
 
 ### Logotipo (Light / Dark)
 <p align="left">
-  <img src="assets/logo/resolvcore-logo-light.png" width="300" alt="Logo Light" style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+  <img src="assets/logo/resolvcore-logo-light.png" width="300" alt="Logo Light">
   &nbsp;&nbsp;
-  <img src="assets/logo/resolvcore-logo-dark.png" width="300" alt="Logo Dark" style="background-color: #0a0c10; padding: 10px; border-radius: 5px;">
+  <img src="assets/logo/resolvcore-logo-dark.png" width="300" alt="Logo Dark">
 </p>
 
 ---

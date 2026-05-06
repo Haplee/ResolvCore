@@ -4,6 +4,10 @@
       <stop offset="0%" stop-color="#008a60" />
       <stop offset="100%" stop-color="#00e5a0" />
     </linearGradient>
+    <linearGradient id="secondary" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a0a5b5" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
     <style>
       .text-resolve { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 64px; fill: #ffffff; letter-spacing: -1px; }
       .text-core { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 300; font-size: 64px; fill: #00e5a0; letter-spacing: 0px; }
@@ -11,17 +15,22 @@
   </defs>
   
   <g transform="translate(10, 10) scale(0.8)">
+    <!-- C (Blue) -->
+    <path d="M 68,22 A 34,34 0 1,0 68,78" fill="none" stroke="#1a1a1a" stroke-width="15" stroke-linecap="round" />
+    <path d="M 68,22 A 34,34 0 1,0 68,78" fill="none" stroke="url(#secondary)" stroke-width="14" stroke-linecap="round" />
+
+    <!-- R (Green) -->
     <!-- Stem -->
-    <path d="M 32,20 L 32,80" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" />
-    <path d="M 32,20 L 32,80" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" />
+    <path d="M 38,20 L 38,80" fill="none" stroke="#1a1a1a" stroke-width="15" stroke-linecap="round" />
+    <path d="M 38,20 L 38,80" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" />
 
     <!-- Loop -->
-    <path d="M 32,30 H 60 C 75,30 75,55 60,55 H 32" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M 32,30 H 60 C 75,30 75,55 60,55 H 32" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 38,30 H 66 C 81,30 81,55 66,55 H 38" fill="none" stroke="#1a1a1a" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 38,30 H 66 C 81,30 81,55 66,55 H 38" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
 
     <!-- Leg -->
-    <path d="M 50,55 L 75,80" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" />
-    <path d="M 50,55 L 75,80" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" />
+    <path d="M 56,55 L 81,80" fill="none" stroke="#1a1a1a" stroke-width="15" stroke-linecap="round" />
+    <path d="M 56,55 L 81,80" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" />
   </g>
   
   <text x="110" y="68">
