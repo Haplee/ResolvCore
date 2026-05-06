@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="primary" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#008a60" />
+      <stop offset="100%" stop-color="#00e5a0" />
+    </linearGradient>
+    <style>
+      .text-resolve { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 64px; fill: #1a1a1a; letter-spacing: -1px; }
+      .text-core { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 300; font-size: 64px; fill: #00b37d; letter-spacing: 0px; }
+    </style>
+  </defs>
+  
+  <g transform="translate(10, 10) scale(0.8)">
+    <!-- Stem -->
+    <path d="M 32,20 L 32,80" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" />
+    <path d="M 32,20 L 32,80" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" />
+
+    <!-- Loop -->
+    <path d="M 32,30 H 60 C 75,30 75,55 60,55 H 32" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 32,30 H 60 C 75,30 75,55 60,55 H 32" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Leg -->
+    <path d="M 50,55 L 75,80" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" />
+    <path d="M 50,55 L 75,80" fill="none" stroke="url(#primary)" stroke-width="14" stroke-linecap="round" />
+  </g>
+  
+  <text x="110" y="68">
+    <tspan class="text-resolve">Resolv</tspan><tspan class="text-core">Core</tspan>
+  </text>
+</svg>

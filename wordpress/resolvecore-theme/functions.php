@@ -37,6 +37,15 @@ function resolvecore_handle_contact() {
         wp_send_json_error(['msg' => 'Spam detectado.']);
     }
 
+    // Rate limiting: máx. 3 envíos por IP por hora
+    $ip_hash      = md5( $_SERVER['REMOTE_ADDR'] ?? '' );
+    $rate_key     = 'rc_contact_' . $ip_hash;
+    $attempts     = (int) get_transient( $rate_key );
+    if ( $attempts >= 3 ) {
+        wp_send_json_error(['msg' => 'Demasiados intentos. Espera un rato antes de volver a enviar.']);
+    }
+    set_transient( $rate_key, $attempts + 1, HOUR_IN_SECONDS );
+
     $name    = sanitize_text_field( $_POST['rc_name'] ?? '' );
     $email   = sanitize_email( $_POST['rc_email'] ?? '' );
     $message = sanitize_textarea_field( $_POST['rc_message'] ?? '' );
@@ -55,11 +64,26 @@ function resolvecore_handle_contact() {
     $headers = ['Content-Type: text/plain; charset=UTF-8', "Reply-To: $name <$email>"];
 
     $sent = wp_mail( $admin_email, $subject, $body, $headers );
-    if ( $sent ) {
-        wp_send_json_success(['msg' => '¡Mensaje enviado! Te responderemos pronto.']);
-    } else {
+    if ( ! $sent ) {
         wp_send_json_error(['msg' => 'Error al enviar. Inténtalo de nuevo.']);
     }
+
+    $response = ['msg' => '¡Mensaje enviado! Te responderemos pronto.'];
+
+    if ( function_exists( 'rc_mantis_create_ticket' ) ) {
+        $ticket_id = rc_mantis_create_ticket([
+            'name'    => $name,
+            'email'   => $email,
+            'type'    => $type,
+            'message' => $message,
+        ]);
+        if ( ! is_wp_error( $ticket_id ) && $ticket_id > 0 ) {
+            $response['ticket_id']  = $ticket_id;
+            $response['msg']        = "¡Mensaje enviado! Ticket #{$ticket_id} creado. Te responderemos pronto.";
+        }
+    }
+
+    wp_send_json_success( $response );
 }
 add_action( 'wp_ajax_resolvecore_contact',        'resolvecore_handle_contact' );
 add_action( 'wp_ajax_nopriv_resolvecore_contact', 'resolvecore_handle_contact' );
