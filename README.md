@@ -31,6 +31,7 @@
 | 🎮 **Demo interactiva** | Prueba el diagnóstico en tiempo real desde la web |
 | 📄 **PDF** | Informes técnicos y resumen para el cliente |
 | 🌐 **Multiplataforma** | Scripts para Windows, Linux, macOS y Android |
+| 💿 **SO Técnico** | ISO/script que instala el stack completo en una máquina física con un solo comando |
 
 ---
 
