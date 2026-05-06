@@ -1,6 +1,10 @@
 <div align="center">
 
-# ⚙️ ResolveCore
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo/resolvcore-logo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo/resolvcore-logo-light.png">
+  <img alt="ResolveCore Logo" src="assets/logo/resolvcore-logo-light.png" width="400">
+</picture>
 
 ### Plataforma de mantenimiento, diagnóstico y optimización de equipos informáticos
 
@@ -27,6 +31,20 @@
 | 🎮 **Demo interactiva** | Prueba el diagnóstico en tiempo real desde la web |
 | 📄 **PDF** | Informes técnicos y resumen para el cliente |
 | 🌐 **Multiplataforma** | Scripts para Windows, Linux, macOS y Android |
+
+---
+
+## 🎨 Branding e Identidad
+
+### Símbolo (Icono)
+<img src="assets/logo/resolvcore-icon.png" width="120" alt="ResolveCore Icono">
+
+### Logotipo (Light / Dark)
+<p align="left">
+  <img src="assets/logo/resolvcore-logo-light.png" width="300" alt="Logo Light" style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+  &nbsp;&nbsp;
+  <img src="assets/logo/resolvcore-logo-dark.png" width="300" alt="Logo Dark" style="background-color: #0a0c10; padding: 10px; border-radius: 5px;">
+</p>
 
 ---
 
@@ -81,6 +99,8 @@ cp -r wordpress/resolvecore-theme/ wp-content/themes/
 
 ```
 ResolveCore/
+├── assets/
+│   └── logo/                  # Identidad corporativa y logotipos (SVG/PNG)
 ├── wordpress/
 │   ├── resolvecore-theme/     # Tema WordPress
 │   │   ├── front-page.php    # Landing con demo
@@ -179,7 +199,8 @@ Proyecto Integrado — IES Trafalgar, Barbate, Cádiz
 **Contacto**
 
 [![GitHub](https://img.shields.io/badge/GitHub-Haplee-181717?style=for-the-badge&logo=github)](https://github.com/Haplee)
-[![X](https://img.shields.io/badge/X-@FranVidalMateo-000000?style=for-the-badge&logo=x)](https://x.com/FranVidalMateo)
+[![X (Twitter)](https://img.shields.io/badge/X-@FranVidalMateo-000000?style=for-the-badge&logo=x)](https://x.com/FranVidalMateo)
+[![Instagram](https://img.shields.io/badge/Instagram-franvidalmateo-E4405F?style=for-the-badge&logo=instagram)](https://www.instagram.com/franvidalmateo)
 [![Email](https://img.shields.io/badge/Email-fvidalmateo@gmail.com-D14836?style=for-the-badge&logo=gmail)](mailto:franvidalmateo@gmail.com)
 
 ---
