@@ -7,8 +7,8 @@ get_header();
 <div class="rc-docs-layout">
   <aside class="rc-docs-sidebar">
     <div class="rc-docs-logo">
-      <img src="<?php echo get_template_directory_uri(); ?>/logo.png"
-           alt="ResolveCore" class="rc-docs-logo-img">
+      <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
+           alt="ResolveCore" class="rc-docs-logo-img" width="160" height="40">
     </div>
     <ul class="rc-docs-nav">
       <li><a href="#intro" class="active">Introducción</a></li>

@@ -7,8 +7,8 @@ get_header();
 <div class="rc-cl-layout">
   <aside class="rc-cl-sidebar">
     <div class="rc-cl-logo">
-      <img src="<?php echo get_template_directory_uri(); ?>/logo.png"
-           alt="ResolveCore" class="rc-cl-logo-img">
+      <img src="<?php echo get_template_directory_uri(); ?>/assets/logo/resolvcore-logo-dark.png"
+           alt="ResolveCore" class="rc-cl-logo-img" width="160" height="40">
     </div>
     <ul class="rc-cl-nav">
       <li><a href="#v1.0.0">v1.0.0</a></li>
