@@ -15,10 +15,64 @@
     - AnyDesk
     - Git + configuracion
 
+.PARAMETER Help
+    Muestra ayuda y sale.
+
 .EXAMPLE
     # Ejecutar como Administrador en PowerShell 7:
     pwsh -ExecutionPolicy Bypass -File setup.ps1
 #>
+
+[CmdletBinding()]
+param(
+    [Alias('h')][switch]$Help
+)
+
+if ($Help) {
+    @"
+NAME
+    setup.ps1 - Setup automatico del stack ResolveCore en Windows 10/11
+
+SYNOPSIS
+    pwsh -ExecutionPolicy Bypass -File setup.ps1 [-Help]
+
+DESCRIPTION
+    Instala y configura el stack completo de ResolveCore en una instalacion
+    limpia de Windows. Aprovisiona la maquina fisica del tecnico con todos
+    los servicios necesarios para operar.
+
+    Componentes instalados:
+        - Chocolatey (gestor de paquetes)
+        - PHP 8.2 + Nginx + MariaDB + Composer
+        - WordPress (via WP-CLI)
+        - MantisBT
+        - wkhtmltopdf (generacion PDF)
+        - AnyDesk
+        - Git + configuracion
+
+PARAMETERS
+    -Help, -h                   Muestra esta ayuda y sale.
+
+REQUISITOS
+    - PowerShell 7+ (#Requires -Version 7.0).
+    - Consola Administrador.
+    - Conexion a internet.
+    - Maquina recien instalada (no ejecutar sobre sistema en uso).
+
+EXAMPLES
+    pwsh -ExecutionPolicy Bypass -File setup.ps1
+    pwsh -ExecutionPolicy Bypass -File setup.ps1 -Help
+
+EXIT CODES
+    0    Setup completado.
+    1    Error fatal (cualquier paso falla con Write-Fail).
+
+ATENCION
+    Modifica la configuracion del sistema. Usar solo en maquina recien
+    instalada para evitar conflictos con servicios existentes.
+"@ | Write-Host
+    exit 0
+}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'

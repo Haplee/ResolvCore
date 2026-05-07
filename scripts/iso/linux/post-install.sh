@@ -4,6 +4,53 @@
 # Uso: sudo bash post-install.sh
 set -euo pipefail
 
+case "${1:-}" in
+    --help|-h)
+        cat <<'EOF'
+NAME
+    post-install.sh - Post-install setup del stack ResolveCore en Linux
+
+SYNOPSIS
+    sudo bash post-install.sh [OPTIONS]
+
+DESCRIPTION
+    Instala y configura el stack completo de ResolveCore en una instalacion
+    limpia de Ubuntu Desktop 22.04/24.04 LTS. Aprovisiona la maquina
+    fisica del tecnico con todos los servicios necesarios.
+
+    Componentes instalados:
+        - Nginx (servidor web)
+        - PHP 8.2 + extensiones requeridas
+        - MariaDB (base de datos)
+        - WordPress (frontend de soporte)
+        - MantisBT (gestor de tickets)
+        - AnyDesk (acceso remoto)
+        - PowerShell 7 (compat scripts Windows)
+
+OPTIONS
+    -h, --help                  Muestra esta ayuda y sale.
+
+REQUISITOS
+    - Ubuntu/Debian con apt-get.
+    - Privilegios de root (sudo).
+    - Conexion a internet.
+    - Maquina recien instalada.
+
+EXAMPLES
+    sudo bash post-install.sh
+    sudo bash post-install.sh --help
+
+EXIT CODES
+    0    Setup completado.
+    1    Error fatal (cualquier paso falla con die()).
+
+ATENCION
+    Modifica la configuracion del sistema. Usar solo en maquina recien
+    instalada para evitar conflictos con servicios existentes.
+EOF
+        exit 0 ;;
+esac
+
 # ============================================================
 # COLORES
 # ============================================================

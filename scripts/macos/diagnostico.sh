@@ -29,26 +29,54 @@ SSH_PORT="22"
 
 usage() {
     cat <<EOF
-Uso: $0 [opciones]
+NAME
+    diagnostico.sh - Diagnostico macOS (DEMO STUB v${SCRIPT_VERSION})
 
-Opciones (interfaz reservada para implementación futura):
-  --host <ip>     Modo remoto vía SSH
-  --user <name>   Usuario SSH (no root, macOS bloquea root login)
-  --port <n>      Puerto SSH (default: 22)
-  --output <dir>  Directorio salida JSON
-  --local         Forzar modo local (default)
-  -h, --help      Esta ayuda
+SYNOPSIS
+    bash diagnostico.sh [OPTIONS]
+
+DESCRIPTION
+    Stub que conserva la interfaz CLI completa para que un tecnico pueda
+    probarlo en macOS sin depender de la logica final. Implementacion
+    completa prevista para fase posterior del TFG. Genera un JSON
+    placeholder con esquema minimo coherente al resto de plataformas.
+
+    Para diagnostico real hoy:
+        system_profiler -json SPHardwareDataType
+        ejecutar el script Linux via contenedor.
+
+OPTIONS
+    --local                     Forzar modo local (default).
+    --host <ip>                 Modo remoto via SSH.
+    --user <name>               Usuario SSH (no root: macOS bloquea root
+                                login por defecto).
+    --port <n>                  Puerto SSH (default: 22).
+    -O, --output <dir>          Directorio salida JSON.
+                                Default: ../diagnosticos
+    -h, --help                  Muestra esta ayuda y sale.
+
+EXAMPLES
+    bash diagnostico.sh
+    bash diagnostico.sh -O /tmp
+    bash diagnostico.sh --host 192.168.1.10 --user fran
+    bash diagnostico.sh --host 192.168.1.10 --user fran --port 2222
+
+EXIT CODES
+    0    Stub ejecutado, JSON placeholder generado.
+
+ESTADO
+    DEMO. Sin recoleccion real de datos en esta version.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --host)   MODE="remote"; SSH_HOST="${2:-}"; shift 2 ;;
-        --user)   SSH_USER="${2:-}"; shift 2 ;;
-        --port)   SSH_PORT="${2:-22}"; shift 2 ;;
-        --output) OUTPUT_DIR="${2:-}"; shift 2 ;;
-        --local)  MODE="local"; shift ;;
-        -h|--help) usage; exit 0 ;;
+        --host)        MODE="remote"; SSH_HOST="${2:-}"; shift 2 ;;
+        --user)        SSH_USER="${2:-}"; shift 2 ;;
+        --port)        SSH_PORT="${2:-22}"; shift 2 ;;
+        -O|--output)   OUTPUT_DIR="${2:-}"; shift 2 ;;
+        --local)       MODE="local"; shift ;;
+        -h|--help)     usage; exit 0 ;;
         *) shift ;;
     esac
 done

@@ -13,7 +13,7 @@
 
 ![WordPress](https://img.shields.io/badge/WordPress-21759B?style=for-the-badge&logo=wordpress&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-8.1+-777BB4?style=for-the-badge&logo=php&logoColor=white)
-![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
+![MySql](https://img.shields.io/badge/MySql-003545?style=for-the-badge&logo=MySql&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell_7-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
 ![Bash](https://img.shields.io/badge/Bash-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
@@ -99,7 +99,7 @@ ResolvCore/
 |------|-----------|----------------|
 | **Core Engine** | PowerShell 7 / Bash | Scripts multiplataforma de bajo nivel. |
 | **Backend** | PHP 8.1 / WordPress 6 | Gestión de contenido y APIs REST. |
-| **Base de Datos** | MariaDB | Almacenamiento persistente de tickets y logs. |
+| **Base de Datos** | MySql | Almacenamiento persistente de tickets y logs. |
 | **Ticketing** | MantisBT 2.26 | Sistema de gestión de incidencias enterprise. |
 | **Frontend** | Vanilla CSS / JS | Interfaz premium con enfoque en rendimiento. |
 | **Remote** | AnyDesk | Herramienta de acceso remoto corporativo. |
@@ -109,7 +109,7 @@ ResolvCore/
 ## 📦 Instalación Rápida
 
 ### Requisitos del Sistema
-- **Servidor:** WordPress 6.0+, PHP 8.1+, MariaDB 10.4+.
+- **Servidor:** WordPress 6.0+, PHP 8.1+, MySql 10.4+.
 - **Cliente:** PowerShell 7 (recomendado) o Bash.
 
 ### Despliegue del Tema

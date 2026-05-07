@@ -4,6 +4,110 @@
 # Menu interactivo para tecnicos ResolveCore en Linux
 # =============================================================================
 
+SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Pass-through: si llega flag de modulo, invocar directo y salir ──────────
+DIAG_FLAGS=()
+OPT_FLAGS=()
+NIVEL_POSITIONAL=""
+PARSE_DONE=false
+ARGS_REMAIN=()
+
+show_help() {
+    cat <<'EOF'
+NAME
+    ResolveCore.sh - Menu interactivo de herramientas ResolveCore para Linux
+
+SYNOPSIS
+    bash ResolveCore.sh                                       # menu
+    bash ResolveCore.sh [-O <dir>] [-S] [-I|-A]               # forward diagnostico
+    bash ResolveCore.sh [--dry-run] [--undo] [NIVEL]          # forward optimizacion
+
+DESCRIPTION
+    Sin flags: lanza menu TUI (diagnostico, optimizacion, ayuda, salir).
+    Con flags de modulo: salta el menu e invoca diagnostico.sh u
+    optimizacion.sh con esos flags. Util para automatizacion.
+
+OPTIONS DEL LAUNCHER
+    -h, --help        Muestra esta ayuda y sale.
+
+FLAGS DE DIAGNOSTICO (forward a diagnostico.sh)
+    -O, --output <dir>      Directorio salida JSON/HTML.
+    -S, --silent            Sin salida por consola.
+    -I, --install           Instala paquetes opcionales (lm-sensors,
+                            smartmontools, pciutils, jq, bc, ufw, ping).
+                            Pide confirmacion.
+    -A, --auto-install      Igual que -I sin confirmar.
+
+FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
+    NIVEL                   ligero | estandar | rendimiento | extreme
+                            (default: estandar).
+    --dry-run               Simula sin aplicar.
+    --undo                  Restaura sysctl y servicios.
+
+MENU
+    1. DIAGNOSTICO    Lanza diagnostico.sh.
+    2. OPTIMIZACION   Lanza optimizacion.sh.
+    3. AYUDA          Guia rapida embebida.
+    4. SALIR          Cierra el programa.
+
+REQUISITOS
+    - Terminal interactiva para el menu (no pipes).
+    - bash 4+ (cualquier distro moderna).
+    - sudo para optimizacion.
+
+EXAMPLES
+    # Menu interactivo
+    bash scripts/linux/ResolveCore.sh
+
+    # Pass-through diagnostico
+    bash scripts/linux/ResolveCore.sh -A
+    bash scripts/linux/ResolveCore.sh -O /tmp -S
+
+    # Pass-through optimizacion
+    sudo bash scripts/linux/ResolveCore.sh --dry-run rendimiento
+    sudo bash scripts/linux/ResolveCore.sh --undo
+
+    # Equivalente directo
+    bash scripts/linux/diagnostico.sh -A
+    sudo bash scripts/linux/optimizacion.sh ligero
+
+EXIT CODES
+    0    Salida normal o ayuda mostrada.
+    1    No es terminal interactiva (modo menu).
+    2    Combinacion invalida de flags (diag + opt).
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help) show_help; exit 0 ;;
+        # Diagnostico flags
+        -O|--output)            DIAG_FLAGS+=("--output" "${2:-}"); shift 2 ;;
+        -S|--silent)            DIAG_FLAGS+=("--silent"); shift ;;
+        -I|--install|--install-deps) DIAG_FLAGS+=("--install"); shift ;;
+        -A|--auto-install)      DIAG_FLAGS+=("--auto-install"); shift ;;
+        # Optimizacion flags
+        --dry-run)              OPT_FLAGS+=("--dry-run"); shift ;;
+        --undo)                 OPT_FLAGS+=("--undo"); shift ;;
+        ligero|estandar|rendimiento|extreme) NIVEL_POSITIONAL="$1"; shift ;;
+        *) ARGS_REMAIN+=("$1"); shift ;;
+    esac
+done
+
+if [[ ${#DIAG_FLAGS[@]} -gt 0 && (${#OPT_FLAGS[@]} -gt 0 || -n "$NIVEL_POSITIONAL") ]]; then
+    echo "[X] Flags de diagnostico y optimizacion son mutuamente exclusivos." >&2
+    exit 2
+fi
+if [[ ${#DIAG_FLAGS[@]} -gt 0 ]]; then
+    exec bash "$SCRIPT_DIR_EARLY/diagnostico.sh" "${DIAG_FLAGS[@]}"
+fi
+if [[ ${#OPT_FLAGS[@]} -gt 0 || -n "$NIVEL_POSITIONAL" ]]; then
+    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh" "${OPT_FLAGS[@]}")
+    [[ -n "$NIVEL_POSITIONAL" ]] && OPT_CMD+=("$NIVEL_POSITIONAL")
+    exec "${OPT_CMD[@]}"
+fi
+
 if [[ ! -t 0 ]]; then
     echo "Este script debe ejecutarse en una terminal interactiva"
     echo "Ejemplo: bash scripts/linux/ResolveCore.sh"

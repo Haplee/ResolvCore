@@ -20,16 +20,42 @@ DRY_RUN=false
 
 usage() {
     cat <<EOF
-Uso: sudo $0 [opciones] [nivel]
+NAME
+    optimizacion.sh - Optimizacion macOS (DEMO STUB v${SCRIPT_VERSION})
 
-Niveles: ligero | estandar | rendimiento | extreme  (default: estandar)
-Opciones (reservadas):
-  --dry-run    Simula sin aplicar
-  --confirm    Confirma acciones destructivas
-  --undo       Deshace cambios
-  -h, --help   Esta ayuda
+SYNOPSIS
+    sudo bash optimizacion.sh [OPTIONS] [NIVEL]
 
-ESTADO: STUB. Sin acciones reales en esta versión.
+DESCRIPTION
+    Stub que conserva la interfaz CLI para fase futura del TFG. La version
+    3.0.0 anterior aplicaba cambios destructivos sin --confirm (mdutil off,
+    rm -rf ~/Library/Caches, networksetup -setdnsservers). Reducido a stub
+    hasta disenar correctamente el flujo de undo y los niveles.
+
+ARGUMENTS
+    NIVEL                       Nivel previsto (default: estandar):
+                                  ligero       Limpieza ~/Library/Caches.
+                                  estandar     Anterior + revision de
+                                               LaunchAgents.
+                                  rendimiento  Anterior + DNS y energia.
+                                  extreme      Anterior + recomendaciones
+                                               avanzadas.
+
+OPTIONS
+    --dry-run                   Simula sin aplicar.
+    --confirm                   Confirma acciones destructivas.
+    --undo                      Deshace cambios (cuando se implemente).
+    -h, --help                  Muestra esta ayuda y sale.
+
+EXAMPLES
+    sudo bash optimizacion.sh ligero --dry-run
+    sudo bash optimizacion.sh rendimiento --confirm
+
+EXIT CODES
+    0    Stub ejecutado sin efectos.
+
+ESTADO
+    STUB. Sin acciones reales en esta version.
 EOF
 }
 
