@@ -181,8 +181,132 @@ function rc_mantis_create_ticket( array $data ): int|WP_Error {
     ] );
 
     if ( is_wp_error( $result ) ) {
+        error_log( '[rc-mantisbt] create_issue failed: ' . $result->get_error_message() );
         return $result;
     }
 
     return (int) ( $result['issue']['id'] ?? 0 );
+}
+
+/**
+ * Sube un JSON de diagnóstico a un ticket existente y crea una nota con el resumen.
+ *
+ * Valida que el JSON cumpla el esquema mínimo (`_meta.plataforma` + `_meta.version`),
+ * lo adjunta como fichero y añade una nota con los datos clave para que el técnico
+ * los vea sin descargar el adjunto.
+ *
+ * @param int    $issue_id     ID del ticket en MantisBT.
+ * @param string $json_path    Ruta absoluta al JSON generado por scripts/<os>/diagnostico.*.
+ * @param bool   $add_summary  Si true (default), añade nota con resumen.
+ * @return true|WP_Error
+ */
+function rc_mantis_attach_diagnostic( int $issue_id, string $json_path, bool $add_summary = true ): true|WP_Error {
+    if ( $issue_id < 1 ) {
+        return new WP_Error( 'rc_mantis_invalid_issue', 'issue_id invalido' );
+    }
+    if ( ! is_readable( $json_path ) ) {
+        return new WP_Error( 'rc_mantis_file_unreadable', "JSON ilegible: $json_path" );
+    }
+
+    $raw = file_get_contents( $json_path );
+    if ( $raw === false || $raw === '' ) {
+        return new WP_Error( 'rc_mantis_file_empty', 'JSON vacio o ilegible' );
+    }
+
+    $data = json_decode( $raw, true );
+    if ( ! is_array( $data ) ) {
+        return new WP_Error( 'rc_mantis_json_invalid',
+            'JSON malformado: ' . json_last_error_msg() );
+    }
+
+    if ( empty( $data['_meta']['plataforma'] ) || empty( $data['_meta']['version'] ) ) {
+        return new WP_Error( 'rc_mantis_schema_invalid',
+            'JSON sin _meta.plataforma o _meta.version (esquema incompatible)' );
+    }
+
+    $api = rc_mantis_get_api();
+    if ( ! $api ) {
+        return new WP_Error( 'rc_mantis_no_config', 'MantisBT no configurado.' );
+    }
+
+    // 1. Adjuntar fichero
+    $upload = $api->attach_file( $issue_id, $json_path );
+    if ( is_wp_error( $upload ) ) {
+        error_log( '[rc-mantisbt] attach_file failed: ' . $upload->get_error_message() );
+        return $upload;
+    }
+
+    // 2. Nota con resumen — extrae datos clave por plataforma
+    if ( $add_summary ) {
+        $resumen = rc_mantis_format_diagnostic_summary( $data );
+        $note    = $api->add_note( $issue_id, $resumen, 'private' );
+        if ( is_wp_error( $note ) ) {
+            // No abortar — el adjunto ya está. Solo loguear.
+            error_log( '[rc-mantisbt] add_note failed: ' . $note->get_error_message() );
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Genera resumen Markdown del JSON de diagnóstico para incluir en una nota.
+ * Tolerante a campos faltantes (cada plataforma expone lo suyo).
+ */
+function rc_mantis_format_diagnostic_summary( array $d ): string {
+    $meta       = $d['_meta'] ?? [];
+    $plataforma = $meta['plataforma'] ?? 'desconocida';
+    $hostname   = $meta['hostname']   ?? '—';
+    $generado   = $meta['generado_en'] ?? '—';
+
+    $lines   = [];
+    $lines[] = "**Diagnóstico ResolveCore** ({$plataforma})";
+    $lines[] = "- Host: `" . sanitize_text_field( (string) $hostname ) . "`";
+    $lines[] = "- Generado: {$generado}";
+    $lines[] = "- Versión script: " . ( $meta['version'] ?? '—' );
+    $lines[] = "";
+
+    // Sistema operativo
+    $os = $d['sistema'] ?? $d['sistema_operativo'] ?? null;
+    if ( is_array( $os ) ) {
+        $nombre = $os['nombre'] ?? '—';
+        $build  = $os['build']  ?? '';
+        $uptime = $os['uptime_horas'] ?? null;
+        $lines[] = "**SO:** {$nombre} {$build}" . ( $uptime !== null ? " — uptime {$uptime}h" : '' );
+    }
+
+    // Hardware (linux/android lo agrupan; Windows lo expone en raíz)
+    $hw = $d['hardware'] ?? null;
+    if ( is_array( $hw ) ) {
+        $cores = $hw['cpu_cores'] ?? '—';
+        $ram   = $hw['ram_gb']    ?? '—';
+        $disk  = $hw['disk_gb']   ?? '—';
+        $lines[] = "**Hardware:** {$cores} cores · {$ram}GB RAM · disco {$disk}GB";
+    } else {
+        // Windows
+        if ( ! empty( $d['cpu']['nucleos_total'] ) ) {
+            $lines[] = "**CPU:** {$d['cpu']['nucleos_total']} cores / "
+                . ( $d['cpu']['hilos_total'] ?? '—' ) . ' hilos';
+        }
+        if ( ! empty( $d['memoria']['total_gb'] ) ) {
+            $lines[] = "**RAM:** {$d['memoria']['total_gb']}GB total · "
+                . ( $d['memoria']['disponible_gb'] ?? '—' ) . 'GB disponibles';
+        }
+    }
+
+    // Red
+    if ( ! empty( $d['red']['latencia_ms'] ) ) {
+        $lines[] = "**Red:** latencia {$d['red']['latencia_ms']}ms · pérdida "
+            . ( $d['red']['perdida_paquetes_pct'] ?? '—' ) . '%';
+    }
+
+    // Seguridad
+    if ( is_array( $d['seguridad'] ?? null ) ) {
+        $sec = $d['seguridad'];
+        $av  = $sec['antivirus'] ?? ( $sec['windows_defender']['activo'] ?? null ? 'Defender' : null );
+        $fw  = ! empty( $sec['firewall'] ) ? 'activo' : 'inactivo';
+        $lines[] = "**Seguridad:** firewall {$fw}" . ( $av ? " · AV: {$av}" : '' );
+    }
+
+    return implode( "\n", $lines );
 }

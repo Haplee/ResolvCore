@@ -122,6 +122,8 @@ mysql -umantis_user -p mantisbt < mantisbt/sql/resolvecore-setup.sql
 |--------|----------|-----|
 | `POST` | `/api/rest/issues` | Crear ticket desde formulario |
 | `GET`  | `/api/rest/issues/{id}` | Consultar estado de ticket |
+| `POST` | `/api/rest/issues/{id}/notes` | Añadir nota (resumen del diagnóstico) |
+| `POST` | `/api/rest/issues/{id}/files` | Adjuntar JSON de diagnóstico |
 | `GET`  | `/api/rest/projects` | Verificar conexión |
 
 ### Ejemplo de petición (crear ticket)
@@ -213,3 +215,98 @@ Configs personalizadas en `mantisbt/plugins/<nombre>/config.php`.
 ### SetDuedate: SLA activo tras activar plugin
 
 El plugin lee la prioridad del ticket al crearse y calcula la fecha de vencimiento automáticamente. No requiere acción manual del técnico.
+
+---
+
+## Subir el JSON de diagnóstico al ticket
+
+Tras ejecutar `scripts/<os>/diagnostico.*` se obtiene un JSON conforme a [`docs/schema-diagnostico.md`](schema-diagnostico.md). Para asociarlo a un ticket existente:
+
+```php
+// Desde cualquier hook de WordPress, p.ej. al cerrar la sesión remota
+$ok = rc_mantis_attach_diagnostic( $issue_id, '/ruta/diagnostico_HOST_20260507_120000.json' );
+if ( is_wp_error( $ok ) ) {
+    error_log( $ok->get_error_message() );
+}
+```
+
+`rc_mantis_attach_diagnostic()` hace dos cosas:
+
+1. **Adjunta el JSON** vía `POST /api/rest/issues/{id}/files` (multipart/form-data, campo `files[]`).
+2. **Crea una nota** privada con un resumen Markdown que el técnico puede leer sin descargar el adjunto (SO, hardware, latencia, estado seguridad).
+
+### Validaciones previas a la subida
+
+| Comprobación | Acción si falla |
+|--------------|-----------------|
+| Fichero legible y no vacío | `WP_Error('rc_mantis_file_unreadable')` |
+| `json_decode` válido | `WP_Error('rc_mantis_json_invalid')` con `json_last_error_msg()` |
+| Esquema mínimo: `_meta.plataforma` + `_meta.version` | `WP_Error('rc_mantis_schema_invalid')` |
+| Tamaño ≤ 5 MB (límite por defecto Mantis) | `WP_Error('mantis_file_too_large')` |
+| Token y URL configurados | `WP_Error('rc_mantis_no_config')` |
+
+Si solo falla la nota (no el adjunto), no se aborta — el adjunto ya está en el ticket y el fallo se loguea con `error_log('[rc-mantisbt] add_note failed: ...')`.
+
+---
+
+## Validación de payload al crear tickets
+
+El cliente valida y normaliza el payload antes de enviar a `POST /api/rest/issues`:
+
+| Campo | Regla |
+|-------|-------|
+| `summary` | Trim + UTF-8 + máx 250 chars |
+| `description` | Trim + UTF-8 + máx 65 000 chars (se añade `[truncado]` si excede) |
+| `project_id` | Entero ≥ 1 obligatorio |
+| `category` | String no vacío; fallback `'General'` |
+| `priority` | Whitelist: `none, low, normal, high, urgent, immediate` → `normal` por defecto |
+| `severity` | Whitelist: `feature, trivial, text, tweak, minor, major, crash, block` → `minor` |
+
+`wp_json_encode()` se invoca con `JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES` para no romper acentos ni rutas en los logs.
+
+Cabeceras de la petición:
+
+```http
+Authorization: Token <api_token>
+Content-Type: application/json; charset=utf-8
+Accept: application/json
+```
+
+---
+
+## Troubleshooting
+
+| Síntoma | Causa probable | Cómo verificar |
+|---------|---------------|----------------|
+| `HTTP 401 Unauthorized` | Token revocado/incorrecto | Probar `GET /api/rest/projects` desde "Verificar conexión" en Ajustes → MantisBT |
+| `HTTP 403 Forbidden` | Token sin permiso sobre el proyecto | Revisar nivel de acceso del usuario dueño del token en MantisBT |
+| `HTTP 404` al adjuntar | `issue_id` no existe en el proyecto | Confirmar ID correcto y mismo proyecto |
+| `HTTP 413 Payload Too Large` | JSON > límite Mantis | Subir `php_max_upload_size` y `g_max_file_size` en `config_inc.php` |
+| `Category not found` | Categoría inexistente en MantisBT | Crear categoría manualmente o usar `'General'` |
+| Acentos rotos en summary/notes | DB MariaDB sin `utf8mb4` | `SHOW CREATE TABLE mantis_bug_table` y migrar collation |
+| Adjunto OK pero nota falla | `g_allow_no_category=OFF` y proyecto sin categorías | Crear al menos una categoría en el proyecto |
+
+Logs del plugin: cualquier error HTTP 4xx/5xx se vuelca en el `error_log` de PHP con prefijo `[rc-mantisbt]` y truncado a 1000 caracteres.
+
+```bash
+tail -f /var/log/php/error.log | grep rc-mantisbt
+```
+
+---
+
+## Esquema esperado del JSON adjunto
+
+El JSON debe contener al menos:
+
+```json
+{
+  "_meta": {
+    "version":     "3.x.y",
+    "plataforma":  "windows | linux | android | macos",
+    "hostname":    "...",
+    "generado_en": "ISO-8601"
+  }
+}
+```
+
+Si falta cualquiera de los dos campos `version` o `plataforma`, el helper rechaza la subida con `rc_mantis_schema_invalid`. Esto evita adjuntar JSONs corruptos o de otro origen al ticket. Estructura completa: ver [`docs/schema-diagnostico.md`](schema-diagnostico.md).

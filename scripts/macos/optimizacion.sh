@@ -1,92 +1,74 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ResolveCore - Optimizacion de sistema macOS
-# Version: 3.0.0
+#  ResolveCore — Optimización macOS (DEMO / FASE FUTURA)
+#  Versión: 0.1.0-demo
+#
+#  ESTADO: Stub. Implementación completa pendiente.
+#  La versión 3.0.0 anterior aplicaba cambios destructivos sin --confirm
+#  (mdutil off, rm -rf ~/Library/Caches, networksetup -setdnsservers, etc.).
+#  Se reduce a stub hasta diseñar el flujo de undo y los niveles correctamente.
+#
+#  Niveles previstos: ligero | estandar | rendimiento | extreme
+#  Opciones previstas: --dry-run, --confirm, --undo
 # =============================================================================
 
-set -uo pipefail
+set -euo pipefail
 
-SCRIPT_VERSION="3.0.0"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKUP_DIR="/tmp/resolvecore_optimizacion"
-LOG_FILE="${BACKUP_DIR}/optimizacion.log"
+SCRIPT_VERSION="0.1.0-demo"
+NIVEL="estandar"
+DRY_RUN=false
 
-NIVEL="${1:-estandar}"
+usage() {
+    cat <<EOF
+Uso: sudo $0 [opciones] [nivel]
 
-# Colores
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+Niveles: ligero | estandar | rendimiento | extreme  (default: estandar)
+Opciones (reservadas):
+  --dry-run    Simula sin aplicar
+  --confirm    Confirma acciones destructivas
+  --undo       Deshace cambios
+  -h, --help   Esta ayuda
 
-# Verificar que es macOS
-if [[ "$OSTYPE" != "darwin"* ]]; then
-    echo -e "${RED}[X] Este script es solo para macOS${NC}"
-    exit 1
+ESTADO: STUB. Sin acciones reales en esta versión.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run) DRY_RUN=true; shift ;;
+        --confirm) shift ;;
+        --undo)    shift ;;
+        -h|--help) usage; exit 0 ;;
+        ligero|estandar|rendimiento|extreme) NIVEL="$1"; shift ;;
+        *) shift ;;
+    esac
+done
+
+YELLOW='\033[1;33m'; CYAN='\033[0;36m'; GREEN='\033[0;32m'; NC='\033[0m'
+
+if [[ "${OSTYPE:-}" != darwin* ]]; then
+    echo -e "  ${YELLOW}[!] No se detecta macOS. Stub continúa de todos modos.${NC}"
 fi
 
-# Crear directorio
-mkdir -p "$BACKUP_DIR"
+cat <<BANNER
+
+${CYAN}  ==============================================================
+  ResolveCore — Optimización macOS (DEMO STUB) v${SCRIPT_VERSION}
+  Nivel: ${NIVEL}   DryRun: ${DRY_RUN}
+  $(date '+%Y-%m-%d %H:%M:%S')
+  ==============================================================${NC}
+
+  ${YELLOW}Este script es un STUB. No aplica cambios reales.${NC}
+  ${YELLOW}Implementación completa pendiente para fase futura del TFG.${NC}
+
+  Plan previsto por nivel:
+    ligero       — limpieza ~/Library/Caches con confirmación
+    estandar     — anterior + revisión de LaunchAgents
+    rendimiento  — anterior + ajustes de DNS y energía
+    extreme      — anterior + recomendaciones avanzadas
+BANNER
 
 echo ""
-echo -e "  =============================================================="${NC}
-echo -e "  ResolveCore - Optimizacion macOS v$SCRIPT_VERSION" "${CYAN}"
-echo -e "  Nivel: $NIVEL" "${NC}"
-echo -e "  $(date '+%Y-%m-%d %H:%M:%S')" "${NC}"
-echo -e "  =============================================================="${NC}
+echo -e "  ${GREEN}[OK] Stub ejecutado. Sin efectos en el sistema.${NC}"
 echo ""
-
-# Desactivar Spotlight (solo si no es nivel ligero)
-if [[ "$NIVEL" != "ligero" ]]; then
-    echo -e "  ${CYAN}> Spotlight${NC}"
-    mdutil -i off / 2>/dev/null
-    echo -e "    ${GREEN}[OK] Spotlight indexacion desactivada${NC}"
-fi
-
-# Limpieza
-echo ""
-echo -e "  ${CYAN}> Limpieza del sistema${NC}"
-
-# Limpiar cache de usuario
-rm -rf ~/Library/Caches/* 2>/dev/null
-rm -rf /Library/Caches/* 2>/dev/null
-echo -e "    ${GREEN}[OK] Cache limpiada${NC}"
-
-# Limpiar logs
-rm -rf /var/log/*.gz 2>/dev/null
-echo -e "    ${GREEN}[OK] Logs antiguos eliminados${NC}"
-
-# Docker
-if command -v docker &> /dev/null; then
-    docker system prune -af 2>/dev/null
-    echo -e "    ${GREEN}[OK] Docker limpiado${NC}"
-fi
-
-# Servicios
-echo ""
-echo -e "  ${CYAN}> Optimizando servicios${NC}"
-
-if [[ "$NIVEL" == "rendimiento" ]] || [[ "$NIVEL" == "extreme" ]]; then
-    # Desactivar servicios no esenciales
-    launchctl unload -w /System/Library/LaunchAgents/com.apple.Spotlight.plist 2>/dev/null
-    echo -e "    ${GREEN}[OK] Servicios optimizados${NC}"
-fi
-
-# DNS
-echo ""
-echo -e "  ${CYAN}> DNS${NC}"
-# Usar DNS de Google
-networksetup -setdnsservers Wi-Fi 8.8.8.8 8.8.4.4 2>/dev/null || true
-echo -e "    ${GREEN}[OK] DNS configurado${NC}"
-
-# Resultado
-echo ""
-echo -e "  =============================================================="${NC}
-echo -e "  ${GREEN}[OK] Optimizacion completada${NC}"
-echo ""
-echo -e "  ${YELLOW}Recomendaciones:${NC}"
-echo -e "    - Reiniciar el Mac para aplicar todos los cambios"
-echo ""
-
 exit 0

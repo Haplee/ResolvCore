@@ -55,9 +55,7 @@ El stack combina herramientas de código abierto maduras, con integración vía 
 | Estándares PHP modernos (WPCS) | Sí | Parcial | Sí | Sí |
 | Relevancia mercado laboral | 43% web mundial | ~2% | ~2% | — |
 
-**Razón principal:** WordPress permite entregar un frontend profesional en el tiempo disponible para el TFG, con formularios AJAX, modo mantenimiento, SEO y un sistema de plugins que facilita la integración con MantisBT. El desarrollo de un CMS custom aportaría poco valor pedagógico frente al tiempo invertido.
-
-**Por qué no React/Next.js:** La versión anterior del proyecto usaba React + Supabase. Se migró a WordPress porque el stack completo (frontend + backend + BBDD) resulta más adecuado para demostrar administración web en ASIR, reduce dependencias de servicios externos (Supabase SaaS) y simplifica el despliegue en VPS propio.
+**Razón principal:** WordPress permite entregar un frontend profesional en el tiempo disponible para el TFG, con formularios AJAX, modo mantenimiento, SEO y un sistema de plugins que facilita la integración con MantisBT. El desarrollo de un CMS custom aportaría poco valor pedagógico frente al tiempo invertido. El stack completo (frontend + backend + BBDD) en un único sistema es el adecuado para demostrar administración web en ASIR, reduce dependencias de servicios externos y simplifica el despliegue en VPS propio.
 
 ### Componentes del tema
 
@@ -435,13 +433,13 @@ En desarrollo. Las opciones evaluadas son:
 
 ### Por qué nativo sobre otras opciones
 
-| Criterio | Kotlin/Compose | Flutter | React Native | PWA |
-|----------|---------------|---------|-------------|-----|
-| Acceso a APIs Android (ADB, diagnóstico) | Total | Parcial (plugins) | Parcial (plugins) | Muy limitado |
-| Rendimiento | Máximo | Alto | Medio | Bajo |
-| Material Design 3 | Nativo | Parcial | Via librería | Via CSS |
-| Alineación con ecosistema Android | Total | Parcial | Parcial | Ninguna |
-| Mantenimiento Google | Sí | Sí | Meta | Estándar web |
+| Criterio | Kotlin/Compose | Flutter | PWA |
+|----------|---------------|---------|-----|
+| Acceso a APIs Android (ADB, diagnóstico) | Total | Parcial (plugins) | Muy limitado |
+| Rendimiento | Máximo | Alto | Bajo |
+| Material Design 3 | Nativo | Parcial | Via CSS |
+| Alineación con ecosistema Android | Total | Parcial | Ninguna |
+| Mantenimiento Google | Sí | Sí | Estándar web |
 
 **Razón:** Los diagnósticos Android requieren acceso a APIs nativas (batería, almacenamiento, red, ADB) que solo Kotlin/Android SDK expone completamente. Fase planificada para después de la defensa del TFG.
 
@@ -451,12 +449,12 @@ En desarrollo. Las opciones evaluadas son:
 
 | Componente | Elegido | Alternativa principal | Razón del descarte |
 |-----------|---------|----------------------|-------------------|
-| CMS | WordPress | React/Next.js | Stack ASIR, despliegue más simple |
+| CMS | WordPress | CMS custom PHP | Tiempo de desarrollo, plugins, comunidad |
 | Bug tracker | MantisBT | Jira | Coste, complejidad, PHP incompatible |
 | Acceso remoto | AnyDesk | TeamViewer | Bloqueo sesiones largas en free |
 | Scripts Windows | PowerShell 7 | Python | No requiere instalación adicional |
 | Scripts Linux | Bash | Python | Universal, sin dependencias |
-| Base de datos | MariaDB | PostgreSQL | WordPress + MantisBT, mismo stack |
+| Base de datos | MariaDB | MySql | WordPress + MantisBT, mismo stack |
 | Servidor web | Nginx | Apache | Mejor rendimiento, menor consumo RAM |
 | Kanban | MantisKanban | Trello | Integración nativa MantisBT |
 | VCS integration | source-integration | Manual | Plugin oficial, webhooks automáticos |

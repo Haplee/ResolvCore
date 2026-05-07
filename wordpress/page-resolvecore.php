@@ -19,9 +19,13 @@
 <head>
   <meta charset="<?php bloginfo('charset'); ?>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?php wp_title('|', true, 'right'); ?><?php bloginfo('name'); ?></title>
+  <meta name="description" content="ResolveCore — Solución a tus problemas informáticos. Plataforma cross-platform de mantenimiento y optimización.">
+  <meta name="theme-color" content="#0a0c10">
+  <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="<?php echo esc_url( get_permalink() ?: home_url( '/' ) ); ?>">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <?php wp_head(); ?>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     /* ============================================================
        RESOLVECORE — ESTILOS GLOBALES
@@ -50,6 +54,23 @@
       font-size: 16px;
       line-height: 1.6;
       overflow-x: hidden;
+    }
+
+    /* a11y */
+    :focus-visible { outline: 2px solid var(--rc-accent); outline-offset: 3px; border-radius: 2px; }
+    .rc-skip-link {
+      position: absolute; left: -9999px; top: 8px;
+      background: var(--rc-accent); color: #000; font-family: var(--rc-mono);
+      font-size: 12px; padding: 10px 16px; z-index: 99999; text-decoration: none;
+    }
+    .rc-skip-link:focus { left: 12px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
     }
 
     /* ---- NAV ---- */
@@ -370,12 +391,14 @@
     }
   </style>
 </head>
-<body class="rc-page <?php body_class(); ?>">
+<body class="rc-page <?php echo esc_attr( implode( ' ', get_body_class() ) ); ?>">
 <?php wp_body_open(); ?>
 
+<a class="rc-skip-link" href="#rc-main">Saltar al contenido principal</a>
+
 <!-- ========== NAV ========== -->
-<nav class="rc-nav">
-  <a href="<?php echo home_url('/'); ?>" class="rc-nav-logo">RESOLVE<span>CORE</span></a>
+<nav class="rc-nav" aria-label="Navegación principal">
+  <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="rc-nav-logo" aria-label="ResolveCore — inicio">RESOLVE<span>CORE</span></a>
   <ul>
     <li><a href="#servicios">Servicios</a></li>
     <li><a href="#diagnosticos">Diagnósticos</a></li>
@@ -384,6 +407,8 @@
   </ul>
   <a href="#" class="rc-nav-cta">DESCARGAR</a>
 </nav>
+
+<main id="rc-main">
 
 <!-- ========== HERO ========== -->
 <section class="rc-hero">
@@ -549,13 +574,15 @@
 </div>
 
 <!-- ========== FOOTER ========== -->
+</main><!-- /#rc-main -->
+
 <footer class="rc-footer" id="contacto">
   <div>
     <div class="rc-footer-logo">RESOLVECORE</div>
-    <div class="rc-footer-copy" style="margin-top:6px">© <?php echo date('Y'); ?> Francisco Vidal Mateo · TFG ASIR</div>
+    <div class="rc-footer-copy" style="margin-top:6px">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG ASIR</div>
   </div>
   <ul>
-    <li><a href="https://github.com/Haplee" target="_blank">GitHub</a></li>
+    <li><a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer">GitHub</a></li>
     <li><a href="#">Documentación</a></li>
     <li><a href="#">Privacidad</a></li>
   </ul>
