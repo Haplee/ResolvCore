@@ -25,14 +25,54 @@ UNDO=false
 
 usage() {
     cat <<EOF
-Uso: sudo $0 [opciones] [nivel]
+NAME
+    optimizacion.sh - Optimizacion de sistema Linux para ResolveCore
 
-Niveles: ligero | estandar | rendimiento | extreme  (default: estandar)
+SYNOPSIS
+    sudo bash optimizacion.sh [OPTIONS] [NIVEL]
 
-Opciones:
-  --dry-run   Simula sin aplicar cambios
-  --undo      Restaura sysctl y servicios desde el último backup
-  -h, --help  Muestra esta ayuda
+DESCRIPTION
+    Aplica optimizaciones por niveles: limpieza de paquetes, ajustes sysctl,
+    deshabilitado de servicios no criticos, swappiness, journal limits.
+    Antes de modificar nada hace backup en /var/tmp/resolvecore_optimizacion/
+    para permitir --undo.
+
+ARGUMENTS
+    NIVEL                       Nivel a aplicar (default: estandar):
+                                  ligero       Limpieza apt + journal vacuum.
+                                  estandar     Anterior + sysctl swappiness +
+                                               servicios no criticos off.
+                                  rendimiento  Anterior + tuning red/IO.
+                                  extreme      Anterior + reducciones agresivas
+                                               (zram, tmp en RAM, etc.).
+
+OPTIONS
+    --dry-run                   Simula sin aplicar cambios. Imprime cada
+                                accion con prefijo [DryRun].
+    --undo                      Restaura sysctl y servicios desde el ultimo
+                                backup. No requiere NIVEL.
+    -h, --help                  Muestra esta ayuda y sale.
+
+REQUISITOS
+    - Privilegios root (sudo).
+    - systemd (para gestion de servicios).
+    - Excluye Spooler (cola de impresion critica para usuarios finales).
+
+FILES
+    /var/tmp/resolvecore_optimizacion/optimizacion.log
+    /var/tmp/resolvecore_optimizacion/sysctl.conf.bak
+    /var/tmp/resolvecore_optimizacion/services_disabled.log
+
+EXAMPLES
+    sudo bash optimizacion.sh
+    sudo bash optimizacion.sh --dry-run rendimiento
+    sudo bash optimizacion.sh ligero
+    sudo bash optimizacion.sh --undo
+
+EXIT CODES
+    0    Optimizacion aplicada correctamente.
+    1    Sin privilegios root.
+    2    Opcion no reconocida.
 EOF
 }
 

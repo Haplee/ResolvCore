@@ -27,7 +27,47 @@ OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --output) OUTPUT_DIR="$2"; shift 2 ;;
+        -h|--help)
+            cat <<EOF
+NAME
+    diagnostico.sh - Diagnostico de dispositivo Android via ADB
+
+SYNOPSIS
+    bash diagnostico.sh [-O <dir>] [-h] [SERIAL]
+
+DESCRIPTION
+    Recoge metricas del dispositivo Android conectado via ADB: hardware
+    (modelo, fabricante, SoC, RAM), bateria (capacidad, salud, ciclos),
+    almacenamiento, version de Android, parches de seguridad, paquetes
+    instalados, permisos sensibles. Genera JSON v${SCRIPT_VERSION} compatible
+    con el importador de ResolveCore.
+
+ARGUMENTS
+    SERIAL                      Numero de serie del dispositivo ADB.
+                                Default: primer dispositivo detectado.
+
+OPTIONS
+    -O, --output <dir>          Directorio de salida del JSON.
+                                Default: ../diagnosticos
+    -h, --help                  Muestra esta ayuda y sale.
+
+REQUISITOS
+    - adb instalado (apt install adb / brew install android-platform-tools).
+    - Depuracion USB o ADB inalambrico habilitada en el dispositivo.
+    - Dispositivo conectado y autorizado (acepta el prompt RSA).
+
+EXAMPLES
+    bash diagnostico.sh
+    bash diagnostico.sh ABC123XYZ
+    bash diagnostico.sh -O /tmp
+    bash diagnostico.sh ABC123XYZ -O /tmp
+
+EXIT CODES
+    0    Diagnostico generado correctamente.
+    1    adb no instalado o sin dispositivo autorizado.
+EOF
+            exit 0 ;;
+        -O|--output) OUTPUT_DIR="$2"; shift 2 ;;
         -*) shift ;;
         *)  [[ -z "$SERIAL" ]] && SERIAL="$1"; shift ;;
     esac

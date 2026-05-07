@@ -4,6 +4,102 @@
 # Menu interactivo para tecnicos ResolveCore en Android
 # =============================================================================
 
+SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+DIAG_FLAGS=()
+OPT_FLAGS=()
+NIVEL_POSITIONAL=""
+
+show_help() {
+    cat <<'EOF'
+NAME
+    ResolveCore.sh - Menu interactivo de herramientas ResolveCore para Android
+
+SYNOPSIS
+    bash ResolveCore.sh                                          # menu
+    bash ResolveCore.sh [-O <dir>] [SERIAL]                      # forward diagnostico
+    bash ResolveCore.sh [--serial <id>] [--dry-run] [--confirm]
+                        [--undo] [NIVEL]                         # forward optimizacion
+
+DESCRIPTION
+    Sin flags: lanza menu TUI (diagnostico, optimizacion, ayuda, salir).
+    Con flags de modulo: salta el menu e invoca diagnostico.sh u
+    optimizacion.sh con esos flags. Util para automatizacion.
+
+OPTIONS DEL LAUNCHER
+    -h, --help        Muestra esta ayuda y sale.
+
+FLAGS DE DIAGNOSTICO (forward a diagnostico.sh)
+    -O, --output <dir>      Directorio salida JSON.
+    SERIAL                  Numero de serie ADB (posicional).
+
+FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
+    NIVEL                   ligero | estandar | rendimiento | extreme.
+    --serial <id>           Dispositivo ADB concreto.
+    --dry-run               Simula sin aplicar.
+    --confirm               Requerido para niveles destructivos.
+    --undo                  Reactiva apps deshabilitadas.
+
+MENU
+    1. DIAGNOSTICO    Lanza diagnostico.sh.
+    2. OPTIMIZACION   Lanza optimizacion.sh.
+    3. AYUDA          Guia rapida embebida.
+    4. SALIR          Cierra el programa.
+
+REQUISITOS
+    - Terminal interactiva (modo menu).
+    - adb instalado y dispositivo autorizado.
+
+EXAMPLES
+    # Menu
+    bash scripts/android/ResolveCore.sh
+
+    # Pass-through diagnostico
+    bash scripts/android/ResolveCore.sh -O /tmp ABC123
+
+    # Pass-through optimizacion
+    bash scripts/android/ResolveCore.sh --dry-run rendimiento
+    bash scripts/android/ResolveCore.sh --serial ABC123 --confirm extreme
+
+EXIT CODES
+    0    Salida normal o ayuda mostrada.
+    1    No es terminal interactiva (modo menu).
+    2    Combinacion invalida de flags.
+EOF
+}
+
+DIAG_HAS_SERIAL_OR_OUTPUT=false
+OPT_HAS_FLAG=false
+SERIAL_POS=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help) show_help; exit 0 ;;
+        -O|--output)  DIAG_FLAGS+=("--output" "${2:-}"); DIAG_HAS_SERIAL_OR_OUTPUT=true; shift 2 ;;
+        --serial)     OPT_FLAGS+=("--serial" "${2:-}"); OPT_HAS_FLAG=true; shift 2 ;;
+        --dry-run)    OPT_FLAGS+=("--dry-run"); OPT_HAS_FLAG=true; shift ;;
+        --confirm)    OPT_FLAGS+=("--confirm"); OPT_HAS_FLAG=true; shift ;;
+        --undo)       OPT_FLAGS+=("--undo"); OPT_HAS_FLAG=true; shift ;;
+        ligero|estandar|rendimiento|extreme) NIVEL_POSITIONAL="$1"; OPT_HAS_FLAG=true; shift ;;
+        *) SERIAL_POS="$1"; DIAG_HAS_SERIAL_OR_OUTPUT=true; shift ;;
+    esac
+done
+
+if [[ "$DIAG_HAS_SERIAL_OR_OUTPUT" == "true" && "$OPT_HAS_FLAG" == "true" ]]; then
+    echo "[X] Flags de diagnostico y optimizacion son mutuamente exclusivos." >&2
+    exit 2
+fi
+if [[ "$DIAG_HAS_SERIAL_OR_OUTPUT" == "true" ]]; then
+    DIAG_CMD=(bash "$SCRIPT_DIR_EARLY/diagnostico.sh" "${DIAG_FLAGS[@]}")
+    [[ -n "$SERIAL_POS" ]] && DIAG_CMD+=("$SERIAL_POS")
+    exec "${DIAG_CMD[@]}"
+fi
+if [[ "$OPT_HAS_FLAG" == "true" ]]; then
+    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh" "${OPT_FLAGS[@]}")
+    [[ -n "$NIVEL_POSITIONAL" ]] && OPT_CMD+=("$NIVEL_POSITIONAL")
+    exec "${OPT_CMD[@]}"
+fi
+
 if [[ ! -t 0 ]]; then
     echo "Este script debe ejecutarse en una terminal interactiva"
     echo "Ejemplo: bash scripts/android/ResolveCore.sh"

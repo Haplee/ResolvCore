@@ -21,8 +21,72 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -o pipefail
-OUTPUT_DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/diagnosticos}"
-SILENT="${2:-false}"
+
+# ── Parseo de argumentos ────────────────────────────────────────────────────
+INSTALL_DEPS=false
+AUTO_INSTALL=false
+OUTPUT_DIR=""
+SILENT="false"
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -O|--output)            OUTPUT_DIR="${2:-}"; shift 2 ;;
+        -S|--silent)            SILENT="true"; shift ;;
+        -I|--install|--install-deps) INSTALL_DEPS=true; shift ;;
+        -A|--auto-install)      INSTALL_DEPS=true; AUTO_INSTALL=true; shift ;;
+        -h|--help)
+            cat <<EOF
+NAME
+    diagnostico.sh - Diagnostico de sistema Linux para ResolveCore
+
+SYNOPSIS
+    bash diagnostico.sh [-O <dir>] [-S] [-I] [-A] [-h]
+
+DESCRIPTION
+    Recoge metricas de hardware (CPU, RAM, discos con SMART, bateria, GPU,
+    temperatura), sistema operativo (version, uptime, actualizaciones,
+    integridad de paquetes, plan energia), drivers/modulos, red (latencia,
+    DNS, perdida paquetes) y seguridad (firewall, antivirus, SELinux).
+    Genera JSON estructurado y un informe HTML autocontenido.
+
+OPTIONS
+    -O, --output <dir>          Directorio de salida del JSON/HTML.
+                                Default: <repo>/scripts/diagnosticos
+    -S, --silent                Suprime salida por consola.
+    -I, --install               Detecta paquetes opcionales faltantes y los
+                                instala via apt/dnf/yum/pacman/zypper. Pide
+                                confirmacion interactiva.
+                                (Alias retro-compat: --install-deps)
+    -A, --auto-install          Igual que -I sin confirmar.
+    -h, --help                  Muestra esta ayuda y sale.
+
+PAQUETES OPCIONALES
+    lm-sensors                  Temperatura CPU/GPU.
+    smartmontools               S.M.A.R.T. extendido (sectores, horas).
+    pciutils                    Deteccion GPU (lspci).
+    nvidia-utils                GPU NVIDIA via nvidia-smi.
+    jq                          Validacion JSON generado.
+    bc, iputils-ping, ufw, iproute2
+
+EXAMPLES
+    bash diagnostico.sh
+    bash diagnostico.sh -O /tmp
+    bash diagnostico.sh -S -O /tmp -I
+    sudo bash diagnostico.sh -A -S
+    ssh user@host 'bash -s' < diagnostico.sh
+
+EXIT CODES
+    0    Diagnostico generado correctamente.
+    1    JSON generado no valido (jq empty fallo).
+EOF
+            exit 0 ;;
+        *) POSITIONAL+=("$1"); shift ;;
+    esac
+done
+# Posicionales legacy: bash diagnostico.sh <output_dir> <silent>
+[[ -z "$OUTPUT_DIR" && -n "${POSITIONAL[0]:-}" ]] && OUTPUT_DIR="${POSITIONAL[0]}"
+[[ -n "${POSITIONAL[1]:-}" ]] && SILENT="${POSITIONAL[1]}"
+[[ -z "$OUTPUT_DIR" ]] && OUTPUT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/diagnosticos"
 
 # ── Colores ──────────────────────────────────────────────────────────────────
 if [[ -t 1 ]] && [[ "$SILENT" != "true" ]]; then
@@ -57,6 +121,89 @@ fi
 header
 if [[ "$is_admin" == "false" ]] && [[ "$SILENT" != "true" ]]; then
     echo -e "  ${YELLOW}⚠  Sin privilegios de root — algunas métricas serán limitadas.${NC}"
+    echo ""
+fi
+
+# ── Instalación opcional de dependencias ────────────────────────────────────
+# Tabla cmd → paquete por gestor. Si el comando ya existe, no se reinstala.
+install_dependencies() {
+    local pm="" install_cmd="" update_cmd=""
+    if   command -v apt-get  &>/dev/null; then pm="apt";    update_cmd="apt-get update -qq";          install_cmd="apt-get install -y"
+    elif command -v dnf      &>/dev/null; then pm="dnf";    update_cmd="dnf -y makecache";            install_cmd="dnf install -y"
+    elif command -v yum      &>/dev/null; then pm="yum";    update_cmd="yum -y makecache";            install_cmd="yum install -y"
+    elif command -v pacman   &>/dev/null; then pm="pacman"; update_cmd="pacman -Sy --noconfirm";      install_cmd="pacman -S --noconfirm --needed"
+    elif command -v zypper   &>/dev/null; then pm="zypper"; update_cmd="zypper refresh";              install_cmd="zypper install -y"
+    else
+        warn "Gestor de paquetes no soportado. Instala manualmente: lm-sensors smartmontools pciutils jq bc"
+        return 1
+    fi
+
+    # cmd:apt:dnf:pacman:zypper  (yum hereda dnf)
+    local deps=(
+        "sensors:lm-sensors:lm_sensors:lm_sensors:sensors"
+        "smartctl:smartmontools:smartmontools:smartmontools:smartmontools"
+        "lspci:pciutils:pciutils:pciutils:pciutils"
+        "jq:jq:jq:jq:jq"
+        "bc:bc:bc:bc:bc"
+        "ping:iputils-ping:iputils:iputils:iputils"
+        "ufw:ufw:ufw:ufw:ufw"
+        "ip:iproute2:iproute:iproute2:iproute2"
+    )
+
+    local missing=() pkg_to_install=()
+    for entry in "${deps[@]}"; do
+        IFS=':' read -r cmd p_apt p_dnf p_pac p_zyp <<<"$entry"
+        if ! command -v "$cmd" &>/dev/null; then
+            local pkg=""
+            case "$pm" in
+                apt)         pkg="$p_apt" ;;
+                dnf|yum)     pkg="$p_dnf" ;;
+                pacman)      pkg="$p_pac" ;;
+                zypper)      pkg="$p_zyp" ;;
+            esac
+            missing+=("$cmd")
+            pkg_to_install+=("$pkg")
+        fi
+    done
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        ok "Dependencias: todas presentes"
+        return 0
+    fi
+
+    section "Dependencias — paquetes faltantes detectados"
+    warn "Faltan: ${missing[*]}"
+    echo -e "    ${GRAY}Paquetes a instalar (${pm}): ${pkg_to_install[*]}${NC}"
+
+    if [[ "$AUTO_INSTALL" != "true" ]]; then
+        read -r -p "    ¿Proceder con la instalación? [y/N] " _ans
+        [[ "$_ans" =~ ^[YySs]$ ]] || { warn "Instalación cancelada"; return 1; }
+    fi
+
+    local sudo_pfx=""
+    [[ "$is_admin" == "false" ]] && sudo_pfx="sudo "
+    if [[ "$is_admin" == "false" ]] && ! command -v sudo &>/dev/null; then
+        fail "Se requiere root o sudo para instalar paquetes"
+        return 1
+    fi
+
+    eval "$sudo_pfx$update_cmd" || warn "Fallo en update — continúo con install"
+    if eval "$sudo_pfx$install_cmd ${pkg_to_install[*]}"; then
+        ok "Paquetes instalados correctamente"
+    else
+        fail "Error al instalar paquetes"
+        return 1
+    fi
+
+    # sensors-detect tras instalar lm-sensors (modo no interactivo)
+    if [[ " ${missing[*]} " == *" sensors "* ]] && command -v sensors-detect &>/dev/null; then
+        ok "Ejecutando sensors-detect --auto"
+        eval "${sudo_pfx}sensors-detect --auto" >/dev/null 2>&1 || warn "sensors-detect terminó con avisos"
+    fi
+}
+
+if [[ "$INSTALL_DEPS" == "true" ]]; then
+    install_dependencies
     echo ""
 fi
 
@@ -156,7 +303,7 @@ if command -v lsblk &>/dev/null; then
         else
             disks_list="$disks_list,{\"modelo\":\"$(json_escape "$d_model")\",\"tipo\":\"$dtype\",\"capacidad_gb\":$d_gb,\"smart\":\"$smart\",\"bus\":\"$d_type\",\"smart_atributos\":$smart_attrs_json}"
         fi
-    done < <(lsblk -d -o NAME,SIZE,TYPE,MODEL 2>/dev/null | tail -n +2 | grep -E "disk|nvme")
+    done < <(lsblk -d -b -o NAME,SIZE,TYPE,MODEL 2>/dev/null | tail -n +2 | grep -E "disk|nvme")
     disks_json="[$disks_list]"
 fi
 
@@ -279,7 +426,7 @@ fi
 os_arch=$(uname -m)
 os_build=$(uname -r)
 uptime_s=$(cat /proc/uptime 2>/dev/null | awk '{print int($1)}' || echo "0")
-uptime_h=$(echo "scale=1; $uptime_s / 3600" | bc 2>/dev/null || echo "0")
+uptime_h=$(LC_ALL=C awk "BEGIN{printf \"%.1f\", ${uptime_s:-0}/3600}")
 
 ok "OS: $os_name (build $os_build, $os_arch)"
 ok "Uptime: ${uptime_h}h"
@@ -304,7 +451,10 @@ fi
 # Integridad del sistema (check de paquetes)
 sfc_issues=0
 if command -v dpkg &>/dev/null; then
-    sfc_issues=$(dpkg -l | grep -c "^..[^i]" 2>/dev/null || echo "0")
+    # Solo paquetes con estado distinto de "ii" (correctamente instalado).
+    # Filtra cabeceras de dpkg-list (||/, +++, Desired=...) por longitud y formato.
+    sfc_issues=$(dpkg -l 2>/dev/null | awk '/^[a-zA-Z]{2,3}[[:space:]]/ && $1 != "ii" {c++} END{print c+0}')
+    [[ "$sfc_issues" =~ ^[0-9]+$ ]] || sfc_issues=0
 elif command -v rpm &>/dev/null; then
     sfc_issues=$(rpm -Va 2>/dev/null | wc -l || echo "0")
 fi
@@ -540,7 +690,17 @@ if [[ -f "$_tmpl" ]]; then
             printf ';\n'
             tail -n +"$((_split + 1))" "$_tmpl"
         } > "$_html_file"
-        command -v xdg-open &>/dev/null && xdg-open "$_html_file" 2>/dev/null &
+        # Abrir con navegador (prioriza $BROWSER, luego comunes; xdg-open como último recurso
+        # porque el default del sistema puede ser Text Editor).
+        _opener=""
+        for _b in "$BROWSER" sensible-browser firefox google-chrome chromium chromium-browser brave-browser; do
+            [[ -n "$_b" ]] && command -v "$_b" &>/dev/null && { _opener="$_b"; break; }
+        done
+        if [[ -n "$_opener" ]]; then
+            "$_opener" "$_html_file" >/dev/null 2>&1 &
+        elif command -v xdg-open &>/dev/null; then
+            xdg-open "$_html_file" 2>/dev/null &
+        fi
     fi
 fi
 
