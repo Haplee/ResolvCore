@@ -116,4 +116,53 @@ _[escribir aquí]_
 
 ---
 
-*Última actualización: 6 de mayo de 2026*
+## Apéndice — Glosario técnico
+
+### ¿Qué es un VPS?
+
+**VPS** (*Virtual Private Server*, servidor privado virtual) es una máquina virtual con
+recursos dedicados (CPU, RAM, disco, IP pública) que se aloja sobre un servidor físico
+compartido por varios clientes mediante un hipervisor (KVM, Xen, VMware). A diferencia
+del hosting compartido, ofrece:
+
+- Acceso `root` / SSH completo.
+- Sistema operativo a elegir (Ubuntu, Debian, AlmaLinux…).
+- IP pública fija y puertos arbitrarios.
+- Aislamiento real frente a otros tenants.
+
+Frente a un servidor dedicado físico, el VPS es más barato y escalable; frente a la nube
+gestionada (PaaS), exige administrar el SO pero da control total.
+
+### ¿Es necesario un VPS en ResolveCore?
+
+**Sí, para el despliegue final del TFG.** Lo justifica la propia arquitectura del proyecto:
+
+| Componente | Requisito | ¿Hosting compartido? | ¿VPS? |
+|------------|-----------|----------------------|-------|
+| WordPress (frontend soporte) | PHP-FPM + MariaDB | Sí | Sí |
+| MantisBT (REST API + cron) | PHP + cron + acceso a BD | Limitado | Sí |
+| Plugin `rc-mantisbt` (llamadas REST internas) | URLs internas accesibles | No fiable | Sí |
+| Generador PDF (wkhtmltopdf o DomPDF) | Binario/sistema instalable | No (wkhtmltopdf) | Sí |
+| Sincronización CVE/NVD (cron semanal) | `cron` de sistema, salida a internet | No | Sí |
+| AnyDesk + scripts diagnóstico | Ejecución del lado del cliente | N/A | N/A |
+
+Resumen: cualquier módulo que requiera **cron de sistema, binarios externos
+(wkhtmltopdf), o llamadas REST entre WordPress y MantisBT en el mismo host** descarta
+el hosting compartido. Un VPS es la opción mínima viable.
+
+### Opciones evaluadas para el TFG
+
+1. **Oracle Cloud Free Tier (VM Ampere ARM, 4 vCPU / 24 GB RAM gratis indefinido).**
+   Pros: coste 0 €, IP pública, recursos sobrados. Contras: alta inicial estricta, ARM
+   exige paquetes compatibles.
+2. **VPS de pago económico (Hetzner CX11, Contabo VPS S, OVH VPS Starter — 4–7 €/mes).**
+   Pros: x86_64 estándar, sin restricciones. Contras: coste mensual.
+3. **WSL/DevKinsta local.** Solo para desarrollo y pruebas; no sirve para defensa con URL
+   pública.
+
+> **Pregunta abierta al tutor (Bloque A):** ¿se exige URL pública en defensa o basta con
+> demo local? La respuesta determina si el VPS es obligatorio o opcional para la entrega.
+
+---
+
+*Última actualización: 7 de mayo de 2026*
