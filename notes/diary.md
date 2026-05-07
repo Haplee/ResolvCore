@@ -17,3 +17,10 @@
 - Añadida una 'C' entrelazada en el símbolo del logotipo para representar 'Core'. Se ha utilizado el color secundario representativo de la marca (azul #0099ff) para crear contraste y dinamismo con la 'R' verde principal.
 - Modificado el color de la 'C' entrelazada en los logotipos: se ha cambiado el azul secundario por el naranja vibrante (#ff4b1f a #ff6b35) que corresponde a la variable '--rc-warn' del tema, dándole un contraste más enérgico y manteniendo la coherencia con la paleta de la web.
 - Color de la 'C' del logo cambiado nuevamente: se ha asignado el color del texto principal de la interfaz web (gradiente blanco/plata para fondos oscuros y gris oscuro para fondos claros). Esto relaciona directamente la 'C' con la palabra 'Resolv' y la 'R' verde con 'Core'.
+
+## [2026-05-07] — Actualización de README y Marca
+
+- Renovado el README.md con los nuevos logotipos (light/dark) y una estructura más profesional.
+- Añadido diagrama de flujo con Mermaid para explicar el ciclo operativo de ResolvCore.
+- Actualizadas las redes sociales y el stack tecnológico para reflejar el estado actual del proyecto.
+- Estado: Documentación principal finalizada y profesionalizada.
