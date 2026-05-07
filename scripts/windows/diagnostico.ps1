@@ -4,18 +4,23 @@
     ResolveCore - Diagnostico completo de sistema Windows
 
 .DESCRIPTION
-    Recoge metricas completas de hardware, software, red y seguridad.
-    Genera un archivo JSON compatible con ResolveCore.
+    Recoge metricas de hardware, software, red y seguridad.
+    Genera JSON estructurado consumible por el generador de informes.
+
+    Exit codes:
+      0  ok
+      1  error de escritura del informe
+      2  error fatal en recogida de datos
 
 .PARAMETER OutputDir
-    Directorio donde se guardara diagnostico
+    Directorio donde se guardara el diagnostico (default: ../diagnosticos)
 
 .PARAMETER Silent
     Suprime la salida por consola
 
 .EXAMPLE
     .\diagnostico.ps1
-    .\diagnostico.ps1 -Silent
+    .\diagnostico.ps1 -Silent -OutputDir C:\reports
 #>
 
 [CmdletBinding()]
@@ -28,7 +33,14 @@ if (-not $OutputDir) {
     $OutputDir = Join-Path (Split-Path $PSScriptRoot -Parent) "diagnosticos"
 }
 
-$ErrorActionPreference = 'SilentlyContinue'
+# Captura no-fatal: cada bloque hace su propio try/catch local.
+# 'SilentlyContinue' silencia tambien bugs reales; usamos 'Continue' y try/catch granular.
+$ErrorActionPreference = 'Continue'
+
+function Invoke-Safe {
+    param([scriptblock]$Block, $Default = $null)
+    try { & $Block } catch { return $Default }
+}
 
 # Helpers de salida
 
@@ -494,11 +506,11 @@ $report['software'] = [ordered]@{
 
 Write-Section 'Rendimiento'
 
-$cpuLoad = [math]::Round(((Get-CimInstance Win32_Processor) | Measure-Object LoadPercentage -Average).Average, 0)
+# Reusamos $cpus (linea 114) y $os (linea 70) para evitar nuevas consultas WMI
+$cpuLoad = [math]::Round(($cpus | Measure-Object LoadPercentage -Average).Average, 0)
 Write-Ok "CPU: $cpuLoad%"
 
-$osMem = Get-CimInstance Win32_OperatingSystem
-$memUse = [math]::Round(($osMem.TotalVisibleMemorySize - $osMem.FreePhysicalMemory) / $osMem.TotalVisibleMemorySize * 100, 1)
+$memUse = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize * 100, 1)
 Write-Ok "Memoria: $memUse%"
 
 Write-Host "    Procesos (memoria):" -ForegroundColor Gray
@@ -587,23 +599,37 @@ $report['_meta'] = [ordered]@{
 # OUTPUT JSON
 # ============================================
 
-if (-not (Test-Path $OutputDir)) {
-    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+try {
+    if (-not (Test-Path $OutputDir)) {
+        New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+    }
+} catch {
+    Write-Fail "No se pudo crear directorio salida: $OutputDir"
+    exit 1
 }
 
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $outFile = Join-Path $OutputDir "diagnostico_$($env:COMPUTERNAME)_$timestamp.json"
 
-$report | ConvertTo-Json -Depth 10 | Out-File -FilePath $outFile -Encoding UTF8
+try {
+    $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $outFile -Encoding UTF8 -ErrorAction Stop
+} catch {
+    Write-Fail "Error escribiendo JSON: $($_.Exception.Message)"
+    exit 1
+}
 
-# Generar informe HTML
+# Informe HTML (best-effort: el JSON es la fuente autoritativa)
 $templatePath = Join-Path $PSScriptRoot '../informe.html'
 $htmlFile = $outFile -replace '\.json$', '.html'
 if (Test-Path $templatePath) {
-    $jsonContent = Get-Content $outFile -Raw -Encoding UTF8
-    $html = (Get-Content $templatePath -Raw -Encoding UTF8) -replace '__JSON_DATA__', $jsonContent
-    $html | Out-File -FilePath $htmlFile -Encoding UTF8
-    if (-not $Silent) { Start-Process $htmlFile }
+    try {
+        $jsonContent = Get-Content $outFile -Raw -Encoding UTF8
+        $html = (Get-Content $templatePath -Raw -Encoding UTF8) -replace '__JSON_DATA__', $jsonContent
+        $html | Out-File -FilePath $htmlFile -Encoding UTF8 -ErrorAction Stop
+        if (-not $Silent) { Start-Process $htmlFile }
+    } catch {
+        if (-not $Silent) { Write-Warn "No se pudo generar HTML: $($_.Exception.Message)" }
+    }
 }
 
 if (-not $Silent) {
@@ -615,4 +641,6 @@ if (-not $Silent) {
     Write-Host ''
 }
 
-return $outFile
+# Imprimimos el path para captura por scripts padre, y exit 0 explicito
+Write-Output $outFile
+exit 0

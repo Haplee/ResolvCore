@@ -9,7 +9,13 @@
       "PowerShell(Compress-Archive *)",
       "PowerShell(Get-Item *)",
       "PowerShell(Copy-Item *)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(grep -nB1 '<hr class=\"rc-section-divider\">\\\\|</main>' \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\")",
+      "Bash(command -v php)",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/functions.php\")",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\")",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/page-resolvecore.php\")",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-landing.php\")"
     ]
   }
 }

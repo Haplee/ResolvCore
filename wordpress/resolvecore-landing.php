@@ -32,7 +32,8 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Seguridad: evitar acceso directo
    ============================================================ */
 function resolvecore_enqueue_assets() {
     // Google Fonts (solo se carga si el shortcode está en la página actual)
-    if ( has_shortcode( get_post()->post_content ?? '', 'resolvecore_landing' ) ) {
+    $post = get_post();
+    if ( $post && has_shortcode( (string) $post->post_content, 'resolvecore_landing' ) ) {
         wp_enqueue_style(
             'resolvecore-fonts',
             'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap',
@@ -42,6 +43,18 @@ function resolvecore_enqueue_assets() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_enqueue_assets' );
+
+/* Preconnect a Google Fonts solo si shortcode presente — mejora LCP */
+function resolvecore_landing_resource_hints( $urls, $relation ) {
+    if ( $relation !== 'preconnect' ) return $urls;
+    $post = get_post();
+    if ( $post && has_shortcode( (string) $post->post_content, 'resolvecore_landing' ) ) {
+        $urls[] = [ 'href' => 'https://fonts.googleapis.com', 'crossorigin' ];
+        $urls[] = [ 'href' => 'https://fonts.gstatic.com',    'crossorigin' ];
+    }
+    return $urls;
+}
+add_filter( 'wp_resource_hints', 'resolvecore_landing_resource_hints', 10, 2 );
 
 /* ============================================================
    2. CSS INLINE — se inyecta una sola vez en el <head>
@@ -509,10 +522,10 @@ function resolvecore_landing_shortcode( $atts ) {
   <footer class="rc-footer" id="rc-contacto">
     <div>
       <div class="rc-footer-logo">RESOLVECORE</div>
-      <div class="rc-footer-copy" style="margin-top:6px">© <?php echo date('Y'); ?> Francisco Vidal Mateo · TFG ASIR</div>
+      <div class="rc-footer-copy" style="margin-top:6px">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG ASIR</div>
     </div>
     <ul>
-      <li><a href="https://github.com/Haplee" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer">GitHub</a></li>
       <li><a href="#">Documentación</a></li>
       <li><a href="#">Privacidad</a></li>
     </ul>
