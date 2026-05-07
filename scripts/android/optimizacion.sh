@@ -26,28 +26,66 @@ OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
 
 usage() {
     cat <<EOF
-Uso: $0 [opciones] [nivel]
+NAME
+    optimizacion.sh - Optimizacion de dispositivo Android via ADB
 
-Niveles: ligero | estandar | rendimiento | extreme  (default: estandar)
+SYNOPSIS
+    bash optimizacion.sh [OPTIONS] [NIVEL]
 
-Opciones:
-  --serial <id>    Dispositivo concreto (default: primero detectado)
-  --dry-run        Simula sin aplicar cambios
-  --confirm        Requerido para acciones destructivas (rendimiento/extreme)
-  --undo           Reactiva apps deshabilitadas en sesiones previas
-  --output <dir>   Directorio del informe JSON
-  -h, --help       Muestra esta ayuda
+DESCRIPTION
+    Aplica optimizaciones por niveles al dispositivo Android conectado via
+    ADB. Usa pm trim-caches (NO 'pm clear' que borra datos de usuario).
+    Genera JSON con acciones aplicadas para auditoria. Permite reactivar
+    apps deshabilitadas con --undo. Requiere --confirm para niveles
+    destructivos (rendimiento, extreme).
+
+ARGUMENTS
+    NIVEL                       Nivel a aplicar (default: estandar):
+                                  ligero       Solo trim-caches.
+                                  estandar     Anterior + servicios no
+                                               criticos.
+                                  rendimiento  Anterior + deshabilitar
+                                               bloatware (requiere --confirm).
+                                  extreme      Anterior + ajustes agresivos
+                                               (requiere --confirm).
+
+OPTIONS
+    --serial <id>               Dispositivo ADB concreto.
+                                Default: primero detectado.
+    --dry-run                   Simula sin aplicar cambios.
+    --confirm                   Requerido para niveles destructivos.
+    --undo                      Reactiva apps deshabilitadas en sesiones
+                                previas (lee log de acciones).
+    -O, --output <dir>          Directorio del informe JSON.
+                                Default: ../diagnosticos
+    -h, --help                  Muestra esta ayuda y sale.
+
+REQUISITOS
+    - adb instalado y dispositivo autorizado.
+    - Depuracion USB activa.
+
+EXAMPLES
+    bash optimizacion.sh --dry-run
+    bash optimizacion.sh ligero
+    bash optimizacion.sh rendimiento --confirm
+    bash optimizacion.sh --undo
+    bash optimizacion.sh --serial ABC123 --confirm extreme
+
+EXIT CODES
+    0    Optimizacion aplicada correctamente.
+    1    adb no instalado o sin dispositivo autorizado.
+    2    Opcion no reconocida.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --serial)  SERIAL="${2:-}"; shift 2 ;;
-        --output)  OUTPUT_DIR="${2:-}"; shift 2 ;;
-        --dry-run) DRY_RUN=true; shift ;;
-        --confirm) CONFIRM=true; shift ;;
-        --undo)    UNDO=true; shift ;;
-        -h|--help) usage; exit 0 ;;
+        --serial)     SERIAL="${2:-}"; shift 2 ;;
+        -O|--output)  OUTPUT_DIR="${2:-}"; shift 2 ;;
+        --dry-run)    DRY_RUN=true; shift ;;
+        --confirm)    CONFIRM=true; shift ;;
+        --undo)       UNDO=true; shift ;;
+        -h|--help)    usage; exit 0 ;;
         ligero|estandar|rendimiento|extreme) NIVEL="$1"; shift ;;
         *) echo "Opción no reconocida: $1" >&2; usage; exit 2 ;;
     esac

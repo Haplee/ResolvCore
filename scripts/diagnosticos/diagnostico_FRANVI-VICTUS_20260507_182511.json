@@ -1,0 +1,639 @@
+﻿{
+    "sistema":  {
+                    "nombre":  "Microsoft Windows 11 Pro",
+                    "version":  "10.0.26200",
+                    "build":  "26200",
+                    "arquitectura":  "64 bits",
+                    "install_date":  "\/Date(1759686260000)\/",
+                    "last_boot":  "\/Date(1778136630500)\/",
+                    "uptime_horas":  9.6,
+                    "uptime_dias":  0,
+                    "windows_directory":  "C:\\WINDOWS",
+                    "locale":  "0c0a",
+                    "mui_languages":  [
+                                          "es-ES"
+                                      ],
+                    "timezone":  120,
+                    "serial_number":  "00330-80000-00000-AA140",
+                    "installation_type":  null,
+                    "free_physical_mb":  5,
+                    "free_virtual_mb":  10,
+                    "parches_count":  4
+                },
+    "cpu":  {
+                "cantidad":  null,
+                "nucleos_total":  8,
+                "hilos_total":  16,
+                "processors":  [
+                                   {
+                                       "nombre":  "AMD Ryzen 7 5800H with Radeon Graphics",
+                                       "nucleos":  8,
+                                       "hilos":  16,
+                                       "velocidad_mhz":  3201,
+                                       "velocidad_actual":  3201,
+                                       "cache_l1_kb":  null,
+                                       "cache_l2_kb":  4096,
+                                       "cache_l3_kb":  16384,
+                                       "fabricante":  "AuthenticAMD",
+                                       "processor_id":  "178BFBFF00A50F00"
+                                   }
+                               ]
+            },
+    "memoria":  {
+                    "total_gb":  15.34,
+                    "disponible_gb":  4.77,
+                    "usada_gb":  10.57,
+                    "fabricante":  "HP",
+                    "modelo":  "Victus by HP Laptop 16-e0xxx",
+                    "modulos":  [
+                                    {
+                                        "slot":  "Bottom - Slot 1 (left)",
+                                        "capacidad_gb":  8,
+                                        "velocidad":  3200,
+                                        "tipo":  "DDR4",
+                                        "fabricante":  "Hynix",
+                                        "serial":  "25A75681"
+                                    },
+                                    {
+                                        "slot":  "Bottom - Slot 2 (right)",
+                                        "capacidad_gb":  8,
+                                        "velocidad":  3200,
+                                        "tipo":  "DDR4",
+                                        "fabricante":  "Hynix",
+                                        "serial":  "25A757EA"
+                                    }
+                                ]
+                },
+    "smart":  [
+                  {
+                      "temperatura_c":  35,
+                      "desgaste_pct":  0,
+                      "read_errors":  null,
+                      "write_errors":  null,
+                      "horas_encendido":  null
+                  },
+                  {
+                      "temperatura_c":  33,
+                      "desgaste_pct":  0,
+                      "read_errors":  null,
+                      "write_errors":  null,
+                      "horas_encendido":  null
+                  }
+              ],
+    "discos":  {
+                   "fisicos":  [
+                                   {
+                                       "modelo":  "SK hynix PC711 HFS512GDE9X073N",
+                                       "capacidad_gb":  476.9,
+                                       "tipo":  "HDD",
+                                       "serial":  "ACE4_2E00_1689_A52D_2EE4_AC00_0000_0001.",
+                                       "firmware":  "HPS0",
+                                       "bus":  "SCSI"
+                                   },
+                                   {
+                                       "modelo":  "CT1000P3SSD8",
+                                       "capacidad_gb":  931.5,
+                                       "tipo":  "SSD",
+                                       "serial":  "6479_A779_6000_002A.",
+                                       "firmware":  "P9CR30A",
+                                       "bus":  "SCSI"
+                                   }
+                               ],
+                   "logicos":  [
+                                   {
+                                       "letra":  "C",
+                                       "capacidad_gb":  930.6,
+                                       "libre_gb":  474.6,
+                                       "usado_pct":  49,
+                                       "sistema_archivos":  null
+                                   }
+                               ]
+               },
+    "gpu":  [
+                {
+                    "nombre":  "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+                    "tipo":  "NVIDIA",
+                    "driver":  "32.0.15.9174",
+                    "vram_mb":  4095,
+                    "resolucion":  "x",
+                    "refresh":  null,
+                    "estado":  "OK"
+                },
+                {
+                    "nombre":  "AMD Radeon(TM) Graphics",
+                    "tipo":  "AMD",
+                    "driver":  "31.0.12044.3",
+                    "vram_mb":  512,
+                    "resolucion":  "1920x1080",
+                    "refresh":  144,
+                    "estado":  "OK"
+                }
+            ],
+    "red":  {
+                "adaptadores":  [
+                                    {
+                                        "nombre":  "Realtek Gaming GbE Family Controller",
+                                        "mac":  "A8:B1:3B:71:E2:E1",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  1000000000
+                                    },
+                                    {
+                                        "nombre":  "Bluetooth Device (Personal Area Network)",
+                                        "mac":  "4C:D5:77:E1:D8:1C",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  3000000
+                                    },
+                                    {
+                                        "nombre":  "WAN Miniport (IP)",
+                                        "mac":  "08:9E:20:52:41:53",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  null
+                                    },
+                                    {
+                                        "nombre":  "WAN Miniport (IPv6)",
+                                        "mac":  "0A:EE:20:52:41:53",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  null
+                                    },
+                                    {
+                                        "nombre":  "WAN Miniport (Network Monitor)",
+                                        "mac":  "0A:79:20:52:41:53",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  null
+                                    },
+                                    {
+                                        "nombre":  "Realtek RTL8852AE WiFi 6 802.11ax PCIe Adapter",
+                                        "mac":  "4C:D5:77:E1:D8:1B",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  9223372036854775807
+                                    },
+                                    {
+                                        "nombre":  "Microsoft Wi-Fi Direct Virtual Adapter",
+                                        "mac":  "4E:D5:77:E1:D8:1B",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  9223372036854775807
+                                    },
+                                    {
+                                        "nombre":  "Microsoft Wi-Fi Direct Virtual Adapter #2",
+                                        "mac":  "CE:D5:77:E1:D8:1B",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  9223372036854775807
+                                    },
+                                    {
+                                        "nombre":  "Npcap Loopback Adapter",
+                                        "mac":  "02:00:4C:4F:4F:50",
+                                        "tipo":  "Ethernet 802.3",
+                                        "velocidad":  1215752192
+                                    }
+                                ],
+                "ip":  [
+                           {
+                               "interfaz":  "Ethernet",
+                               "ipv4":  "192.168.1.144",
+                               "gateway":  "192.168.1.1",
+                               "dns":  "2001:4860:4860::8888, 8.8.8.8, 8.8.4.4"
+                           },
+                           {
+                               "interfaz":  "Wi-Fi",
+                               "ipv4":  "169.254.81.147",
+                               "gateway":  "",
+                               "dns":  "46.6.113.34, 212.230.135.1"
+                           },
+                           {
+                               "interfaz":  "Conexión de red Bluetooth",
+                               "ipv4":  "169.254.234.217",
+                               "gateway":  "",
+                               "dns":  "fec0:0:0:ffff::1, fec0:0:0:ffff::2, fec0:0:0:ffff::3"
+                           }
+                       ]
+            },
+    "placa_base":  {
+                       "producto":  "88ED",
+                       "fabricante":  "HP",
+                       "serial":  "PLHYH018JGA0GM",
+                       "bios_nombre":  "F.18",
+                       "bios_version":  [
+                                            "HPQOEM - 1072009",
+                                            "F.18",
+                                            "American Megatrends - 50013"
+                                        ],
+                       "bios_fecha":  "\/Date(1690243200000)\/",
+                       "bios_uuid":  null
+                   },
+    "bateria":  {
+                    "carga_pct":  100,
+                    "estado":  2,
+                    "voltage":  17005,
+                    "desgaste_pct":  null,
+                    "ciclos":  127
+                },
+    "servicios":  {
+                      "total":  297,
+                      "iniciados":  124,
+                      "detenidos":  173,
+                      "automaticos_detenidos":  5,
+                      "criticos":  [
+                                       {
+                                           "nombre":  "wuauserv",
+                                           "estado":  "Stopped",
+                                           "inicio":  "Manual"
+                                       },
+                                       {
+                                           "nombre":  "WSearch",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "Spooler",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "BITS",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "Dnscache",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "Dhcp",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "LanmanServer",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "EventLog",
+                                           "estado":  "Running",
+                                           "inicio":  "Automatic"
+                                       },
+                                       {
+                                           "nombre":  "Netlogon",
+                                           "estado":  "Stopped",
+                                           "inicio":  "Manual"
+                                       },
+                                       {
+                                           "nombre":  "PlugPlay",
+                                           "estado":  "Running",
+                                           "inicio":  "Manual"
+                                       }
+                                   ]
+                  },
+    "software":  {
+                     "cantidad":  50,
+                     "lista":  [
+                                   {
+                                       "nombre":  "AJAZZ AK820Pro 三模RGB Keyboard V1.0 version V1.0",
+                                       "version":  "V1.0",
+                                       "proveedor":  "深圳市黑爵同创电子科技有限公司, Inc."
+                                   },
+                                   {
+                                       "nombre":  "AJAZZ Driver version 1.2.3",
+                                       "version":  "1.2.3",
+                                       "proveedor":  "AJAZZ Driver Software, Inc."
+                                   },
+                                   {
+                                       "nombre":  "Android Studio",
+                                       "version":  "2025.3",
+                                       "proveedor":  "Google LLC"
+                                   },
+                                   {
+                                       "nombre":  "Antigravity (User)",
+                                       "version":  "1.23.2",
+                                       "proveedor":  "Google"
+                                   },
+                                   {
+                                       "nombre":  "AnycubicSlicerNext",
+                                       "version":  null,
+                                       "proveedor":  "Anycubic"
+                                   },
+                                   {
+                                       "nombre":  "Application Verifier x64 External Package (DesktopEditions)",
+                                       "version":  "10.1.26100.7705",
+                                       "proveedor":  "Microsoft"
+                                   },
+                                   {
+                                       "nombre":  "Application Verifier x64 External Package (OnecoreUAP)",
+                                       "version":  "10.1.26100.7705",
+                                       "proveedor":  "Microsoft"
+                                   },
+                                   {
+                                       "nombre":  "Battle.net",
+                                       "version":  null,
+                                       "proveedor":  "Blizzard Entertainment"
+                                   },
+                                   {
+                                       "nombre":  "Battlefield™ 6",
+                                       "version":  "1.0.420.18457",
+                                       "proveedor":  "Electronic Arts"
+                                   },
+                                   {
+                                       "nombre":  "DiagnosticsHub_CollectionService",
+                                       "version":  "17.14.36412",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Discord",
+                                       "version":  "1.0.9235",
+                                       "proveedor":  "Discord Inc."
+                                   },
+                                   {
+                                       "nombre":  "EA app",
+                                       "version":  "13.680.0.6193",
+                                       "proveedor":  "Electronic Arts"
+                                   },
+                                   {
+                                       "nombre":  "EA app",
+                                       "version":  "13.680.0.6193",
+                                       "proveedor":  "Electronic Arts"
+                                   },
+                                   {
+                                       "nombre":  "Eclipse Temurin JDK con Hotspot 17.0.18+8 (x64)",
+                                       "version":  "17.0.18.8",
+                                       "proveedor":  "Eclipse Adoptium"
+                                   },
+                                   {
+                                       "nombre":  "Eclipse Temurin JDK con Hotspot 21.0.10+7 (x64)",
+                                       "version":  "21.0.10.7",
+                                       "proveedor":  "Eclipse Adoptium"
+                                   },
+                                   {
+                                       "nombre":  "Eclipse Temurin JDK con Hotspot 25.0.2+10 (x64)",
+                                       "version":  "25.0.2.10",
+                                       "proveedor":  "Eclipse Adoptium"
+                                   },
+                                   {
+                                       "nombre":  "Epic Games Launcher",
+                                       "version":  "1.3.155.0",
+                                       "proveedor":  "Epic Games, Inc."
+                                   },
+                                   {
+                                       "nombre":  "Epic Games Launcher Prerequisites (x64)",
+                                       "version":  "1.0.0.0",
+                                       "proveedor":  "Epic Games, Inc."
+                                   },
+                                   {
+                                       "nombre":  "Epic Online Services",
+                                       "version":  "4.0.1",
+                                       "proveedor":  "Epic Games, Inc."
+                                   },
+                                   {
+                                       "nombre":  "FACEIT Anti-Cheat",
+                                       "version":  "2.1",
+                                       "proveedor":  "FACEIT LTD"
+                                   },
+                                   {
+                                       "nombre":  "Git",
+                                       "version":  "2.51.0.2",
+                                       "proveedor":  "The Git Development Community"
+                                   },
+                                   {
+                                       "nombre":  "GitHub CLI",
+                                       "version":  "2.89.0",
+                                       "proveedor":  "GitHub, Inc."
+                                   },
+                                   {
+                                       "nombre":  "Google Chrome",
+                                       "version":  "147.0.7727.139",
+                                       "proveedor":  "Google LLC"
+                                   },
+                                   {
+                                       "nombre":  "Intel(R) Computing Improvement Program",
+                                       "version":  "2.4.11118",
+                                       "proveedor":  "Intel Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Kits Configuration Installer",
+                                       "version":  "10.1.26100.7705",
+                                       "proveedor":  "Microsoft"
+                                   },
+                                   {
+                                       "nombre":  "Launcher Prerequisites (x64)",
+                                       "version":  "1.0.0.0",
+                                       "proveedor":  "Epic Games, Inc."
+                                   },
+                                   {
+                                       "nombre":  "Malwarebytes version 5.4.6.227",
+                                       "version":  "5.4.6.227",
+                                       "proveedor":  "Malwarebytes"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Host - 8.0.14 (x64)",
+                                       "version":  "64.56.29490",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Host - 8.0.14 (x86)",
+                                       "version":  "64.56.29490",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Host FX Resolver - 8.0.14 (x64)",
+                                       "version":  "64.56.29490",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Host FX Resolver - 8.0.14 (x86)",
+                                       "version":  "64.56.29490",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Runtime - 8.0.14 (x64)",
+                                       "version":  "64.56.29490",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Runtime - 8.0.14 (x64)",
+                                       "version":  "8.0.14.34611",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft .NET Runtime - 8.0.14 (x86)",
+                                       "version":  "64.56.29490",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft ASP.NET Core 8.0.14 - Shared Framework (x86)",
+                                       "version":  "8.0.14.25112",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft ASP.NET Core 8.0.14 Shared Framework (x86)",
+                                       "version":  "8.0.14.25112",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft GameInput",
+                                       "version":  "3.3.182.0",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Office LTSC Professional Plus 2021 - es-es",
+                                       "version":  "16.0.14334.20624",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Project Profesional 2021 - es-es",
+                                       "version":  "16.0.14334.20624",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visio LTSC Professional 2021 - es-es",
+                                       "version":  "16.0.14334.20624",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2008 Redistributable - x86 9.0.30729.17",
+                                       "version":  "9.0.30729",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2008 Redistributable - x86 9.0.30729.6161",
+                                       "version":  "9.0.30729.6161",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2010  x64 Redistributable - 10.0.40219",
+                                       "version":  "10.0.40219",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2010  x86 Redistributable - 10.0.40219",
+                                       "version":  "10.0.40219",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2012 Redistributable (x64) - 11.0.61030",
+                                       "version":  "11.0.61030.0",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2012 Redistributable (x86) - 11.0.61030",
+                                       "version":  "11.0.61030.0",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2012 x64 Additional Runtime - 11.0.61030",
+                                       "version":  "11.0.61030",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2012 x64 Minimum Runtime - 11.0.61030",
+                                       "version":  "11.0.61030",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2012 x86 Additional Runtime - 11.0.61030",
+                                       "version":  "11.0.61030",
+                                       "proveedor":  "Microsoft Corporation"
+                                   },
+                                   {
+                                       "nombre":  "Microsoft Visual C++ 2012 x86 Minimum Runtime - 11.0.61030",
+                                       "version":  "11.0.61030",
+                                       "proveedor":  "Microsoft Corporation"
+                                   }
+                               ]
+                 },
+    "rendimiento":  {
+                        "cpu_pct":  3,
+                        "memoria_pct":  68.9,
+                        "top_procesos":  [
+                                             {
+                                                 "nombre":  "opera",
+                                                 "memoria_mb":  768
+                                             },
+                                             {
+                                                 "nombre":  "claude",
+                                                 "memoria_mb":  692
+                                             },
+                                             {
+                                                 "nombre":  "opera",
+                                                 "memoria_mb":  661
+                                             },
+                                             {
+                                                 "nombre":  "opera",
+                                                 "memoria_mb":  514
+                                             },
+                                             {
+                                                 "nombre":  "opera",
+                                                 "memoria_mb":  444
+                                             }
+                                         ]
+                    },
+    "seguridad":  {
+                      "windows_defender":  {
+                                               "activo":  false
+                                           },
+                      "firewall":  [
+                                       {
+                                           "nombre":  "Domain",
+                                           "activo":  true
+                                       },
+                                       {
+                                           "nombre":  "Private",
+                                           "activo":  true
+                                       },
+                                       {
+                                           "nombre":  "Public",
+                                           "activo":  true
+                                       }
+                                   ],
+                      "uac":  true
+                  },
+    "usuarios":  [
+                     {
+                         "nombre":  "Administrador",
+                         "completo":  "",
+                         "disabled":  true
+                     },
+                     {
+                         "nombre":  "CodexSandboxOffline",
+                         "completo":  "CodexSandboxOffline",
+                         "disabled":  false
+                     },
+                     {
+                         "nombre":  "CodexSandboxOnline",
+                         "completo":  "CodexSandboxOnline",
+                         "disabled":  false
+                     },
+                     {
+                         "nombre":  "DefaultAccount",
+                         "completo":  "",
+                         "disabled":  true
+                     },
+                     {
+                         "nombre":  "franc",
+                         "completo":  "Francisco Vidal Mateo",
+                         "disabled":  false
+                     },
+                     {
+                         "nombre":  "Invitado",
+                         "completo":  "",
+                         "disabled":  true
+                     },
+                     {
+                         "nombre":  "WDAGUtilityAccount",
+                         "completo":  "",
+                         "disabled":  true
+                     },
+                     {
+                         "nombre":  "WsiAccount",
+                         "completo":  "",
+                         "disabled":  true
+                     }
+                 ],
+    "_meta":  {
+                  "version":  "3.2.0",
+                  "plataforma":  "windows",
+                  "hostname":  "FRANVI-VICTUS",
+                  "usuario":  "franc",
+                  "generado_en":  "2026-05-07T18:25:11.1918113+02:00",
+                  "admin":  true
+              }
+}

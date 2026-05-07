@@ -20,8 +20,63 @@ param(
     [string]$Nivel = 'estandar',
     [switch]$DryRun,
     [switch]$Undo,
-    [switch]$BackupOnly
+    [switch]$BackupOnly,
+    [Alias('h')][switch]$Help
 )
+
+if ($Help) {
+    @"
+NAME
+    optimizacion.ps1 - Optimizacion de sistema Windows para ResolveCore
+
+SYNOPSIS
+    .\optimizacion.ps1 [-Nivel <nivel>] [-DryRun] [-Undo] [-BackupOnly]
+                       [-Help]
+
+DESCRIPTION
+    Aplica optimizaciones por niveles: telemetria off, servicios no
+    criticos (Spooler EXCLUIDO siempre), visual effects, ajustes del
+    registro, debloat de Cortana/OneDrive/Bing en niveles altos. Antes
+    de modificar nada hace backup del registro y guarda estado_previo.json
+    para permitir -Undo. Requiere consola Administrador.
+
+PARAMETERS
+    -Nivel <nivel>              Nivel a aplicar (default: estandar):
+                                  ligero       Limpieza basica + servicios
+                                               no criticos.
+                                  estandar     Telemetria off + servicios +
+                                               visual effects.
+                                  rendimiento  Estandar + optimizaciones
+                                               disco/red/RAM.
+                                  extreme      Rendimiento + bloqueo de
+                                               Cortana/OneDrive/Bing.
+    -DryRun                     Simula sin aplicar cambios. Imprime las
+                                acciones planificadas.
+    -Undo                       Deshace cambios usando estado_previo.json.
+    -BackupOnly                 Solo crea copia del registro, no aplica.
+    -Help, -h                   Muestra esta ayuda y sale.
+
+FILES
+    %TEMP%\ResolveCore_Optimizacion\optimizacion.log
+    %TEMP%\ResolveCore_Optimizacion\backup\         (copias .reg)
+    %TEMP%\ResolveCore_Optimizacion\estado_previo.json
+
+REQUISITOS
+    - Consola PowerShell como Administrador.
+    - PowerShell 5.1+ (Windows 10/11 trae 5.1).
+
+EXAMPLES
+    .\optimizacion.ps1 -Nivel ligero -DryRun
+    .\optimizacion.ps1 -Nivel rendimiento
+    .\optimizacion.ps1 -BackupOnly
+    .\optimizacion.ps1 -Undo
+
+EXIT CODES
+    0    Optimizacion aplicada correctamente.
+    1    Sin privilegios de Administrador.
+"@ | Write-Host
+    exit 0
+}
 
 $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'

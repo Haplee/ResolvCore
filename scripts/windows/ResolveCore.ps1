@@ -12,8 +12,139 @@
 
 [CmdletBinding()]
 param(
-    [switch]$NoLoop
+    [switch]$NoLoop,
+    [Alias('h')][switch]$Help,
+
+    # Pass-through a diagnostico.ps1
+    [Alias('O','Output')][string]$OutputDir,
+    [Alias('S')][switch]$Silent,
+    [Alias('I','Install')][switch]$InstallDeps,
+    [Alias('A')][switch]$AutoInstall,
+
+    # Pass-through a optimizacion.ps1
+    [ValidateSet('','ligero','estandar','rendimiento','extreme')]
+    [string]$Nivel = '',
+    [switch]$DryRun,
+    [switch]$Undo,
+    [switch]$BackupOnly
 )
+
+# ── Pass-through: si llega flag de modulo, invocar directo y salir ──────────
+$diagFlags = $OutputDir -or $Silent -or $InstallDeps -or $AutoInstall
+$optFlags  = $Nivel -or $DryRun -or $Undo -or $BackupOnly
+if ($diagFlags -and $optFlags) {
+    Write-Host '[X] Flags de diagnostico y optimizacion son mutuamente exclusivos.' -ForegroundColor Red
+    Write-Host '    Invoca .\diagnostico.ps1 o .\optimizacion.ps1 por separado.'
+    exit 2
+}
+if ($diagFlags) {
+    $diagPath = Join-Path $PSScriptRoot 'diagnostico.ps1'
+    $splat = @{}
+    if ($OutputDir)    { $splat.OutputDir   = $OutputDir }
+    if ($Silent)       { $splat.Silent      = $true }
+    if ($InstallDeps)  { $splat.InstallDeps = $true }
+    if ($AutoInstall)  { $splat.AutoInstall = $true }
+    & $diagPath @splat
+    exit $LASTEXITCODE
+}
+if ($optFlags) {
+    $optPath = Join-Path $PSScriptRoot 'optimizacion.ps1'
+    $splat = @{}
+    if ($Nivel)        { $splat.Nivel      = $Nivel }
+    if ($DryRun)       { $splat.DryRun     = $true }
+    if ($Undo)         { $splat.Undo       = $true }
+    if ($BackupOnly)   { $splat.BackupOnly = $true }
+    & $optPath @splat
+    exit $LASTEXITCODE
+}
+
+if ($Help) {
+    @"
+NAME
+    ResolveCore.ps1 - Menu interactivo de herramientas ResolveCore para Windows
+
+SYNOPSIS
+    .\ResolveCore.ps1 [-NoLoop] [-Help]
+    .\ResolveCore.ps1 [-O <dir>] [-S] [-I|-A]                # forward a diagnostico
+    .\ResolveCore.ps1 -Nivel <nivel> [-DryRun] [-Undo] [-BackupOnly]  # forward a optimizacion
+
+DESCRIPTION
+    Sin flags: lanza menu interactivo TUI (analisis, diagnostico, optimizacion,
+    ayuda, salir). Con flags de modulo: salta el menu e invoca diagnostico.ps1
+    u optimizacion.ps1 directamente con esos flags. Util para automatizacion
+    o tecnicos que ya saben que accion lanzar.
+
+    Antes del menu ejecuta Get-SystemAnalysis que detecta problemas (disco,
+    memoria, CPU, servicios, Defender) y muestra resumen.
+
+OPTIONS DEL LAUNCHER
+    -NoLoop           Tras seleccionar una opcion, sale en vez de volver al
+                      menu. Util para invocaciones desde scripts wrapper.
+    -h, -Help         Muestra esta ayuda y sale.
+
+MENU
+    1. DIAGNOSTICO    Llama a diagnostico.ps1 (genera JSON + HTML).
+    2. OPTIMIZACION   Llama a optimizacion.ps1 (niveles ligero/estandar/
+                      rendimiento/extreme).
+    3. AYUDA          Guia rapida embebida.
+    4. SALIR          Cierra el programa.
+
+FLAGS DE DIAGNOSTICO (forward a diagnostico.ps1)
+    -O, -OutputDir, -Output <dir>   Directorio salida JSON/HTML
+                                    (default: ..\diagnosticos).
+    -S, -Silent                     Sin salida por consola (modo CI).
+    -I, -InstallDeps, -Install      Instala paquetes opcionales:
+                                    smartmontools, OpenHardwareMonitor,
+                                    speedtest, nmap, git (winget/choco).
+                                    Pide confirmacion.
+    -A, -AutoInstall                Igual que -I sin confirmar.
+
+FLAGS DE OPTIMIZACION (forward a optimizacion.ps1)
+    -Nivel <ligero|estandar|rendimiento|extreme>
+                                    Nivel a aplicar (default: estandar).
+                                      ligero       Limpieza basica.
+                                      estandar     Telemetria + servicios.
+                                      rendimiento  Anterior + disco/red/RAM.
+                                      extreme      Anterior + Cortana/
+                                                   OneDrive/Bing off.
+    -DryRun                         Simula sin aplicar.
+    -Undo                           Deshace cambios via estado_previo.json.
+    -BackupOnly                     Solo backup del registro, no aplica.
+
+NOTA
+    Los flags de diagnostico y optimizacion son mutuamente exclusivos.
+    Si pasas alguno, el launcher salta el menu y lanza el modulo.
+
+REQUISITOS
+    - PowerShell 5.1+ (Windows 10/11 trae 5.1; recomendado pwsh 7+).
+    - Consola Administrador para deteccion completa y para optimizacion.
+
+EXAMPLES
+    # Menu interactivo
+    .\ResolveCore.ps1
+
+    # Sin loop (sale tras una accion)
+    .\ResolveCore.ps1 -NoLoop
+
+    # Pass-through al modulo de diagnostico (sin pasar por menu)
+    .\ResolveCore.ps1 -A
+    .\ResolveCore.ps1 -O C:\reports -S
+    .\ResolveCore.ps1 -I
+
+    # Pass-through al modulo de optimizacion
+    .\ResolveCore.ps1 -Nivel rendimiento -DryRun
+    .\ResolveCore.ps1 -Undo
+
+    # Equivalente invocando modulos directamente
+    .\diagnostico.ps1 -A
+    .\optimizacion.ps1 -Nivel rendimiento
+
+EXIT CODES
+    0    Salida normal o ayuda mostrada.
+    2    Combinacion invalida de flags (diag + opt).
+"@ | Write-Host
+    exit 0
+}
 
 $usuario = $env:USERNAME
 
