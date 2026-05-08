@@ -19,7 +19,9 @@
       "Bash(python scripts/buscar_vulnerabilidades.py --help)",
       "Bash(bash -n scripts/linux/ResolveCore.sh)",
       "Bash(bash -n scripts/android/ResolveCore.sh)",
-      "PowerShell(Out-Null *)"
+      "PowerShell(Out-Null *)",
+      "Bash(php -l wordpress/page-resolvecore.php wordpress/resolvecore-landing.php)",
+      "PowerShell(Get-Command *)"
     ]
   }
 }

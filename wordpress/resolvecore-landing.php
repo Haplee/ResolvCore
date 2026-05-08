@@ -116,8 +116,9 @@ function resolvecore_inject_styles() {
       /* HERO */
       .rc-wrap .rc-hero {
         position: relative; min-height: 85vh;
-        display: flex; align-items: center;
-        padding: 0 2rem; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        padding: 4rem 2rem; overflow: hidden;
+        text-align: center;
       }
       .rc-wrap .rc-hero-grid {
         position: absolute; inset: 0;
@@ -131,9 +132,12 @@ function resolvecore_inject_styles() {
       .rc-wrap .rc-hero-glow {
         position: absolute; width: 600px; height: 600px; border-radius: 50%;
         background: radial-gradient(circle, rgba(0,229,160,.06) 0%, transparent 70%);
-        top: -100px; right: -100px; pointer-events: none;
+        top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
       }
-      .rc-wrap .rc-hero-content { position: relative; max-width: 700px; z-index: 2; }
+      .rc-wrap .rc-hero-content {
+        position: relative; max-width: 760px; width: 100%;
+        margin: 0 auto; z-index: 2;
+      }
       .rc-wrap .rc-badge {
         display: inline-flex; align-items: center; gap: 8px;
         font-family: var(--rc-mono); font-size: 11px; color: var(--rc-accent);
@@ -154,9 +158,12 @@ function resolvecore_inject_styles() {
       .rc-wrap .rc-hero h1 .dim    { color: var(--rc-muted); }
       .rc-wrap .rc-hero-sub {
         font-size: 1.05rem; color: var(--rc-muted);
-        max-width: 520px; margin-bottom: 2.5rem; font-weight: 300;
+        max-width: 560px; margin: 0 auto 2.5rem; font-weight: 300;
       }
-      .rc-wrap .rc-hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+      .rc-wrap .rc-hero-actions {
+        display: flex; gap: 1rem; flex-wrap: wrap;
+        justify-content: center;
+      }
       .rc-wrap .rc-btn-primary {
         font-family: var(--rc-mono); font-size: 12px; letter-spacing: .06em;
         color: #000 !important; background: var(--rc-accent); border: none;
@@ -172,8 +179,11 @@ function resolvecore_inject_styles() {
         text-decoration: none; display: inline-block;
       }
       .rc-wrap .rc-hero-stats {
-        margin-top: 4rem; display: flex; gap: 3rem;
+        margin-top: 4rem;
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1.5rem 2rem;
         padding-top: 2rem; border-top: 1px solid var(--rc-border);
+        text-align: center;
       }
       .rc-wrap .rc-stat-num {
         font-family: var(--rc-mono); font-size: 1.8rem;
@@ -186,7 +196,11 @@ function resolvecore_inject_styles() {
         border-top: 1px solid var(--rc-border); border-bottom: 1px solid var(--rc-border);
         padding: 1.5rem 2rem;
       }
-      .rc-wrap .rc-plat-inner { display: flex; align-items: center; gap: 3rem; flex-wrap: wrap; }
+      .rc-wrap .rc-plat-inner {
+        display: flex; align-items: center; justify-content: center;
+        gap: 2rem 3rem; flex-wrap: wrap;
+        max-width: 1100px; margin: 0 auto;
+      }
       .rc-wrap .rc-plat-label {
         font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted); letter-spacing: .08em;
       }
@@ -201,6 +215,7 @@ function resolvecore_inject_styles() {
       }
       .rc-wrap .pi-win { background: rgba(0,120,212,.15); color: #0078d4; }
       .rc-wrap .pi-lin { background: rgba(255,165,0,.12);  color: #ff9f00; }
+      .rc-wrap .pi-mac { background: rgba(255,255,255,.08); color: #f5f5f7; }
       .rc-wrap .pi-and { background: rgba(61,220,132,.12); color: #3ddc84; }
       /* SECTION */
       .rc-wrap .rc-section {
@@ -209,13 +224,16 @@ function resolvecore_inject_styles() {
       .rc-wrap .rc-section-label {
         font-family: var(--rc-mono); font-size: 11px;
         letter-spacing: .12em; color: var(--rc-accent); margin-bottom: .75rem;
+        text-align: center;
       }
       .rc-wrap .rc-section-title {
         font-family: var(--rc-mono); font-size: clamp(1.6rem,3vw,2.2rem);
         font-weight: 700; margin-bottom: 1rem; line-height: 1.2;
+        text-align: center;
       }
       .rc-wrap .rc-section-desc {
-        color: var(--rc-muted); max-width: 540px; font-size: 1rem; margin-bottom: 3rem;
+        color: var(--rc-muted); max-width: 580px; font-size: 1rem;
+        margin: 0 auto 3rem; text-align: center;
       }
       /* SERVICES */
       .rc-wrap .rc-services-grid {
@@ -259,7 +277,11 @@ function resolvecore_inject_styles() {
         content: ''; width: 4px; height: 4px; background: var(--rc-accent); flex-shrink: 0;
       }
       /* DIAG */
-      .rc-wrap .rc-diag-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+      .rc-wrap .rc-diag-layout {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem; align-items: stretch;
+        max-width: 980px; margin: 0 auto;
+      }
       .rc-wrap .rc-terminal {
         background: #0d0f13; border: 1px solid var(--rc-border2);
         padding: 1.25rem; font-family: var(--rc-mono); font-size: 12px; line-height: 1.8;
@@ -323,17 +345,22 @@ function resolvecore_inject_styles() {
       .rc-wrap .rc-footer {
         border-top: 1px solid var(--rc-border); padding: 2.5rem 2rem;
         max-width: 1100px; margin: 0 auto;
-        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+        display: flex; justify-content: center; align-items: center;
+        flex-wrap: wrap; gap: 1.5rem 2.5rem; text-align: center;
       }
       .rc-wrap .rc-footer-logo { font-family: var(--rc-mono); font-size: 14px; font-weight: 700; color: var(--rc-accent); }
       .rc-wrap .rc-footer-copy { font-size: 12px; color: var(--rc-muted); }
       .rc-wrap .rc-footer ul { display: flex; gap: 1.5rem; list-style: none; }
       .rc-wrap .rc-footer ul a { font-size: 12px; color: var(--rc-muted); text-decoration: none; }
       .rc-wrap .rc-footer ul a:hover { color: var(--rc-text); }
+      .rc-wrap .rc-footer ul { display: flex; gap: 1.5rem; list-style: none; padding: 0; margin: 0; justify-content: center; flex-wrap: wrap; }
       @media (max-width: 640px) {
-        .rc-wrap .rc-diag-layout { grid-template-columns: 1fr; }
-        .rc-wrap .rc-hero-stats { gap: 2rem; }
-        .rc-wrap .rc-nav ul { display: none; }
+        .rc-wrap .rc-hero        { padding: 3rem 1.25rem; min-height: 80vh; }
+        .rc-wrap .rc-hero-stats  { gap: 1rem; }
+        .rc-wrap .rc-nav         { padding: 0 1rem; }
+        .rc-wrap .rc-nav ul      { display: none; }
+        .rc-wrap .rc-section     { padding: 3.5rem 1.25rem; }
+        .rc-wrap .rc-stat-num    { font-size: 1.5rem; }
       }
     </style>
     <?php
@@ -355,12 +382,12 @@ function resolvecore_landing_shortcode( $atts ) {
     $show_footer  = filter_var( $atts['show_footer'],  FILTER_VALIDATE_BOOLEAN );
 
     $services = [
-        ['⬡','01','Diagnóstico automatizado','Análisis completo del sistema en segundos. Detecta cuellos de botella, errores de disco y problemas de memoria sin configuración manual.',['Escaneo de CPU, RAM y almacenamiento','Análisis de procesos en tiempo real','Informe exportable en PDF/JSON']],
-        ['◈','02','Proyección de vida útil del hardware','Algoritmos predictivos que estiman cuándo podrían fallar tus componentes.',['Temperatura y desgaste de disco (S.M.A.R.T)','Historial de uso de batería','Alertas preventivas configurables']],
-        ['⬡','03','Análisis de vulnerabilidades del SO','Escanea el SO contra una base de datos de CVEs y aplica reparaciones automáticas.',['Base de datos de vulnerabilidades propia','Reparación con un clic','Compatible con políticas empresariales']],
-        ['◇','04','Optimización del sistema','Limpieza profunda, gestión de inicio y liberación de espacio en disco de forma segura.',['Limpieza de archivos temporales y caché','Gestión de programas de inicio','Modo seguro de limpieza']],
-        ['⬡','05','Panel multiplataforma','Gestiona Windows, Linux y Android desde una única interfaz.',['Panel unificado multi-dispositivo','Histórico de diagnósticos','Exportación de reportes']],
-        ['◈','06','Actualizaciones automáticas','Actualizaciones silenciosas y programadas con rollback instantáneo.',['Actualizaciones programadas en silencio','Rollback instantáneo ante fallos','Compatible con entornos sin conexión']],
+        ['⬡','01','TUI Launcher modular','Menú interactivo cross-platform (ResolveCore.ps1 / .sh) con análisis previo y pass-through a los módulos.',['Detección automática de problemas críticos','Pass-through de flags a diagnóstico/optimización','Ayuda embebida y modo NoLoop para CI/CD']],
+        ['◈','02','Diagnóstico automatizado','Análisis completo del sistema en segundos. Detecta cuellos de botella, errores de disco y memoria sin configurar nada.',['Escaneo de CPU, RAM y almacenamiento','S.M.A.R.T, sensores y red en tiempo real','Salida JSON estructurada + informe PDF/HTML']],
+        ['⬡','03','CVE Engine multi-feed','Escanea el SO contra cuatro feeds públicos en paralelo y prioriza con EPSS. Sólo Python 3.8+ stdlib.',['NVD (NIST) + CISA KEV (explotadas)','OSV (Google) + EPSS-FIRST (probabilidad)','Histórico local y export CSV/JSON/email']],
+        ['◇','04','Optimización por niveles','Cuatro perfiles configurables con backup previo y rollback total. Spooler siempre excluido.',['ligero · estandar · rendimiento · extreme','--dry-run para previsualizar cambios','--undo y --backup-only para reversión']],
+        ['⬡','05','Suite cross-platform','Paridad de funcionalidad en Windows, Linux, macOS y Android desde una arquitectura modular.',['PowerShell 7 + Bash 4+ con misma API','ADB shell para diagnóstico Android','macOS con paridad respecto a Linux']],
+        ['◈','06','Auto-instalación de dependencias','Instala paquetes opcionales (smartmontools, lm-sensors, nmap, jq) bajo demanda.',['Confirmación interactiva (-I) o auto (-A)','winget/choco en Win, apt/dnf en Linux','Detección y skip si ya están presentes']],
     ];
 
     ob_start(); ?>
@@ -384,20 +411,21 @@ function resolvecore_landing_shortcode( $atts ) {
     <div class="rc-hero-grid"></div>
     <div class="rc-hero-glow"></div>
     <div class="rc-hero-content">
-      <div class="rc-badge">PLATAFORMA CROSS-PLATFORM · v1.0</div>
+      <div class="rc-badge">PLATAFORMA CROSS-PLATFORM · v1.1 · TUI LAUNCHER</div>
       <h1>
         <span class="dim">Solución a tus</span><br>
         <span class="accent">problemas</span><br>
         informáticos.
       </h1>
-      <p class="rc-hero-sub">Diagnóstico automatizado, proyección de vida útil del hardware y análisis de vulnerabilidades del SO para Windows, Linux y Android.</p>
+      <p class="rc-hero-sub">Diagnóstico automatizado, proyección de vida útil del hardware y análisis de vulnerabilidades multi-feed (NVD · CISA KEV · OSV · EPSS) para Windows, Linux, macOS y Android.</p>
       <div class="rc-hero-actions">
         <a href="#" class="rc-btn-primary">DESCARGAR GRATIS</a>
         <a href="#rc-servicios" class="rc-btn-outline">VER SERVICIOS</a>
       </div>
       <div class="rc-hero-stats">
-        <div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas</div></div>
-        <div><div class="rc-stat-num">500+</div><div class="rc-stat-label">Vulnerabilidades en BD</div></div>
+        <div><div class="rc-stat-num">4</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+        <div><div class="rc-stat-num">4</div><div class="rc-stat-label">Feeds CVE integrados</div></div>
+        <div><div class="rc-stat-num">4</div><div class="rc-stat-label">Niveles de optimización</div></div>
         <div><div class="rc-stat-num">100%</div><div class="rc-stat-label">Diagnóstico automatizado</div></div>
       </div>
     </div>
@@ -410,7 +438,8 @@ function resolvecore_landing_shortcode( $atts ) {
       <div class="rc-plat-items">
         <div class="rc-plat-item"><div class="rc-plat-icon pi-win">⊞</div> Windows 10 / 11</div>
         <div class="rc-plat-item"><div class="rc-plat-icon pi-lin">☰</div> Linux (Ubuntu, Debian, Arch)</div>
-        <div class="rc-plat-item"><div class="rc-plat-icon pi-and">◈</div> Android 10+</div>
+        <div class="rc-plat-item"><div class="rc-plat-icon pi-mac">◉</div> macOS 12+</div>
+        <div class="rc-plat-item"><div class="rc-plat-icon pi-and">◈</div> Android 10+ (ADB)</div>
       </div>
     </div>
   </div>
@@ -448,17 +477,18 @@ function resolvecore_landing_shortcode( $atts ) {
           <div class="rc-term-dot td1"></div><div class="rc-term-dot td2"></div><div class="rc-term-dot td3"></div>
           <span class="rc-term-title">resolvecore — diagnóstico completo</span>
         </div>
-        <span style="display:block"><span class="tl-prompt">rc@system:~$</span> resolvecore --scan --full</span>
-        <span style="display:block" class="tl-dim">Iniciando análisis del sistema...</span>
+        <span style="display:block"><span class="tl-prompt">rc@system:~$</span> ./ResolveCore.sh</span>
+        <span style="display:block" class="tl-dim">[*] Análisis previo del sistema...</span>
         <span style="display:block" class="tl-ok">✓ CPU: Intel Core i7-12700H — 8% carga</span>
         <span style="display:block" class="tl-ok">✓ RAM: 16GB DDR5 — 42% en uso</span>
         <span style="display:block" class="tl-warn">⚠ SSD: 87% lleno — acción recomendada</span>
         <span style="display:block" class="tl-ok">✓ Temperatura: 54°C — nominal</span>
         <span style="display:block" class="tl-dim">─────────────────────────────</span>
-        <span style="display:block" class="tl-info">→ Escaneando vulnerabilidades...</span>
-        <span style="display:block" class="tl-err">✗ CVE-2024-3049 detectado — CRÍTICO</span>
-        <span style="display:block" class="tl-warn">⚠ CVE-2024-1871 detectado — ALTO</span>
+        <span style="display:block" class="tl-info">→ buscar_vulnerabilidades.py (NVD · KEV · OSV · EPSS)</span>
+        <span style="display:block" class="tl-err">✗ CVE-2024-3049 — CRÍTICO (KEV · EPSS 0.94)</span>
+        <span style="display:block" class="tl-warn">⚠ CVE-2024-1871 — ALTO (EPSS 0.71)</span>
         <span style="display:block" class="tl-ok">✓ 23 comprobaciones pasadas</span>
+        <span style="display:block" class="tl-info">→ optimizacion.sh rendimiento --dry-run</span>
         <span style="display:block"><span class="tl-prompt">rc@system:~$</span> <span class="rc-cursor"></span></span>
       </div>
       <div>
@@ -485,9 +515,10 @@ function resolvecore_landing_shortcode( $atts ) {
         <div class="rc-pricing-name">Free</div>
         <div class="rc-pricing-price"><span class="price-currency">€</span><span class="price-num">0</span><span class="price-period">/ siempre</span></div>
         <div class="rc-pricing-divider"></div>
-        <div class="rc-pricing-feature"><span class="pf-check">■</span> Diagnóstico básico</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> Diagnóstico básico + TUI</div>
         <div class="rc-pricing-feature"><span class="pf-check">■</span> 1 dispositivo · Windows</div>
-        <div class="rc-pricing-feature"><span class="pf-none">─</span> Análisis de vulnerabilidades</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> Optimización nivel ligero</div>
+        <div class="rc-pricing-feature"><span class="pf-none">─</span> CVE Engine multi-feed</div>
         <div class="rc-pricing-feature"><span class="pf-none">─</span> Proyección de hardware</div>
         <div style="margin-top:1.5rem"><a href="#" class="rc-btn-outline" style="width:100%;text-align:center;font-size:11px;padding:10px">DESCARGAR</a></div>
       </div>
@@ -497,9 +528,10 @@ function resolvecore_landing_shortcode( $atts ) {
         <div class="rc-pricing-name">Pro</div>
         <div class="rc-pricing-price"><span class="price-currency">€</span><span class="price-num">4.99</span><span class="price-period">/ mes</span></div>
         <div class="rc-pricing-divider"></div>
-        <div class="rc-pricing-feature"><span class="pf-check">■</span> Diagnóstico completo</div>
-        <div class="rc-pricing-feature"><span class="pf-check">■</span> 3 dispositivos · Win + Linux</div>
-        <div class="rc-pricing-feature"><span class="pf-check">■</span> Análisis de vulnerabilidades</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> Diagnóstico completo + TUI</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> 3 dispositivos · Win + Linux + macOS</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> CVE Engine (NVD · KEV · OSV · EPSS)</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> Optimización 4 niveles + Undo</div>
         <div class="rc-pricing-feature"><span class="pf-check">■</span> Proyección de hardware</div>
         <div style="margin-top:1.5rem"><a href="#" class="rc-btn-primary" style="width:100%;text-align:center;font-size:11px;padding:10px;display:block">EMPEZAR</a></div>
       </div>
@@ -510,8 +542,9 @@ function resolvecore_landing_shortcode( $atts ) {
         <div class="rc-pricing-divider"></div>
         <div class="rc-pricing-feature"><span class="pf-check">■</span> Todo en Pro</div>
         <div class="rc-pricing-feature"><span class="pf-check">■</span> Dispositivos ilimitados</div>
-        <div class="rc-pricing-feature"><span class="pf-check">■</span> Win + Linux + Android</div>
-        <div class="rc-pricing-feature"><span class="pf-check">■</span> BD de vulnerabilidades offline</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> Win + Linux + macOS + Android</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> Integración MantisBT (REST API)</div>
+        <div class="rc-pricing-feature"><span class="pf-check">■</span> BD CVE offline + auto-instalación</div>
         <div style="margin-top:1.5rem"><a href="#" class="rc-btn-outline" style="width:100%;text-align:center;font-size:11px;padding:10px">CONTACTAR</a></div>
       </div>
     </div>
