@@ -15,7 +15,11 @@
       "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/functions.php\")",
       "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\")",
       "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/page-resolvecore.php\")",
-      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-landing.php\")"
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-landing.php\")",
+      "Bash(python scripts/buscar_vulnerabilidades.py --help)",
+      "Bash(bash -n scripts/linux/ResolveCore.sh)",
+      "Bash(bash -n scripts/android/ResolveCore.sh)",
+      "PowerShell(Out-Null *)"
     ]
   }
 }

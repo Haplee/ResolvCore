@@ -1,0 +1,316 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "plataforma": "Windows (Windows 10 Pro)",
+    "hostname": "FranVi-Victus"
+  },
+  "meta": {
+    "fecha": "2026-05-08T12:36:09",
+    "hostname": "FranVi-Victus",
+    "plataforma": "Windows (Windows 10 Pro)",
+    "script_version": "1.0.0",
+    "risk_score": 0,
+    "risk_nivel": "CRITICO",
+    "admin": true,
+    "dry_run": false
+  },
+  "resumen": {
+    "total_cves": 14,
+    "corregidos": 0,
+    "pendientes": 14,
+    "checks_config": 5,
+    "checks_fallidos": 0,
+    "puertos_riesgo": 2
+  },
+  "os": {
+    "producto": "Windows 10 Pro",
+    "build": "26200",
+    "version": "25H2",
+    "kernel": "11"
+  },
+  "vulnerabilidades": [
+    {
+      "cve_id": "CVE-2016-6658",
+      "cvss": 9.6,
+      "severity": "CRITICAL",
+      "descripcion": "Applications in cf-release before 245 can be configured and pushed with a user-provided custom buildpack using a URL pointing to the buildpack. Although it is not recommended, a user can specify a credential in the URL (basic auth or OAuth) to access the buildpack through the CLI. For example, the user could include a GitHub username and password in the URL to access a private repo. Because the UR",
+      "fuente": "NVD",
+      "software": "GitHub CLI",
+      "version": "2.89.0",
+      "kev": false,
+      "epss": 0.00294,
+      "epss_percentile": 0.52697,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2018-1000006",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "descripcion": "GitHub Electron versions 1.8.2-beta.3 and earlier, 1.7.10 and earlier, 1.6.15 and earlier has a vulnerability in the protocol handler, specifically Electron apps running on Windows 10, 7 or 2008 that register custom protocol handlers can be tricked in arbitrary command execution if the user clicks on a specially crafted URL. This has been fixed in versions 1.8.2-beta.4, 1.7.11, and 1.6.16.",
+      "fuente": "NVD",
+      "software": "GitHub CLI",
+      "version": "2.89.0",
+      "kev": false,
+      "epss": 0.92322,
+      "epss_percentile": 0.99729,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2016-6564",
+      "cvss": 8.1,
+      "severity": "HIGH",
+      "descripcion": "Android devices with code from Ragentek contain a privileged binary that performs over-the-air (OTA) update checks. Additionally, there are multiple techniques used to hide the execution of this binary. This behavior could be described as a rootkit. This binary, which resides as /system/bin/debugs, runs with root privileges and does not communicate over an encrypted channel. The binary has been sh",
+      "fuente": "NVD",
+      "software": "Android Studio",
+      "version": "2025.3",
+      "kev": false,
+      "epss": 0.00341,
+      "epss_percentile": 0.56768,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2020-15134",
+      "cvss": 8.0,
+      "severity": "HIGH",
+      "descripcion": "Faye before version 1.4.0, there is a lack of certification validation in TLS handshakes. Faye uses em-http-request and faye-websocket in the Ruby version of its client. Those libraries both use the `EM::Connection#start_tls` method in EventMachine to implement the TLS handshake whenever a `wss:` URL is used for the connection. This method does not implement certificate verification by default, me",
+      "fuente": "NVD",
+      "software": "GitHub CLI",
+      "version": "2.89.0",
+      "kev": false,
+      "epss": 0.00122,
+      "epss_percentile": 0.30786,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2020-8736",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "descripcion": "Improper access control in subsystem for the Intel(R) Computing Improvement Program before version 2.4.5718 may allow an authenticated user to potentially enable escalation of privilege via local access.",
+      "fuente": "NVD",
+      "software": "Intel(R) Computing Improvement Program",
+      "version": "2.4.11118",
+      "kev": false,
+      "epss": 0.00058,
+      "epss_percentile": 0.17791,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2019-11162",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "descripcion": "Insufficient access control in hardware abstraction in SEMA driver for Intel(R) Computing Improvement Program before version 2.4.0.04733 may allow an authenticated user to potentially enable escalation of privilege, denial of service or information disclosure via local access.",
+      "fuente": "NVD",
+      "software": "Intel(R) Computing Improvement Program",
+      "version": "2.4.11118",
+      "kev": false,
+      "epss": 0.00049,
+      "epss_percentile": 0.15154,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2021-0052",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "descripcion": "Incorrect default privileges in the Intel(R) Computing Improvement Program before version 2.4.6522 may allow an authenticated user to potentially enable an escalation of privilege via local access.",
+      "fuente": "NVD",
+      "software": "Intel(R) Computing Improvement Program",
+      "version": "2.4.11118",
+      "kev": false,
+      "epss": 0.00049,
+      "epss_percentile": 0.15194,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2021-0074",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "descripcion": "Improper permissions in the installer for the Intel(R) Computing Improvement Program software before version 2.4.5982 may allow an authenticated user to potentially enable escalation of privilege via local access.",
+      "fuente": "NVD",
+      "software": "Intel(R) Computing Improvement Program",
+      "version": "2.4.11118",
+      "kev": false,
+      "epss": 0.00037,
+      "epss_percentile": 0.11081,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2008-5517",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "descripcion": "The web interface in git (gitweb) 1.5.x before 1.5.6 allows remote attackers to execute arbitrary commands via shell metacharacters related to (1) git_snapshot and (2) git_object.",
+      "fuente": "NVD",
+      "software": "Git",
+      "version": "2.51.0.2",
+      "kev": false,
+      "epss": 0.07517,
+      "epss_percentile": 0.91847,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2006-0477",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "descripcion": "Buffer overflow in git-checkout-index in GIT before 1.1.5 allows remote attackers to execute arbitrary code via an index file with a long symbolic link.",
+      "fuente": "NVD",
+      "software": "Git",
+      "version": "2.51.0.2",
+      "kev": false,
+      "epss": 0.06718,
+      "epss_percentile": 0.91324,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2008-3546",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "descripcion": "Stack-based buffer overflow in the (1) diff_addremove and (2) diff_change functions in GIT before 1.5.6.4 might allow local users to execute arbitrary code via a PATH whose length is larger than the system's PATH_MAX when running GIT utilities such as git-diff or git-grep.",
+      "fuente": "NVD",
+      "software": "Git",
+      "version": "2.51.0.2",
+      "kev": false,
+      "epss": 0.01761,
+      "epss_percentile": 0.82726,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2008-5516",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "descripcion": "The web interface in git (gitweb) 1.5.x before 1.5.5 allows remote attackers to execute arbitrary commands via shell metacharacters related to git_search.",
+      "fuente": "NVD",
+      "software": "Git",
+      "version": "2.51.0.2",
+      "kev": false,
+      "epss": 0.01455,
+      "epss_percentile": 0.80923,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2020-26230",
+      "cvss": 7.4,
+      "severity": "HIGH",
+      "descripcion": "Radar COVID is the official COVID-19 exposure notification app for Spain. In affected versions of Radar COVID, identification and de-anonymization of COVID-19 positive users that upload Radar COVID TEKs to the Radar COVID server is possible. This vulnerability enables the identification and de-anonymization of COVID-19 positive users when using Radar COVID. The vulnerability is caused by the fact ",
+      "fuente": "NVD",
+      "software": "GitHub CLI",
+      "version": "2.89.0",
+      "kev": false,
+      "epss": 0.00746,
+      "epss_percentile": 0.73172,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    },
+    {
+      "cve_id": "CVE-2020-12308",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "descripcion": "Improper access control for the Intel(R) Computing Improvement Program before version 2.4.5982 may allow an unprivileged user to potentially enable information disclosure via network access.",
+      "fuente": "NVD",
+      "software": "Intel(R) Computing Improvement Program",
+      "version": "2.4.11118",
+      "kev": false,
+      "epss": 0.00327,
+      "epss_percentile": 0.55593,
+      "estado": "PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)"
+    }
+  ],
+  "config_checks": [
+    {
+      "check": "UAC habilitado",
+      "estado": "OK",
+      "riesgo": "HIGH",
+      "valor_actual": "1",
+      "valor_esperado": "1",
+      "corregido": false,
+      "accion": ""
+    },
+    {
+      "check": "AutoRun politica explicita",
+      "estado": "OK",
+      "riesgo": "LOW",
+      "valor_actual": "default",
+      "valor_esperado": "configurada o default",
+      "corregido": false,
+      "accion": ""
+    },
+    {
+      "check": "SMBv1 deshabilitado",
+      "estado": "OK",
+      "riesgo": "HIGH",
+      "valor_actual": "False",
+      "valor_esperado": "False",
+      "corregido": false,
+      "accion": ""
+    },
+    {
+      "check": "Firewall activo (3 perfiles)",
+      "estado": "OK",
+      "riesgo": "HIGH",
+      "valor_actual": "ON=3 OFF=0",
+      "valor_esperado": "ON=3 OFF=0",
+      "corregido": false,
+      "accion": ""
+    },
+    {
+      "check": "Defender habilitado",
+      "estado": "OK",
+      "riesgo": "CRITICAL",
+      "valor_actual": "True",
+      "valor_esperado": "True",
+      "corregido": false,
+      "accion": ""
+    }
+  ],
+  "red": [
+    {
+      "puerto": 135,
+      "servicio": "RPC/DCOM (Windows)",
+      "riesgo": "MEDIUM",
+      "estado": "ABIERTO"
+    },
+    {
+      "puerto": 445,
+      "servicio": "SMB",
+      "riesgo": "HIGH",
+      "estado": "ABIERTO"
+    }
+  ],
+  "iocs": [],
+  "dependencias_vulnerables": [],
+  "excepciones_activas": [],
+  "pendientes_tecnico": [
+    "CVE-2016-6658 - GitHub CLI 2.89.0 (CVSS 9.6) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2018-1000006 - GitHub CLI 2.89.0 (CVSS 8.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2016-6564 - Android Studio 2025.3 (CVSS 8.1) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-15134 - GitHub CLI 2.89.0 (CVSS 8.0) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-8736 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2019-11162 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2021-0052 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2021-0074 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2008-5517 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2006-0477 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2008-3546 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2008-5516 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-26230 - GitHub CLI 2.89.0 (CVSS 7.4) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-12308 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 6.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "PORT 135 RPC/DCOM (Windows) (MEDIUM)",
+    "PORT 445 SMB (HIGH)"
+  ],
+  "mensaje_cliente": "Su equipo presenta riesgos criticos de seguridad. Es necesario actuar de inmediato.",
+  "acciones_tecnico": [
+    "CVE-2016-6658 - GitHub CLI 2.89.0 (CVSS 9.6) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2018-1000006 - GitHub CLI 2.89.0 (CVSS 8.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2016-6564 - Android Studio 2025.3 (CVSS 8.1) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-15134 - GitHub CLI 2.89.0 (CVSS 8.0) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-8736 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2019-11162 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2021-0052 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2021-0074 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2008-5517 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2006-0477 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2008-3546 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2008-5516 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-26230 - GitHub CLI 2.89.0 (CVSS 7.4) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "CVE-2020-12308 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 6.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)",
+    "PORT 135 RPC/DCOM (Windows) (MEDIUM)",
+    "PORT 445 SMB (HIGH)"
+  ]
+}

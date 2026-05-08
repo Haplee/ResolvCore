@@ -137,9 +137,12 @@ show_menu() {
     echo -e "                       - Niveles: Basico, Estandar"
     echo -e "                       - Incluye limpieza, apps, permisos"
     echo ""
-    echo -e "    ${CYAN}3.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo -e "    \033[0;35m3.${NC}  [VULNERABILIDADES] - Buscar CVEs (NVD + KEV + OSV)"
+    echo -e "                       - Audita patch de seguridad y apps"
     echo ""
-    echo -e "    ${RED}4.${NC}  [SALIR]         - Salir del programa"
+    echo -e "    ${CYAN}4.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo ""
+    echo -e "    ${RED}5.${NC}  [SALIR]         - Salir del programa"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
     echo ""
@@ -223,6 +226,60 @@ show_devices() {
     echo ""
 }
 
+ensure_deps() {
+    local need=()
+    command -v python3 &>/dev/null || need+=("python3")
+    command -v adb &>/dev/null || need+=("adb")
+    if [ ${#need[@]} -eq 0 ]; then return 0; fi
+    echo -e "  ${YELLOW}[!] Faltan: ${need[*]}. Intentando instalar...${NC}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get update -qq 2>/dev/null
+        for p in "${need[@]}"; do
+            [ "$p" = "adb" ] && p="android-tools-adb"
+            sudo apt-get install -y "$p" 2>/dev/null
+        done
+    elif command -v brew &>/dev/null; then
+        for p in "${need[@]}"; do
+            [ "$p" = "adb" ] && p="android-platform-tools"
+            brew install "$p" 2>/dev/null
+        done
+    elif command -v dnf &>/dev/null; then
+        for p in "${need[@]}"; do
+            sudo dnf install -y "$p" 2>/dev/null
+        done
+    fi
+    command -v python3 &>/dev/null && command -v adb &>/dev/null
+}
+
+run_vulnerabilidades() {
+    VULN="$(dirname "$SCRIPT_DIR")/buscar_vulnerabilidades.py"
+    if ! ensure_deps; then
+        echo -e "  ${RED}[X] No se pudieron instalar las dependencias automaticamente${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+    if ! check_adb; then
+        read -p "  Presiona ENTER para continuar..."
+        return
+    fi
+    if [ -f "$VULN" ]; then
+        echo ""
+        echo -e "  ${YELLOW}Ejecutando escaneo de vulnerabilidades Android...${NC}"
+        echo ""
+        SERIAL=$(adb devices | grep "device$" | head -n1 | awk '{print $1}')
+        if [ -n "$SERIAL" ]; then
+            python3 "$VULN" --platform A --serial "$SERIAL" 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+        else
+            python3 "$VULN" --platform A 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+        fi
+        echo ""
+        echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
+    else
+        echo -e "  ${RED}[X] No encontrado: $VULN${NC}"
+    fi
+    read -p "  Presiona ENTER para continuar..."
+}
+
 run_diagnostico() {
     echo ""
     echo -e "  ${YELLOW}Verificando ADB...${NC}"
@@ -304,14 +361,15 @@ while true; do
     show_banner
     show_menu
 
-    read -p "  Selecciona una opcion (1-4): " opcion
+    read -p "  Selecciona una opcion (1-5): " opcion
     [[ -z "$opcion" ]] && { echo ""; exit 0; }
 
     case $opcion in
         1) run_diagnostico ;;
         2) run_optimizacion ;;
-        3) show_help ;;
-        4)
+        3) run_vulnerabilidades ;;
+        4) show_help ;;
+        5)
             echo ""
             echo -e "  ${GREEN}Hasta luego!${NC}"
             echo ""

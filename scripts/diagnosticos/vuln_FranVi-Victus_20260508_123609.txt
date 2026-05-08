@@ -1,0 +1,48 @@
+=================================================================
+RESOLVECORE - INFORME DE VULNERABILIDADES
+=================================================================
+Equipo:     FranVi-Victus
+Plataforma: Windows (Windows 10 Pro)
+Fecha:      2026-05-08T12:36:09
+RiskScore:  0/100 (CRITICO)
+
+RESUMEN:
+  CVEs encontrados: 14 (corregidos: 0, pendientes: 14)
+  Checks config:    5 (fallidos: 0)
+  Puertos riesgo:   2
+
+VULNERABILIDADES:
+  - CVE-2016-6658 | GitHub CLI 2.89.0 | CVSS 9.6 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2018-1000006 | GitHub CLI 2.89.0 | CVSS 8.8 | EPSS 0.92 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2016-6564 | Android Studio 2025.3 | CVSS 8.1 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2020-15134 | GitHub CLI 2.89.0 | CVSS 8.0 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2020-8736 | Intel(R) Computing Improvement Program 2.4.11118 | CVSS 7.8 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2019-11162 | Intel(R) Computing Improvement Program 2.4.11118 | CVSS 7.8 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2021-0052 | Intel(R) Computing Improvement Program 2.4.11118 | CVSS 7.8 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2021-0074 | Intel(R) Computing Improvement Program 2.4.11118 | CVSS 7.8 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2008-5517 | Git 2.51.0.2 | CVSS 7.5 | EPSS 0.08 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2006-0477 | Git 2.51.0.2 | CVSS 7.5 | EPSS 0.07 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2008-3546 | Git 2.51.0.2 | CVSS 7.5 | EPSS 0.02 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2008-5516 | Git 2.51.0.2 | CVSS 7.5 | EPSS 0.01 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2020-26230 | GitHub CLI 2.89.0 | CVSS 7.4 | EPSS 0.01 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  - CVE-2020-12308 | Intel(R) Computing Improvement Program 2.4.11118 | CVSS 6.5 | EPSS 0.00 | PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+
+PENDIENTES PARA EL TECNICO:
+  * CVE-2016-6658 - GitHub CLI 2.89.0 (CVSS 9.6) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2018-1000006 - GitHub CLI 2.89.0 (CVSS 8.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2016-6564 - Android Studio 2025.3 (CVSS 8.1) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2020-15134 - GitHub CLI 2.89.0 (CVSS 8.0) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2020-8736 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2019-11162 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2021-0052 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2021-0074 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 7.8) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2008-5517 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2006-0477 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2008-3546 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2008-5516 - Git 2.51.0.2 (CVSS 7.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2020-26230 - GitHub CLI 2.89.0 (CVSS 7.4) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * CVE-2020-12308 - Intel(R) Computing Improvement Program 2.4.11118 (CVSS 6.5) - PENDIENTE (sin scoop/choco - actualizar manualmente desde web oficial)
+  * PORT 135 RPC/DCOM (Windows) (MEDIUM)
+  * PORT 445 SMB (HIGH)
+
+Su equipo presenta riesgos criticos de seguridad. Es necesario actuar de inmediato.

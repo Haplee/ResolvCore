@@ -341,10 +341,11 @@ function Show-Menu {
     Write-Host "  |  SELECCIONA UNA OPCION:                                       |" -ForegroundColor DarkCyan
     Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host "    1.  [DIAGNOSTICO]   - Analisis completo del sistema" -ForegroundColor Green
-    Write-Host "    2.  [OPTIMIZACION]  - Optimizar rendimiento" -ForegroundColor Yellow
-    Write-Host "    3.  [AYUDA]         - Ver guia rapida" -ForegroundColor Gray
-    Write-Host "    4.  [SALIR]         - Salir" -ForegroundColor Red
+    Write-Host "    1.  [DIAGNOSTICO]     - Analisis completo del sistema" -ForegroundColor Green
+    Write-Host "    2.  [OPTIMIZACION]    - Optimizar rendimiento" -ForegroundColor Yellow
+    Write-Host "    3.  [VULNERABILIDADES] - Buscar y corregir CVEs" -ForegroundColor Magenta
+    Write-Host "    4.  [AYUDA]           - Ver guia rapida" -ForegroundColor Gray
+    Write-Host "    5.  [SALIR]           - Salir" -ForegroundColor Red
     Write-Host ""
     Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
     Write-Host ""
@@ -394,6 +395,72 @@ function Invoke-Diagnostico {
     }
     else {
         Write-Host "  [X] No encontrado" -ForegroundColor Red
+    }
+
+    Read-Host "  Presiona ENTER"
+}
+
+function Ensure-Python {
+    $py = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $py) { $py = Get-Command python3 -ErrorAction SilentlyContinue }
+    if ($py) { return $py }
+
+    Write-Host "  [!] Python no encontrado. Intentando instalar..." -ForegroundColor Yellow
+
+    # Intento 1: Scoop (sin admin, software libre - MIT)
+    $scoop = Get-Command scoop -ErrorAction SilentlyContinue
+    if ($scoop) {
+        Write-Host "  [>] Instalando python via scoop..." -ForegroundColor Cyan
+        try { & scoop install python *> $null } catch {}
+        $py = Get-Command python -ErrorAction SilentlyContinue
+        if ($py) { return $py }
+    }
+
+    # Intento 2: Chocolatey (Apache 2.0)
+    $choco = Get-Command choco -ErrorAction SilentlyContinue
+    if ($choco) {
+        $isAdminLocal = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+            [Security.Principal.WindowsBuiltInRole]::Administrator)
+        if ($isAdminLocal) {
+            Write-Host "  [>] Instalando python via chocolatey..." -ForegroundColor Cyan
+            try { & choco install python -y --no-progress *> $null } catch {}
+            $env:Path += ";C:\Python313;C:\Python313\Scripts;C:\Python312;C:\Python312\Scripts"
+            $py = Get-Command python -ErrorAction SilentlyContinue
+            if ($py) { return $py }
+        } else {
+            Write-Host "  [!] Choco requiere admin para instalar python" -ForegroundColor Yellow
+        }
+    }
+
+    Write-Host "  [X] No se pudo instalar Python automaticamente" -ForegroundColor Red
+    Write-Host "      Descarga desde https://www.python.org/downloads/" -ForegroundColor Gray
+    return $null
+}
+
+function Invoke-Vulnerabilidades {
+    Write-Host ""
+    Write-Host "  Lanzando escaneo de vulnerabilidades..." -ForegroundColor Magenta
+    Write-Host ""
+
+    $py = Ensure-Python
+    if (-not $py) {
+        Read-Host "  Presiona ENTER"
+        return
+    }
+
+    $script = Join-Path $PROJECT_ROOT "buscar_vulnerabilidades.py"
+    if (-not (Test-Path $script)) {
+        Write-Host "  [X] No encontrado: $script" -ForegroundColor Red
+        Read-Host "  Presiona ENTER"
+        return
+    }
+
+    try {
+        & $py.Source $script @args
+        Write-Host ""
+        Write-Host "  [OK] Escaneo completado" -ForegroundColor Green
+    } catch {
+        Write-Host "  [!] Error durante escaneo: $_" -ForegroundColor Yellow
     }
 
     Read-Host "  Presiona ENTER"
@@ -471,13 +538,14 @@ function Main-Menu {
 
         Show-Menu
 
-        $opcion = Read-Host "  Selecciona (1-4)"
+        $opcion = Read-Host "  Selecciona (1-5)"
 
         switch ($opcion) {
             "1" { Invoke-Diagnostico }
             "2" { Invoke-Optimizacion }
-            "3" { Show-Help }
-            "4" {
+            "3" { Invoke-Vulnerabilidades }
+            "4" { Show-Help }
+            "5" {
                 Write-Host "  [ResolveCore] Sesion finalizada correctamente." -ForegroundColor Cyan
                 Write-Host "  Gracias $usuario por utilizar nuestras herramientas de soporte." -ForegroundColor Gray
                 Write-Host "  ¡Hasta la proxima!" -ForegroundColor White

@@ -239,15 +239,148 @@ La versión anterior (`scripts/android/optimizacion.sh` v3.0.0) usaba `pm clear 
 
 ---
 
-## 8. Módulo 3 — Base de vulnerabilidades CVE
+## 8. Módulo 3 — Vulnerabilidades CVE (`buscar_vulnerabilidades.py` v1.0)
 
-### Tabla `rc_vulnerabilities`
+### Decisión arquitectónica
+
+Módulo unificado en **Python 3.8+ stdlib** (sin pip, sin requirements.txt) que vale para los 4 SO. Evita duplicar lógica CVE en PowerShell + Bash + Bash + Bash. Se invoca como **opción 3** del menú `ResolveCore` en cada plataforma. El launcher auto-instala Python via scoop/choco/apt/dnf/brew si falta.
+
+**Política open source estricta (defendible):**
+
+| ✅ Permitido | ❌ Rechazado |
+|---|---|
+| Scoop (MIT), Chocolatey (Apache 2.0) | winget, Microsoft Store |
+| apt / dnf / pacman / brew | Snap, Mac App Store |
+| smtplib + msmtp (GPL) | MAPI, Outlook COM |
+| NIST NVD / CISA KEV / OSV / EPSS | Nessus, Qualys, Snyk, Tenable |
+| Python stdlib | Cualquier dep pip/npm |
+
+### Pipeline (16 clases, ~1700 líneas)
+
+```
+PlatformDetector → inventario SW + servicios + OS
+        ↓
+CISAKEVCache → feed CISA KEV (~1589 CVEs explotados activamente)
+        ↓
+WhitelistManager → excepciones aceptadas con caducidad
+        ↓
+VulnScanner → NVD (3 intentos: keyword+ver, keyword, virtualMatchString CPE)
+            + OSV (paralelo, threading)
+            + EPSS (probabilidad explotación 30 días)
+        ↓
+ConfigAuditor → audita config local (UAC, SMBv1, RDP NLA, SSH, UFW, ASLR, ...)
+        ↓
+NetworkScanner → 12 puertos riesgo (Telnet/FTP/SMB/RDP/Redis/Mongo)
+        ↓
+LogAnalyzer → IOCs (BruteForce SSH, Event 4625, crons sospechosos)
+        ↓
+DepsScanner (--scan-deps) → requirements.txt, package.json contra OSV
+        ↓
+RemediationEngine → corrección automática:
+    - Win: scoop / chocolatey
+    - Linux: apt / dnf / pacman
+    - macOS: brew
+    - Android: lista manual al técnico
+        ↓
+RiskScorer → score 0-100 con desglose línea a línea
+        ↓
+HistoryManager → guarda histórico, compara con escaneo previo (--compare)
+        ↓
+ReportGenerator → JSON + TXT (estructurado) + HTML (gauge SVG, chips, banner)
+        ↓
+Notifier → SMTP (smtplib, msmtp fallback, .eml si todo falla)
+        ↓
+MantisBTClient → crea ticket REST + adjunta JSON + nota Markdown
+        ↓
+MultiHostRunner (--hosts) → ejecuta en N máquinas vía SSH (script base64 embebido)
+```
+
+### Fuentes públicas auditables
+
+| API | Licencia | Uso |
+|-----|----------|-----|
+| **NIST NVD 2.0** | Pública USG | Catálogo CVE + CVSS v3.1/v3.0/v2.0 |
+| **CISA KEV** | Dominio público | CVEs explotados activamente |
+| **OSV.dev** (Google) | Apache 2.0 | Vulns por ecosistema (PyPI/npm/Maven/Go) |
+| **EPSS FIRST.org** | Pública | Probabilidad explotación 30 días |
+
+CVSS = gravedad estática. EPSS = urgencia real. KEV = ya está siendo explotado *ahora*. La combinación de las tres aporta señal mucho más útil que solo CVSS.
+
+### Normalización inteligente de inventario
+
+Sistema típico Windows: 181 entradas en registro Uninstall. Sin filtrar = ruido total + 0 matches NVD (los nombres en español/edición no coinciden con CPE).
+
+```python
+SOFTWARE_NOISE_PATTERNS    # descarta updates/hotfixes/SDKs/redists
+SOFTWARE_KEYWORD_MAP       # "Microsoft Visual C++ 2013" → "vcredist 2013"
+                           # "Eclipse Temurin JDK con Hotspot" → "openjdk"
+                           # "Oracle VirtualBox 7.2.8" → "virtualbox"
+dedupe_software()          # agrupa duplicados x86/x64, queda versión más alta
+```
+
+Tres intentos NVD por SW: keyword+versión corta → keyword solo → `virtualMatchString` CPE-like. Versión normalizada a `MAJOR.MINOR` (más matches).
+
+### RiskScore con desglose
+
+```
+Base: 100
+- CVE CRITICAL: -15      - CVE HIGH: -8       - CVE MEDIUM: -3
+- CVE en KEV: -20 extra  - Config CRITICAL FALLO: -20
+- Config HIGH FALLO: -10 - Config MEDIUM FALLO: -4
+- Puerto CRITICAL: -8    - Puerto HIGH: -5    - Puerto MEDIUM: -3
+- IOC HIGH: -25          + Remediación aplicada: +5 c/u
+Clasificación: 80-100 BUENO | 50-79 MEJORABLE | 0-49 CRÍTICO
+```
+
+El JSON expone `score_desglose[]` con cada línea de penalización para auditoría: `"-20 CVE en CISA KEV: CVE-2024-1234"`. El HTML lo muestra en `<details>` desplegable.
+
+### Informes generados
+
+**TXT estructurado** — secciones: identificación equipo, score con barra ASCII, resumen ejecutivo, CVEs detallados, auditoría config, puertos, IOCs, comparativa histórica, acciones priorizadas numeradas, mensaje cliente personalizado, próxima revisión recomendada (7d crítico / 30d mejorable / 90d bueno).
+
+**HTML autocontenido** — paleta corporativa idéntica a `informe.html` (mismas CSS vars `--bg`, `--accent`, `--red`, etc.), gauge SVG circular, chips de severidad (KEV/CRITICAL/HIGH/MEDIUM), banner del mensaje cliente coloreado por nivel, desglose del score desplegable, tablas con filas coloreadas por severidad, sección IOCs/dependencias/comparativa condicionales, footer con versión.
+
+**JSON** — incluye `_meta.version/plataforma/hostname` (schema MantisBT del proyecto), `por_severidad`, `score_desglose`, `duracion_segundos`, `proxima_revision`, `excepciones_activas`.
+
+### Mensaje cliente personalizado
+
+`build_client_message()` construye el texto adaptado a hallazgos reales:
+- KEV detectados → "se han detectado N vulnerabilidades en explotación activa…"
+- CRITICAL → "hay N CVEs de severidad crítica…"
+- Configs fallidas → "configuración insuficiente en: Defender, SMBv1…"
+- Puertos abiertos → "servicios sensibles expuestos en red: 445 (SMB)…"
+- IOCs → "indicadores de compromiso en logs…"
+
+### CLI completa
+
+```
+--dry-run --no-fix       Solo detectar, no corregir
+--silent --verbose       Modo CI / debug
+--compare                Diff contra último escaneo
+--output <dir>           Directorio salida
+--report-html            Generar HTML adicional
+--notify <email>         Email vía SMTP (smtplib + fallbacks)
+--mantis-ticket          Crear ticket REST en MantisBT
+--mantis-url --mantis-token   Override de .env
+--platform <W|L|A|M>     Forzar plataforma
+--min-score <N>          Umbral CVSS (default 7.0)
+--serial <id>            Serial ADB Android
+--whitelist-add <CVE>    Añadir excepción
+--whitelist-list         Listar excepciones activas
+--whitelist-expire       Listar caducadas
+--hosts <fichero>        Multihost SSH/ADB
+--scan-deps              Escanear dependencias proyecto (lento, opt-in)
+--no-net-scan --no-logs --no-config   Saltar fases
+```
+
+### Tabla histórica `rc_vulnerabilities` (BBDD MariaDB - sincronización futura)
+
 ```sql
 CREATE TABLE IF NOT EXISTS rc_vulnerabilities (
     id           BIGINT PRIMARY KEY AUTO_INCREMENT,
-    cve          VARCHAR(20) UNIQUE NOT NULL,        -- CVE-2024-1234
+    cve          VARCHAR(20) UNIQUE NOT NULL,
     severity     ENUM('low','medium','high','critical') NOT NULL,
-    cvss_score   DECIMAL(3,1),                       -- 0.0–10.0
+    cvss_score   DECIMAL(3,1),
     os_affected  SET('windows','linux','android','macos','cross'),
     description  TEXT,
     fix          TEXT,
@@ -258,15 +391,18 @@ CREATE TABLE IF NOT EXISTS rc_vulnerabilities (
 );
 ```
 
-### Sincronización NVD
-Cron semanal pendiente de implementar:
-1. Descarga JSON feed NVD.
-2. Parseo CVE-ID, CVSS, descripción.
-3. Insert/Update idempotente (`ON DUPLICATE KEY UPDATE`).
-4. Notificación email si nuevas críticas afectan SO desplegados.
+Pendiente: cron semanal que vuelque `vuln_history.json` a esta tabla para vista global del parque de equipos del cliente.
 
-### Consumo desde scripts diagnóstico
-Los scripts comparan paquetes instalados (`dpkg -l`, `Get-HotFix`, `pm list packages`) contra `rc_vulnerabilities.os_affected` y emiten alertas en el JSON de salida bajo `vulnerabilidades_detectadas[]`.
+### Defensa académica
+
+| Competencia | Demostración |
+|-------------|--------------|
+| **Programación** | 16 clases Python, threading, context managers, decoradores |
+| **Seguridad** | CVE / CVSS / EPSS / KEV / hardening / IOC detection |
+| **Redes** | HTTP REST (NVD/OSV/EPSS), socket port scan, SSH multihost |
+| **SO multiplataforma** | winreg / dpkg-rpm-pacman / brew / adb |
+| **BBDD** | Schema CVE + integración MantisBT REST |
+| **Calidad** | Try/except por fase, timeouts, rate limiting, fallbacks SMTP |
 
 ---
 
@@ -636,3 +772,6 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 2026-05-07 | Creación inicial. Cubre módulos 1-7, decisiones, errores, guion demo, roadmap. Estado proyecto al cierre de ciclo "mejoras tema WP + integración JSON↔Mantis". |
 | 2026-05-07 | Sección 16: eliminadas referencias a stack previo (React/Vue/SPA). Justificación WordPress reescrita en positivo (audiencia, mantenimiento, SEO, hosting, ASIR). Sincroniza con docs/stack-tecnologico.md. |
 | 2026-05-07 | README.md reescrito: índice, badges ampliados (MantisBT/PowerShell/Bash/Lighthouse), instalación vía zip oficial, troubleshooting WP, sección plugins separada, tabla docs, módulos ASIR con descripción concreta, footer con autor unificado. |
+| 2026-05-08 | Módulo 3 reescrito al completo: nuevo `scripts/buscar_vulnerabilidades.py` v1.0 (~1700 líneas, Python stdlib). 16 clases, integra NVD + CISA KEV + OSV + EPSS, ConfigAuditor multi-SO, NetworkScanner, LogAnalyzer (IOCs), DepsScanner, RemediationEngine (scoop/choco/apt/dnf/brew), HistoryManager con --compare, MantisBTClient REST, Notifier SMTP+msmtp+.eml, MultiHostRunner SSH. Política open source estricta documentada. |
+| 2026-05-08 | Launchers `ResolveCore.{ps1,sh}` (Windows/Linux/Android): añadida opción 3 [VULNERABILIDADES], menú reordenado (1=Diag 2=Optim 3=Vulns 4=Ayuda 5=Salir). Auto-instalan Python via scoop/choco/apt si falta. Manejo de errores `2>&1` para no aparecer en consola. |
+| 2026-05-08 | Informes mejorados: TXT con secciones (identificación, score barra, resumen ejecutivo, CVEs detallados, config, puertos, IOCs, comparativa, pendientes priorizados, mensaje cliente personalizado, próxima revisión). HTML con chips severidad, banner cliente coloreado, desglose score desplegable, banda OS info. JSON añade `por_severidad`, `score_desglose`, `duracion_segundos`, `proxima_revision`. RiskScore más justo (Config CRITICAL FALLO ahora -20). |
