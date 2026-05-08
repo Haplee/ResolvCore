@@ -148,9 +148,13 @@ show_menu() {
     echo -e "                       - Niveles: Basico, Estandar, Rendimiento"
     echo -e "                       - Incluye limpieza, servicios, kernel"
     echo ""
-    echo -e "    ${CYAN}3.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo -e "    \033[0;35m3.${NC}  [VULNERABILIDADES] - Buscar y corregir CVEs"
+    echo -e "                       - Escaneo NVD + CISA KEV + OSV + EPSS"
+    echo -e "                       - Audita configuracion y puertos abiertos"
     echo ""
-    echo -e "    ${RED}4.${NC}  [SALIR]         - Salir del programa"
+    echo -e "    ${CYAN}4.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo ""
+    echo -e "    ${RED}5.${NC}  [SALIR]         - Salir del programa"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
     echo ""
@@ -248,6 +252,42 @@ get_system_analysis() {
     echo ""
 }
 
+ensure_python() {
+    if command -v python3 &>/dev/null; then
+        return 0
+    fi
+    echo -e "  ${YELLOW}[!] Python3 no encontrado. Intentando instalar...${NC}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get update -qq 2>/dev/null
+        sudo apt-get install -y python3 2>/dev/null
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y python3 2>/dev/null
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -Sy --noconfirm python 2>/dev/null
+    fi
+    command -v python3 &>/dev/null
+}
+
+run_vulnerabilidades() {
+    VULN="$(dirname "$SCRIPT_DIR")/buscar_vulnerabilidades.py"
+    if ! ensure_python; then
+        echo -e "  ${RED}[X] No se pudo instalar Python3 automaticamente${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+    if [ -f "$VULN" ]; then
+        echo ""
+        echo -e "  ${YELLOW}Ejecutando escaneo de vulnerabilidades...${NC}"
+        echo ""
+        python3 "$VULN" 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+        echo ""
+        echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
+    else
+        echo -e "  ${RED}[X] No encontrado: $VULN${NC}"
+    fi
+    read -p "  Presiona ENTER para continuar..."
+}
+
 run_diagnostico() {
     echo ""
     echo -e "  ${YELLOW}Ejecutando diagnostico...${NC}"
@@ -322,14 +362,15 @@ while true; do
     show_banner
     show_menu
 
-    read -p "  Selecciona una opcion (1-4): " opcion
+    read -p "  Selecciona una opcion (1-5): " opcion
     [[ -z "$opcion" ]] && { echo ""; exit 0; }
 
     case $opcion in
         1) run_diagnostico ;;
         2) run_optimizacion ;;
-        3) show_help ;;
-        4)
+        3) run_vulnerabilidades ;;
+        4) show_help ;;
+        5)
             echo ""
             echo -e "  ${GREEN}Hasta luego!${NC}"
             echo ""
