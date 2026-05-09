@@ -21,7 +21,14 @@
       "Bash(bash -n scripts/android/ResolveCore.sh)",
       "PowerShell(Out-Null *)",
       "Bash(php -l wordpress/page-resolvecore.php wordpress/resolvecore-landing.php)",
-      "PowerShell(Get-Command *)"
+      "PowerShell(Get-Command *)",
+      "Bash(grep -E '\\(\\\\.zip$|__pycache__|diagnosticos/.*\\\\.\\(json|txt\\)\\)')",
+      "Bash(chmod +x /home/franvi/proyectos/ResolvCore/scripts/bootstrap-mantis.sh)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(bash *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"\\(exit $?\\)\")"
     ]
   }
 }

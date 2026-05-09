@@ -145,18 +145,26 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
   - [ ] Si el target real es PS5.1 (Windows 10/11 default): actualizar `CLAUDE.md` y README.
   - [ ] Si el target es PS7: subir el `#Requires` y verificar que el código no usa cmdlets PS7-only que rompan en 5.1.
 
-### `S3` — Reescribir generación de JSON en Linux/macOS/Android
+### `S3` — Reescribir generación de JSON en Linux/macOS/Android  ✅
 - **Severidad**: media (riesgo real de JSON inválido) · **Esfuerzo**: medio · **Reversible**: sí
-- **Por qué**: `linux/diagnostico.sh` construye el JSON por **concatenación de strings** (líneas ~580–668: `hardware_json="\"hardware\": { … }"`). Cualquier comilla, salto de línea o carácter especial en valores rompe el JSON. La validación `jq empty` posterior detecta el fallo pero no lo previene.
-- **Casos que romperán hoy**:
-  - Hostname con `'` o `"`.
-  - Mensajes de servicios systemd con comillas.
-  - Paths con espacios en discos montados raros.
-- **Solución**: usar `jq -n --arg/--argjson` para construir el objeto, o `python3 -c "import json,sys; print(json.dumps(...))"` si quieres evitar dependencia de `jq`.
+- **Por qué**: scripts construían el JSON por **concatenación de strings**. Cualquier comilla, salto de línea o carácter especial rompía el JSON. **Ocurrió en producción 2026-05-09** con `actualizaciones_pendientes: $'0\n0'` provocado por `apt-get -s upgrade | grep -c '^Inst' || echo "0"` con `pipefail` (grep imprime `0` y exit 1, el `||` añade otro `0`).
+- **Solución aplicada**:
+  - **Linux** (3.0.0 → 3.1.0):
+    - Bug raíz fix: `|| echo "0"` → `|| true` + validación regex en apt/dnf/yum/pacman.
+    - Helper `json_num()` para coerción defensiva de numéricos a JSON válido (number o `null`).
+    - Ensamblaje top-level migrado a `jq -n --argjson` con dump de fragmentos a `*.debug.txt` si falla.
+    - `jq` ahora dependencia obligatoria (exit 3 si falta).
+  - **Android** (2.0.0 → 2.1.0):
+    - Mismo refactor a `jq -n --argjson` para los 7 sub-objetos (hardware, sistema_operativo, red, seguridad, aplicaciones, dispositivo, _meta).
+    - `jq` añadido como dependencia obligatoria tras `adb`.
+    - Helpers `json_str/num/bool` ya existentes — solo cambia la fase de ensamblaje.
+  - **macOS** (stub, sin bump): hardening defensivo aunque sea stub. Si `jq` está, usa `jq -n --arg` para serializar; si no, fallback con escape manual de strings. Replicar el patrón completo cuando deje de ser stub.
 - **Acciones**:
-  - [ ] Reescribir `scripts/linux/diagnostico.sh` (sección OUTPUT JSON).
-  - [ ] Replicar en `scripts/macos/diagnostico.sh` y `scripts/android/diagnostico.sh`.
-  - [ ] Añadir test que pase un hostname con caracteres especiales y verifique JSON válido.
+  - [x] Reescribir `scripts/linux/diagnostico.sh` (sección OUTPUT JSON).
+  - [x] Replicar en `scripts/android/diagnostico.sh`.
+  - [x] Hardening en `scripts/macos/diagnostico.sh` (stub).
+  - [x] Versiones bumped en `docs/schema-diagnostico.md`.
+  - [ ] Test con hostnames/valores que contengan `"`, `\`, `\n` para regresión.
 
 ### `S4` — Inyección segura del JSON en `informe.html`
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
@@ -164,6 +172,12 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 - **Acciones**:
   - [ ] Cambiar plantilla para que el JSON viva en `<script type="application/json" id="rc-data">…</script>` y se lea con `JSON.parse(document.getElementById('rc-data').textContent)`.
   - [ ] Aplicar en `scripts/informe.html` y en los puntos de inyección de cada SO.
+
+### `S6` — Mismatch nivel "basico" entre launcher y optimización  ✅
+- **Severidad**: media (UX: la opción 1 del menú revienta) · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: detectado 2026-05-09 testando Android. El launcher (`ResolveCore.sh`) mapea opción 1 → `nivel_opt="basico"`, pero `optimizacion.sh` solo acepta `ligero|estandar|rendimiento|extreme`. Resultado: "Opción no reconocida: basico" + ayuda. Mismo bug en Linux + macOS + Android.
+- **Solución aplicada**: `"basico"` → `"ligero"` en los tres launchers (línea 335/258/336). Etiqueta del menú "BASICO" se mantiene como label de UI.
+- [x] Implementado en los tres launchers.
 
 ### `S5` — Modularizar `buscar_vulnerabilidades.py`
 - **Severidad**: baja · **Esfuerzo**: alto · **Reversible**: sí
@@ -269,3 +283,5 @@ Por **ROI** (impacto / esfuerzo):
 |-------------|--------------------------------------------------------------|
 | 2026-05-09  | Versión inicial — auditoría completa.                        |
 | 2026-05-09  | E1 + E2 + E3 completados: vendor Mantis fuera, bootstrap script, gitignore ampliado. |
+| 2026-05-09  | S3 (Linux) parcial: jq -n + json_num + fix bug apt grep -c. S6 nuevo y resuelto. |
+| 2026-05-09  | S3 cerrado: Android refactor (2.0.0 → 2.1.0) + macOS stub hardening. Versiones actualizadas en schema-diagnostico.md. |
