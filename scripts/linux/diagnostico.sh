@@ -217,6 +217,25 @@ json_escape() {
     printf '%s' "$s"
 }
 
+# json_num: emite el valor si es numérico válido, "null" en caso contrario.
+# Defensa contra capturas multi-línea (p.ej. `grep -c | echo "0"` con pipefail
+# que devuelve "0\n0") que romperían el JSON al interpolarse en un campo numérico.
+json_num() {
+    local v="$1"
+    if [[ "$v" =~ ^-?[0-9]+(\.[0-9]+)?$ ]]; then
+        printf '%s' "$v"
+    else
+        printf 'null'
+    fi
+}
+
+# Verificación de jq como dependencia obligatoria (la usamos para ensamblar JSON).
+if ! command -v jq &>/dev/null; then
+    echo "  ✗  jq no encontrado. Instala con: sudo apt install jq" >&2
+    echo "     O ejecuta: bash $0 -A   (auto-instalación de dependencias)" >&2
+    exit 3
+fi
+
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. HARDWARE
 # ═════════════════════════════════════════════════════════════════════════════
@@ -395,18 +414,18 @@ if [[ -n "$_df" ]]; then
 fi
 [[ "$disk_free_gb" != "null" ]] && ok "Disco / libre: ${disk_free_gb}GB (uso: ${disk_used_pct}%)"
 
-hardware_json="\"hardware\": {
-    \"cpu_cores\": $cpu_cores,
-    \"ram_gb\": $ram_gb,
+hardware_json="{
+    \"cpu_cores\": $(json_num "$cpu_cores"),
+    \"ram_gb\": $(json_num "$ram_gb"),
     \"disk_type\": \"$disk_type\",
-    \"disk_gb\": $disk_gb,
-    \"disk_free_gb\": $disk_free_gb,
-    \"disk_uso_pct\": $disk_used_pct,
+    \"disk_gb\": $(json_num "$disk_gb"),
+    \"disk_free_gb\": $(json_num "$disk_free_gb"),
+    \"disk_uso_pct\": $(json_num "$disk_used_pct"),
     \"smart_status\": \"$smart_status\",
     \"cpu_nombre\": \"$(json_escape "$cpu_name")\",
-    \"cpu_hilos\": $cpu_threads,
-    \"cpu_mhz\": $cpu_mhz,
-    \"cpu_temp_c\": $cpu_temp,
+    \"cpu_hilos\": $(json_num "$cpu_threads"),
+    \"cpu_mhz\": $(json_num "$cpu_mhz"),
+    \"cpu_temp_c\": $(json_num "$cpu_temp"),
     \"discos\": $disks_json,
     \"bateria\": $battery_json,
     \"gpu\": $gpu_json
@@ -432,21 +451,26 @@ ok "OS: $os_name (build $os_build, $os_arch)"
 ok "Uptime: ${uptime_h}h"
 
 # Actualizaciones pendientes
+# Nota: `grep -c` imprime el conteo (incluido "0") y sale con código 1 si no hay
+# matches. Con `pipefail` la sustitución hereda ese exit 1, así que usamos
+# `|| true` para no inyectar valores extra. La regex final blinda contra cualquier
+# output imprevisto del package manager.
 pending_updates="null"
 if command -v apt &>/dev/null; then
     # Usa cache local — no ejecuta apt update para evitar efectos secundarios en diagnóstico
-    pending_updates=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates (caché local)"
+    pending_updates=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0} (caché local)"
 elif command -v dnf &>/dev/null; then
-    pending_updates=$(dnf check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates"
+    pending_updates=$(dnf check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0}"
 elif command -v yum &>/dev/null; then
-    pending_updates=$(yum check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates"
+    pending_updates=$(yum check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0}"
 elif command -v pacman &>/dev/null; then
-    pending_updates=$(pacman -Qu 2>/dev/null | wc -l | xargs || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates"
+    pending_updates=$(pacman -Qu 2>/dev/null | wc -l | xargs || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0}"
 fi
+[[ "$pending_updates" =~ ^[0-9]+$ ]] || pending_updates=0
 
 # Integridad del sistema (check de paquetes)
 sfc_issues=0
@@ -476,13 +500,13 @@ if [[ -f /sys/class/power_supply/*/status ]]; then
     ok "Plan de energía: $power_plan"
 fi
 
-sistema_json="\"sistema_operativo\": {
-    \"actualizaciones_pendientes\": $pending_updates,
+sistema_json="{
+    \"actualizaciones_pendientes\": $(json_num "$pending_updates"),
     \"nombre\": \"$(json_escape "$os_name")\",
     \"build\": \"$os_build\",
     \"arquitectura\": \"$os_arch\",
-    \"uptime_horas\": $uptime_h,
-    \"sfc_archivos_danados\": $sfc_issues,
+    \"uptime_horas\": $(json_num "$uptime_h"),
+    \"sfc_archivos_danados\": $(json_num "$sfc_issues"),
     \"plan_energia\": \"$power_plan\"
 }"
 
@@ -520,9 +544,9 @@ if command -v lsmod &>/dev/null; then
     ok "Módulos sin firma: $unsigned_count"
 fi
 
-drivers_json="\"drivers\": {
-    \"detenidos\": $stopped_count,
-    \"sin_firma\": $unsigned_count,
+drivers_json="{
+    \"detenidos\": $(json_num "$stopped_count"),
+    \"sin_firma\": $(json_num "$unsigned_count"),
     \"detenidos_lista\": [],
     \"sin_firma_lista\": []
 }"
@@ -574,11 +598,11 @@ if command -v ping &>/dev/null; then
     fi
 fi
 
-red_json="\"red\": {
-    \"latencia_ms\": $latency_ms,
-    \"perdida_paquetes_pct\": $packet_loss_pct,
+red_json="{
+    \"latencia_ms\": $(json_num "$latency_ms"),
+    \"perdida_paquetes_pct\": $(json_num "$packet_loss_pct"),
     \"dns\": $dns_json,
-    \"interfaz\": \"$active_iface\"
+    \"interfaz\": \"$(json_escape "$active_iface")\"
 }"
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -628,13 +652,13 @@ if command -v getenforce &>/dev/null; then
     ok "SELinux: $selinux_status"
 fi
 
-seguridad_json="\"seguridad\": {
+seguridad_json="{
     \"antivirus\": $antivirus_name,
     \"firewall\": $firewall_active,
     \"uac_habilitado\": null,
     \"defender_activo\": $defender_active,
-    \"defender_firma_dias\": $def_sig_days,
-    \"selinux\": \"$selinux_status\"
+    \"defender_firma_dias\": $(json_num "$def_sig_days"),
+    \"selinux\": \"$(json_escape "$selinux_status")\"
 }"
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -643,10 +667,10 @@ seguridad_json="\"seguridad\": {
 hostname_str=$(hostname 2>/dev/null || echo "unknown")
 timestamp=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')
 
-meta_json="\"_meta\": {
-    \"version\": \"3.0.0\",
+meta_json="{
+    \"version\": \"3.1.0\",
     \"plataforma\": \"linux\",
-    \"hostname\": \"$hostname_str\",
+    \"hostname\": \"$(json_escape "$hostname_str")\",
     \"generado_en\": \"$timestamp\",
     \"admin\": $is_admin
 }"
@@ -658,23 +682,42 @@ meta_json="\"_meta\": {
 mkdir -p "$OUTPUT_DIR" 2>/dev/null
 out_file="$OUTPUT_DIR/diagnostico_${hostname_str}_$(date '+%Y%m%d_%H%M%S').json"
 
-cat > "$out_file" <<EOF
-{
-    $hardware_json,
-    $sistema_json,
-    $drivers_json,
-    $red_json,
-    $seguridad_json,
-    $meta_json
-}
-EOF
-
-if command -v jq &>/dev/null; then
-    if ! jq empty "$out_file" 2>/dev/null; then
-        echo -e "  ${RED}✗  JSON generado no válido. Revisa la salida.${NC}" >&2
-        exit 1
-    fi
+# Ensamblaje vía jq -n: cada sección llega como --argjson y jq valida que sea
+# JSON bien formado antes de incluirla. Si alguna sección está corrupta, jq -n
+# falla con un mensaje que apunta al fragmento problemático en vez de generar
+# silenciosamente un fichero inválido.
+if ! jq -n \
+    --argjson hardware "$hardware_json" \
+    --argjson sistema_operativo "$sistema_json" \
+    --argjson drivers "$drivers_json" \
+    --argjson red "$red_json" \
+    --argjson seguridad "$seguridad_json" \
+    --argjson meta "$meta_json" \
+    '{
+        hardware: $hardware,
+        sistema_operativo: $sistema_operativo,
+        drivers: $drivers,
+        red: $red,
+        seguridad: $seguridad,
+        _meta: $meta
+    }' > "$out_file" 2>/tmp/diagnostico_jq_err.$$; then
+    echo -e "  ${RED}✗  jq falló al ensamblar el JSON. Detalle:${NC}" >&2
+    cat /tmp/diagnostico_jq_err.$$ >&2 || true
+    rm -f /tmp/diagnostico_jq_err.$$
+    # Volcar fragmentos a un .debug.json para que el técnico pueda inspeccionar
+    debug_file="${out_file%.json}.debug.txt"
+    {
+        printf '== hardware_json ==\n%s\n\n' "$hardware_json"
+        printf '== sistema_json ==\n%s\n\n'  "$sistema_json"
+        printf '== drivers_json ==\n%s\n\n'  "$drivers_json"
+        printf '== red_json ==\n%s\n\n'      "$red_json"
+        printf '== seguridad_json ==\n%s\n\n' "$seguridad_json"
+        printf '== meta_json ==\n%s\n'        "$meta_json"
+    } > "$debug_file"
+    echo -e "  ${YELLOW}↳ Fragmentos volcados en: $debug_file${NC}" >&2
+    exit 1
 fi
+rm -f /tmp/diagnostico_jq_err.$$
 
 # Generar informe HTML
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

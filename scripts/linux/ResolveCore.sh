@@ -332,7 +332,7 @@ run_optimizacion() {
     read -p "  Selecciona opcion (1-4): " nivel
 
     case $nivel in
-        1) nivel_opt="basico" ;;
+        1) nivel_opt="ligero" ;;
         2) nivel_opt="estandar" ;;
         3) nivel_opt="rendimiento" ;;
         4) return ;;

@@ -333,7 +333,7 @@ run_optimizacion() {
     read -p "  Selecciona opcion (1-3): " nivel
 
     case $nivel in
-        1) nivel_opt="basico" ;;
+        1) nivel_opt="ligero" ;;
         2) nivel_opt="estandar" ;;
         3) return ;;
         *) echo -e "  ${RED}Opcion no valida${NC}"; return ;;

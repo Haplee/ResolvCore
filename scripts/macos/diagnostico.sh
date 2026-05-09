@@ -101,31 +101,68 @@ if [[ "$MODE" == "local" && "${OSTYPE:-}" != darwin* ]]; then
     echo -e "  ${YELLOW}[!] No se detecta macOS (OSTYPE=${OSTYPE:-unknown}).${NC}"
 fi
 
-# Generar JSON placeholder con esquema mínimo coherente al resto de plataformas
+# Generar JSON placeholder con esquema mínimo coherente al resto de plataformas.
+# Nota: aunque sea stub, se escapan campos string para que un hostname/SSH con
+# caracteres especiales no rompa el JSON. Cuando este script salga del estado
+# stub, replicar el patrón jq -n de scripts/linux/diagnostico.sh.
 mkdir -p "$OUTPUT_DIR"
 HOSTNAME_STR="$(hostname 2>/dev/null || echo macos)"
 TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
+GENERATED_AT="$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')"
 OUT_FILE="${OUTPUT_DIR}/diagnostico_macos_${HOSTNAME_STR}_${TIMESTAMP}.json"
 
-cat > "$OUT_FILE" <<EOF
+if command -v jq &>/dev/null; then
+    jq -n \
+        --arg version    "$SCRIPT_VERSION" \
+        --arg hostname   "$HOSTNAME_STR" \
+        --arg modo       "$MODE" \
+        --arg ssh_host   "$SSH_HOST" \
+        --arg ssh_user   "$SSH_USER" \
+        --arg generado   "$GENERATED_AT" \
+        '{
+            hardware:          { demo: true },
+            sistema_operativo: { demo: true, nombre: "macOS" },
+            red:               { demo: true },
+            seguridad:         { demo: true },
+            _meta: {
+                version:     $version,
+                plataforma:  "macos",
+                stub:        true,
+                hostname:    $hostname,
+                modo:        $modo,
+                ssh_host:    $ssh_host,
+                ssh_user:    $ssh_user,
+                generado_en: $generado,
+                nota:        "Implementacion pendiente. Conserva interfaz CLI para integracion futura."
+            }
+        }' > "$OUT_FILE"
+else
+    # Fallback sin jq: escapado manual mínimo para no romper el JSON.
+    json_escape() {
+        local s="$1"
+        s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\n'/\\n}"; s="${s//$'\t'/\\t}"
+        printf '%s' "$s"
+    }
+    cat > "$OUT_FILE" <<EOF
 {
   "hardware":          { "demo": true },
   "sistema_operativo": { "demo": true, "nombre": "macOS" },
   "red":               { "demo": true },
   "seguridad":         { "demo": true },
   "_meta": {
-    "version":     "$SCRIPT_VERSION",
+    "version":     "$(json_escape "$SCRIPT_VERSION")",
     "plataforma":  "macos",
     "stub":        true,
-    "hostname":    "$HOSTNAME_STR",
-    "modo":        "$MODE",
-    "ssh_host":    "$SSH_HOST",
-    "ssh_user":    "$SSH_USER",
-    "generado_en": "$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')",
+    "hostname":    "$(json_escape "$HOSTNAME_STR")",
+    "modo":        "$(json_escape "$MODE")",
+    "ssh_host":    "$(json_escape "$SSH_HOST")",
+    "ssh_user":    "$(json_escape "$SSH_USER")",
+    "generado_en": "$(json_escape "$GENERATED_AT")",
     "nota":        "Implementacion pendiente. Conserva interfaz CLI para integracion futura."
   }
 }
 EOF
+fi
 
 echo -e "  ${GREEN}[OK] JSON stub generado: $OUT_FILE${NC}"
 echo "$OUT_FILE"
