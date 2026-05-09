@@ -37,5 +37,16 @@ opencode/
 # Cuentas de prueba (credenciales locales)
 notes/test_accounts.md
 
-# Diagnósticos generados (datos locales de cada equipo)
-diagnosticos/*.json
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Diagnósticos generados (datos locales con hostnames/IPs reales)
+scripts/diagnosticos/
+
+# Empaquetados del tema/plugin (distribuir vía GitHub Releases)
+wordpress/*.zip
+
+# Vendor MantisBT (instalar con: bash scripts/bootstrap-mantis.sh)
+mantisbt-2.28.1/
