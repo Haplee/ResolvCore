@@ -16,8 +16,8 @@
 | Plataforma | Script              | Versión actual |
 |------------|---------------------|----------------|
 | Windows    | `windows/diagnostico.ps1` | 3.2.0    |
-| Linux      | `linux/diagnostico.sh`    | 3.0.0    |
-| Android    | `android/diagnostico.sh`  | 2.0.0    |
+| Linux      | `linux/diagnostico.sh`    | 3.1.0    |
+| Android    | `android/diagnostico.sh`  | 2.1.0    |
 | macOS      | `macos/diagnostico.sh`    | 0.1.0-demo (stub) |
 
 ---
