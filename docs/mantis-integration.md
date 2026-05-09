@@ -17,10 +17,21 @@ Usuario → Formulario WP → functions.php → rc_mantis_create_ticket()
 
 ```bash
 cd /var/www
-wget https://github.com/mantisbt/mantisbt/releases/download/release-2.27.0/mantisbt-2.27.0.tar.gz
-tar -xzf mantisbt-2.27.0.tar.gz
-mv mantisbt-2.27.0 mantis
+wget https://github.com/mantisbt/mantisbt/releases/download/2.28.1/mantisbt-2.28.1.tar.gz
+tar -xzf mantisbt-2.28.1.tar.gz
+mv mantisbt-2.28.1 mantis
 ```
+
+> **Para desarrollo local** (no VPS): el bundle MantisBT no se versiona en este
+> repo. Para obtener una copia local:
+>
+> ```bash
+> bash scripts/bootstrap-mantis.sh
+> ```
+>
+> El script descarga el tarball oficial 2.28.1 a `mantisbt-2.28.1/`
+> (gitignored). Es idempotente y verifica SHA256 si hay
+> `mantisbt/mantis-2.28.1.sha256`.
 
 ### 2. Permisos
 
