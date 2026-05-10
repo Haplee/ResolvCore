@@ -4,6 +4,8 @@
 # Menu interactivo para tecnicos ResolveCore en Mac
 # =============================================================================
 
+set -uo pipefail
+
 SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DIAG_FLAGS=()

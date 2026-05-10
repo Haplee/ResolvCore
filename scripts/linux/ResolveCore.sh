@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # ResolveCore - Menu Linux
 # Menu interactivo para tecnicos ResolveCore en Linux
 # =============================================================================
+
+set -uo pipefail
 
 SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
