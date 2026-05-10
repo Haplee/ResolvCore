@@ -81,13 +81,16 @@ resolvecore/
 - YOU MUST never store sensitive data (contraseñas, tokens) en opciones de WordPress sin cifrar.
 
 ### PowerShell
-- Usa `#Requires -Version 7.0` al inicio de cada script.
+- Usa `#Requires -Version 5.1` al inicio de cada script (sin espacio entre `#` y `Requires` — `# Requires` es un comentario inerte). El target real es Windows 10/11, que ship con 5.1; pedir PS7 obliga al técnico a instalarlo y suma fricción.
+- Si un script necesita una capacidad PS7 concreta (`ForEach-Object -Parallel`, ternario, `??`), añade ese script a una excepción con `#Requires -Version 7.0` y documenta el por qué en cabecera.
 - Maneja errores con `try/catch` y escribe al log con `Write-EventLog` o fichero.
 - Los scripts de diagnóstico deben devolver un objeto `[PSCustomObject]` estructurado.
 - IMPORTANT: nunca ejecutes comandos destructivos sin confirmación explícita del técnico.
 
 ### Bash
-- `#!/usr/bin/env bash` en todos los scripts. `set -euo pipefail`.
+- `#!/usr/bin/env bash` en todos los scripts (nunca `#!/bin/bash` — rompe portabilidad en macOS y BSD).
+- **`set -uo pipefail` por defecto** en scripts de diagnóstico/optimización. Se omite `-e` deliberadamente: estos scripts capturan fallos comando a comando (`|| echo ...`, `|| true`, validaciones regex) y `-e` los aborta antes de poder rellenar el JSON. Si añades `-e` a un script existente, rompes la captura granular y vuelves al bug del 2026-05-09 con `apt-get -s upgrade | grep -c '^Inst'`.
+- Para scripts auxiliares cortos sin captura granular sí se usa `set -euo pipefail` (p.ej. `scripts/bootstrap-mantis.sh`).
 - Variables en UPPER_CASE. Funciones en snake_case.
 - Comprueba dependencias al inicio con `command -v <tool> || exit 1`.
 

@@ -100,19 +100,19 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 
 # 2. Documentación
 
-### `D1` — Crear `docs/flujo-sistema.md`
+### `D1` — Crear `docs/flujo-sistema.md`  ✅
 - **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `CLAUDE.md` referencia el fichero ("Diagrama del sistema: `docs/flujo-sistema.md`") y obliga a actualizarlo "al añadir una nueva fase al flujo del sistema". El fichero **no existe**.
 - **Contenido mínimo**: promover el diagrama mermaid del README + descripción detallada de cada fase (1–7) con responsable, input, output y herramientas implicadas.
-- [ ] Implementado
+- [x] Implementado — diagrama mermaid + 7 fases (responsable / input / output / herramienta / persistencia) + tabla de payloads + guía de modificación.
 
-### `D2` — Crear `vulnerabilities/migrations/`
+### `D2` — Crear `vulnerabilities/migrations/`  ✅ (parcial)
 - **Severidad**: media · **Esfuerzo**: medio · **Reversible**: sí
 - **Por qué**: `CLAUDE.md` y README hablan de la tabla `rc_vulnerabilities` y de migraciones idempotentes en `vulnerabilities/migrations/`, pero **el directorio no existe**. La única SQL del repo (`mantisbt/sql/resolvecore-setup.sql`) solo configura categorías Mantis.
 - **Acciones**:
-  - [ ] Crear `vulnerabilities/migrations/0001_init.sql` con `CREATE TABLE IF NOT EXISTS rc_vulnerabilities` (CVE, gravedad, SO afectado, descripción, fix, fecha sync).
-  - [ ] Documentar el esquema en `docs/schema-vulnerabilidades.md` (campos, índices, fuente de cada feed).
-  - [ ] Si hay sync con NVD planificada, dejar al menos un `0002_seed_dev.sql` con fixtures FICTICIOS (sin CVEs reales que terminen siendo "datos del cliente").
+  - [x] Crear `vulnerabilities/migrations/0001_init.sql` con `CREATE TABLE IF NOT EXISTS rc_vulnerabilities` (CVE, fuente, gravedad, CVSS, EPSS, KEV, SO afectado, producto, versión, fix, referencias, fecha sync) + tabla auxiliar `rc_vulnerabilities_sync` (audit trail).
+  - [x] Documentar el esquema en `docs/schema-vulnerabilidades.md` (campos, índices, política de upsert, fixtures `CVE-9999-*`).
+  - [ ] `0002_seed_dev.sql` con fixtures ficticios — pendiente hasta primera integración real con scanner (sin valor antes).
 
 ### `D3` — Tabla de versiones por componente en README
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
@@ -128,22 +128,25 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 
 # 3. Calidad de scripts
 
-### `S1` — **CLAUDE.md**: alinear shebangs y `set` en Bash
+### `S1` — **CLAUDE.md**: alinear shebangs y `set` en Bash  ✅
 - **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `CLAUDE.md` dice *"`#!/usr/bin/env bash` en todos los scripts. `set -euo pipefail`"*. Realidad:
   - `scripts/linux/diagnostico.sh:1` → `#!/bin/bash` y solo `set -o pipefail`.
   - `scripts/linux/optimizacion.sh:13` → `set -uo pipefail` (sin `-e`).
-- **Decisión**: o adaptar los scripts a la regla, o relajar la regla en `CLAUDE.md` (algunos scripts hacen captura granular y `-e` les molesta — documentar esa excepción).
+- **Decisión aplicada**: relajar `CLAUDE.md` para reflejar la realidad. `set -uo pipefail` es la convención del proyecto en scripts con captura granular (regresión 2026-05-09 con `apt-get -s upgrade | grep -c '^Inst'` demostró que `-e` rompe la captura). `set -euo pipefail` se mantiene para scripts auxiliares cortos como `bootstrap-mantis.sh`.
 - **Acciones**:
-  - [ ] Decidir política (estricto vs. permitir excepción documentada).
-  - [ ] Aplicar a `scripts/{linux,macos,android}/*.sh` (revisar uno a uno por si `-e` rompe captura intencional de fallos).
+  - [x] Política documentada en `CLAUDE.md` (sección `Bash`).
+  - [x] Shebangs corregidos: `linux/diagnostico.sh` y `linux/ResolveCore.sh` pasan a `#!/usr/bin/env bash`.
+  - [x] `set -uo pipefail` añadido a los launchers `linux/ResolveCore.sh`, `macos/ResolveCore.sh`, `android/ResolveCore.sh` que lo omitían.
 
-### `S2` — **CLAUDE.md**: `#Requires -Version 7.0` en PowerShell
+### `S2` — **CLAUDE.md**: `#Requires -Version 7.0` en PowerShell  ✅
 - **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `CLAUDE.md` exige `#Requires -Version 7.0`. Realidad: `scripts/windows/diagnostico.ps1:1` declara `#Requires -Version 5.1`. README también declara PS7+. Decide cuál es la verdad.
+- **Decisión aplicada**: target real es **PS5.1** (Windows 10/11 default; pedir PS7 sumaba fricción al técnico). Se alinean `CLAUDE.md` y `README.md` a 5.1.
 - **Acciones**:
-  - [ ] Si el target real es PS5.1 (Windows 10/11 default): actualizar `CLAUDE.md` y README.
-  - [ ] Si el target es PS7: subir el `#Requires` y verificar que el código no usa cmdlets PS7-only que rompan en 5.1.
+  - [x] Bug fix: `scripts/windows/ResolveCore.ps1:1` tenía `# Requires -Version 5.1` (con espacio = comentario inerte). Corregido a `#Requires -Version 5.1`.
+  - [x] `CLAUDE.md` actualizado: directiva PS5.1 + cláusula de excepción para scripts que necesiten capacidades PS7.
+  - [x] `README.md` actualizado: badge, resumen ejecutivo, capa Diagnóstico, stack table, tabla de requisitos y árbol de directorios.
 
 ### `S3` — Reescribir generación de JSON en Linux/macOS/Android  ✅
 - **Severidad**: media (riesgo real de JSON inválido) · **Esfuerzo**: medio · **Reversible**: sí
@@ -207,23 +210,22 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 
 # 4. WordPress + integración Mantis
 
-### `W1` — **CLAUDE.md**: cifrar (o externalizar) el token Mantis
+### `W1` — **CLAUDE.md**: cifrar (o externalizar) el token Mantis  ✅
 - **Severidad**: alta (seguridad) · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `wordpress/plugins/rc-mantisbt/rc-mantisbt.php:36` registra `rc_mantis_token` con `sanitize_text_field` y lo guarda en `wp_options` **en claro**. `CLAUDE.md` dice literalmente: *"YOU MUST never store sensitive data (contraseñas, tokens) en opciones de WordPress sin cifrar"*.
-- **Opciones**:
-  1. **Constante en `wp-config.php`** (preferida — es justo lo que el README muestra como instrucción): `define( 'RC_MANTIS_TOKEN', '...' );`. Modificar el plugin para leer `defined('RC_MANTIS_TOKEN') ? RC_MANTIS_TOKEN : get_option(...)`.
-  2. **Cifrar antes de guardar** con `openssl_encrypt` usando una clave derivada de `wp_salt('auth')` o de una constante propia en `wp-config.php`.
-- **Acciones**:
-  - [ ] Implementar opción 1 o 2.
-  - [ ] Avisar en la página de admin si el token sigue en `wp_options` y existe la constante (priorizar constante).
-  - [ ] Documentar en `docs/mantis-integration.md`.
+- **Solución aplicada**: opción 1 (constante en `wp-config.php`).
+  - Helpers `rc_mantis_get_url()` y `rc_mantis_get_token()` con prioridad **constante > wp_options**.
+  - Pantalla de ajustes detecta la constante y desactiva el campo correspondiente con un aviso.
+  - Si la constante está definida y además existe un valor en `wp_options`, aviso de aplicación (recomendar vaciar el campo).
+  - `rc_mantis_get_api()` ahora usa los helpers — ningún consumidor accede directamente a `get_option('rc_mantis_token')`.
+  - `docs/mantis-integration.md` documenta la prioridad y la sección "Almacenamiento de credenciales".
+- [x] Implementado.
 
-### `W2` — Nonce en el botón "Verificar conexión"
+### `W2` — Nonce en el botón "Verificar conexión"  ✅
 - **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `rc-mantisbt.php:89-94` construye un enlace con `add_query_arg([..., 'rc_mantis_test' => '1'])` y lo dispara con `isset($_GET['rc_mantis_test'])`. Hay `current_user_can('manage_options')` (correcto), pero falta nonce — un admin que pinche un enlace malicioso dispararía el test sin querer (CSRF en acción admin).
-- **Acciones**:
-  - [ ] Generar el enlace con `wp_nonce_url(...)`.
-  - [ ] Verificar con `check_admin_referer(...)` antes de ejecutar `get_projects()`.
+- **Solución aplicada**: enlace generado con `wp_nonce_url(..., 'rc_mantis_test', 'rc_mantis_nonce')`; handler verifica con `check_admin_referer('rc_mantis_test', 'rc_mantis_nonce')` antes de llamar a `get_projects()`. Resuelto en el mismo commit que W1 (mismo archivo).
+- [x] Implementado.
 
 ### `W3` — Strlen vs mb_substr en sanitize_description
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
@@ -285,3 +287,4 @@ Por **ROI** (impacto / esfuerzo):
 | 2026-05-09  | E1 + E2 + E3 completados: vendor Mantis fuera, bootstrap script, gitignore ampliado. |
 | 2026-05-09  | S3 (Linux) parcial: jq -n + json_num + fix bug apt grep -c. S6 nuevo y resuelto. |
 | 2026-05-09  | S3 cerrado: Android refactor (2.0.0 → 2.1.0) + macOS stub hardening. Versiones actualizadas en schema-diagnostico.md. |
+| 2026-05-09  | W1 + W2 cerrados: token Mantis externalizable a `RC_MANTIS_TOKEN` (constante > wp_options), nonce CSRF en "Verificar conexión", aviso de duplicado, helpers `rc_mantis_get_*()`. D1 cerrado: `docs/flujo-sistema.md` con 7 fases. D2 parcial: migración 0001 (rc_vulnerabilities + sync) + `docs/schema-vulnerabilidades.md`. S1 + S2 cerrados: shebangs `#!/usr/bin/env bash` en linux/, `set -uo pipefail` en launchers, política Bash documentada en CLAUDE.md, target real PS5.1 alineado en CLAUDE.md/README, fix typo `# Requires` en ResolveCore.ps1. |
