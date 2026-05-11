@@ -12,7 +12,7 @@
 #    - Validación de dispositivo autorizado antes de actuar.
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_VERSION="3.1.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
