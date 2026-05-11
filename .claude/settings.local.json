@@ -29,7 +29,9 @@
       "Bash(bash *)",
       "Bash(git check-ignore *)",
       "Bash(echo \"\\(exit $?\\)\")",
-      "Bash(php *)"
+      "Bash(php *)",
+      "Bash(git reset *)",
+      "Bash(git commit *)"
     ]
   }
 }

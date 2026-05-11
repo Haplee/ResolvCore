@@ -12,7 +12,7 @@
 #  Opciones previstas: --dry-run, --confirm, --undo
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_VERSION="0.1.0-demo"
 NIVEL="estandar"

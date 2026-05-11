@@ -58,7 +58,7 @@ Para instalar Ubuntu + stack completo sin intervención manual:
 [✓] Instala PHP 8.2 + extensiones
 [✓] Instala MariaDB → crea BBs resolvecore_wp + resolvecore_mantis
 [✓] Instala WordPress via WP-CLI
-[✓] Instala MantisBT 2.27.0
+[✓] Instala MantisBT 2.28.1
 [✓] Configura Nginx (WordPress en / , MantisBT en /mantis/)
 [✓] Instala wkhtmltopdf
 [✓] Instala PowerShell 7
@@ -98,7 +98,7 @@ pwsh -ExecutionPolicy Bypass -File .\scripts\iso\windows\setup.ps1
 [✓] Instala Nginx → registrado como servicio Windows (NSSM)
 [✓] Instala MariaDB → crea BBs resolvecore_wp + resolvecore_mantis
 [✓] Instala WordPress via WP-CLI
-[✓] Instala MantisBT 2.27.0
+[✓] Instala MantisBT 2.28.1
 [✓] Instala wkhtmltopdf
 [✓] Instala AnyDesk
 [✓] Clona los scripts de ResolveCore en C:\ResolveCore\scripts\

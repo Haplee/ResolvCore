@@ -75,9 +75,9 @@ Construir una plataforma operativa que permita a un técnico:
 ### Objetivos específicos
 | ID | Objetivo | Estado |
 |----|----------|--------|
-| O1 | Scripts diagnóstico Windows (PowerShell 7) | ✅ Completado v3.2.0 |
-| O2 | Scripts diagnóstico Linux (Bash) | ✅ Completado v3.1.0 |
-| O3 | Scripts diagnóstico Android (Termux/ADB) | ✅ Completado v3.1.0 |
+| O1 | Scripts diagnóstico Windows (PowerShell 5.1+) | ✅ Completado v3.2.0 |
+| O2 | Scripts diagnóstico Linux (Bash) | ✅ Completado v3.0.0 |
+| O3 | Scripts diagnóstico Android (Termux/ADB) | ✅ Completado v2.1.0 |
 | O4 | Scripts diagnóstico macOS (stub demo) | ✅ Completado v0.1.0 |
 | O5 | Schema JSON cross-platform unificado | 🟡 Documentado, falta migración Win |
 | O6 | Plugin WP integración MantisBT | ✅ Completado |
@@ -107,7 +107,7 @@ Construir una plataforma operativa que permita a un técnico:
 │           VPS Linux  ·  nginx  ·  PHP-FPM  ·  MariaDB       │
 │                                                              │
 │  ┌─────────────┐   ┌─────────────┐   ┌──────────────────┐   │
-│  │  WordPress  │──▶│  Plugin     │──▶│   MantisBT 2.27  │   │
+│  │  WordPress  │──▶│  Plugin     │──▶│   MantisBT 2.28  │   │
 │  │  (tema RC)  │   │  rc-mantisbt│   │   (REST API)     │   │
 │  └─────────────┘   └─────────────┘   └──────────────────┘   │
 │         │                  │                  │              │
@@ -159,11 +159,11 @@ Cada fase emite un **evento auditable**: log local en cliente, nota en ticket, f
 |------|------------|---------|---------------|
 | Frontend público | WordPress | 6.x | CMS con cuota >40% web, ecosistema masivo, hosting barato |
 | Frontend tema | PHP + HTML5 + CSS3 + JS vanilla | — | Sin frameworks JS para minimizar bundle; tema 100% propio |
-| Tickets | MantisBT | 2.27 | Open source, PHP, REST API completa, granularidad de roles |
+| Tickets | MantisBT | 2.28.1 | Open source, PHP, REST API completa, granularidad de roles |
 | BD | MariaDB | 10.6+ | Drop-in MySQL, soporte UTF8MB4, licencia libre |
 | Acceso remoto | AnyDesk | — | Cifrado TLS 1.2, sin VPN, multiplataforma |
-| Diagnóstico Win | PowerShell | 7.0+ | Cross-platform, objetos, CIM/WMI nativo |
-| Diagnóstico Linux | Bash | 4+ | Universal, `set -euo pipefail` para fail-fast |
+| Diagnóstico Win | PowerShell | 5.1 (target) / 7+ (opt-in) | 5.1 viene en Win 10/11 — sin fricción para el técnico. 7+ solo en scripts que requieren `ForEach-Object -Parallel` u operadores PS7 |
+| Diagnóstico Linux | Bash | 4+ | Universal, `set -uo pipefail` (omite `-e` para captura granular comando a comando) |
 | Diagnóstico Android | Bash + ADB / Termux | — | ADB sobre USB; Termux para acceso local sin root |
 | PDF | wkhtmltopdf / DomPDF | — | HTML→PDF fiel, plantillas reusables (planificado) |
 | Servidor | nginx + PHP-FPM | 1.24 / 8.2 | Performance > Apache para PHP, footprint bajo |
@@ -188,7 +188,7 @@ Recolecta:
 
 Salida: JSON + HTML resumen. Exit codes 0/1/2.
 
-### Linux (`scripts/linux/diagnostico.sh` v3.1.0)
+### Linux (`scripts/linux/diagnostico.sh` v3.0.0)
 - `top`/`uptime`/`free -h` → CPU, carga, RAM
 - `df -h`, `lsblk`, `smartctl` → disco
 - `journalctl -p 3` → errores recientes
@@ -196,7 +196,7 @@ Salida: JSON + HTML resumen. Exit codes 0/1/2.
 - `ss -tulpn` → puertos abiertos
 - `systemctl --failed` → servicios caídos
 
-### Android (`scripts/android/diagnostico.sh` v3.1.0)
+### Android (`scripts/android/diagnostico.sh` v2.1.0)
 - ADB: `dumpsys battery`, `dumpsys meminfo`, `pm list packages`
 - Termux: `getprop`, `df`, `top -n 1`
 - Detección de apps con permisos peligrosos.
@@ -652,15 +652,16 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 - Control total a11y (skip-link, ARIA, prefers-reduced-motion).
 - Sin licencias propietarias.
 
-### Por qué PowerShell 7 y no .ps1 clásico
-- Cross-platform real (PowerShell Core corre en Linux/macOS).
-- Sintaxis moderna (`??`, ternario, pipeline chain).
-- Soporte oficial Microsoft a largo plazo.
+### Por qué PowerShell 5.1 como target (no PS7)
+- Windows 10/11 ship con 5.1 nativo: cero fricción para el técnico en sesión remota AnyDesk.
+- Pedir PS7 obligaría a instalarlo en cada equipo cliente antes de poder ejecutar el script — coste innecesario para los casos de uso reales.
+- PS7 se admite como opt-in cuando un script concreto necesita una capacidad PS7 (`ForEach-Object -Parallel`, ternario, `??`): se marca con `#Requires -Version 7.0` y se documenta en cabecera. Ejemplo: `scripts/iso/windows/setup.ps1`.
+- Aviso de sintaxis: `#Requires` sin espacio entre `#` y `Requires`. Con espacio (`# Requires`) PowerShell lo ignora — sería un comentario inerte.
 
 ### Por qué Bash (no Python) en Linux/Android
 - **Cero dependencias**: cualquier distro tiene Bash; Python 3 no siempre.
 - Scripts de diagnóstico = composiciones de comandos del sistema. Bash es lingua franca.
-- `set -euo pipefail` + `command -v <tool> || exit 1` cubre fail-fast.
+- `set -uo pipefail` (omite `-e` deliberadamente) + `command -v <tool> || exit 1` cubre fail-fast sin abortar la captura granular de fallos comando a comando que rellena el JSON. `set -e` se reserva para scripts auxiliares cortos (`bootstrap-mantis.sh`).
 
 ### Por qué REST y no GraphQL para MantisBT
 - MantisBT 2.x trae REST nativo. GraphQL requeriría plugin extra no oficial.
@@ -691,7 +692,7 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 
 ### Material a tener listo
 - Laptop con WSL Ubuntu + WordPress local (DevKinsta o `docker compose`)
-- VPS con MantisBT 2.27 + plugin instalado y token válido
+- VPS con MantisBT 2.28.1 + plugin instalado y token válido
 - Equipo Windows secundario para diagnóstico real
 - Móvil Android con USB debugging activado y ADB en el laptop
 
@@ -780,3 +781,5 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 2026-05-08 | Landing WordPress polish premium: smooth scroll + scrollbar custom, h1 con gradient accent (verde→azul), fade-in stagger, tarjetas de servicio con border-radius + hover lift + glow, sección nueva `#flujo` con pipeline 7 fases numerada, sección `#faq` con `<details>` nativo (6 preguntas), bloque CTA final con gradient bg, mobile menu hamburguesa funcional <860px, scroll hint animado en hero, pricing card featured con sombra glow + offset. Aplicado a `page-resolvecore.php`. Re-empaquetado en `resolvecore-theme.zip` y `resolvecore-theme-v11.zip`. |
 | 2026-05-08 | README reescrito formato profesional: TOC numerada (15 secciones), badges reorganizados (status/version/license/TFG/A11y), resumen ejecutivo con propuesta de valor, mermaid arquitectura ampliada (7 fases con etiquetas), tabla capas por responsabilidad, stack con columna "Versión", tablas detalladas por módulo (diagnóstico/optimización/scanner CVE/MantisBT), referencia a esquema JSON, sección "Seguridad y reversibilidad" enumerada, índice de docs/, roadmap v1.2-v2.0, estado del proyecto, licencia GPL-3.0. Eliminados emojis decorativos en headers. |
 | 2026-05-11 | Añadido `docs/defensa-scripts-mantis.md`: guion técnico de defensa orientado al tribunal. Cataloga los 17 scripts (4 Windows, 3 Linux, 3 Android, 3 macOS stub, escáner Python, ISO Win/Linux, bootstrap Mantis, install plugins) con flags, mecanismos de seguridad, exit codes. Detalla integración MantisBT (5 endpoints REST, plugin `rc-mantisbt`, helper `rc_mantis_attach_diagnostic`, flujo end-to-end 11 pasos). 9 preguntas frecuentes del tribunal con respuestas. Referencia cruzada en sección 20 de este documento. |
+| 2026-05-11 | Auditoría scripts vs reglas Bash/PS actualizadas en CLAUDE.md. Fix `set -euo pipefail` → `set -uo pipefail` en `scripts/android/optimizacion.sh`, `scripts/macos/diagnostico.sh`, `scripts/macos/optimizacion.sh`. Fix `set -o pipefail` → `set -uo pipefail` en `scripts/linux/diagnostico.sh`. Sincronizadas versiones en este documento: Linux diag v3.1.0 → **v3.0.0** (versión real), Android diag v3.1.0 → **v2.1.0** (versión real). Stack: PowerShell 7.0+ → **5.1 target / 7+ opt-in** (Win 10/11 ship con 5.1, sin fricción técnico). Sección 16 "Por qué PowerShell" reescrita: target 5.1 + excepción PS7 documentada + aviso sintaxis `#Requires` sin espacio. Sección 16 "Por qué Bash" actualizada: `set -uo pipefail` (no `-e`) + razón captura granular del JSON. |
+| 2026-05-11 | Versión MantisBT unificada en 2.28.1 (era 2.27 en arquitectura/demo/stack de este doc, en `docs/informe-tutor-estado-proyecto.md` y en `docs/so-especializado.md`). Scripts ISO `scripts/iso/linux/post-install.sh` y `scripts/iso/windows/setup.ps1`: bump `MANTIS_VER` 2.27.0 → 2.28.1 + fix URL de GitHub Releases (`download/release-${VER}/` → `download/${VER}/`, alineado con `scripts/bootstrap-mantis.sh` que funciona). El tag de release sin prefijo `release-` es el formato actual para MantisBT ≥ 2.28. |
