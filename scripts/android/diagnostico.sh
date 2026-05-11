@@ -258,7 +258,7 @@ if [[ -n "$bat_raw" ]]; then
     bat_full_cap=$(adb_s 'cat /sys/class/power_supply/battery/charge_full 2>/dev/null || cat /sys/class/power_supply/Battery/charge_full 2>/dev/null || echo ""' | head -1 || echo '')
     bat_design_cap=$(adb_s 'cat /sys/class/power_supply/battery/charge_full_design 2>/dev/null || cat /sys/class/power_supply/Battery/charge_full_design 2>/dev/null || echo ""' | head -1 || echo '')
     if [[ "$bat_full_cap" =~ ^[0-9]+$ && "$bat_design_cap" =~ ^[0-9]+$ && "$bat_design_cap" -gt 0 ]]; then
-        bat_desgaste=$(awk "BEGIN{v=(1 - $bat_full_cap / $bat_design_cap) * 100; printf \"%.1f\", (v<0?0:v)}")
+        bat_desgaste=$(LC_NUMERIC=C awk "BEGIN{v=(1 - $bat_full_cap / $bat_design_cap) * 100; printf \"%.1f\", (v<0?0:v)}")
         ok "Desgaste batería: ${bat_desgaste}%"
     fi
 
@@ -285,7 +285,7 @@ for zone in $(adb_s ls /sys/class/thermal/ 2>/dev/null | grep thermal_zone); do
         t=$(adb_s "cat /sys/class/thermal/$zone/temp 2>/dev/null" | xargs || echo '')
         if [[ "$t" =~ ^[0-9]+$ && "$t" -gt 0 ]]; then
             if [[ "$t" -gt 1000 ]]; then
-                cpu_temp=$(awk "BEGIN{printf \"%.1f\", $t/1000}")
+                cpu_temp=$(LC_NUMERIC=C awk "BEGIN{printf \"%.1f\", $t/1000}")
             else
                 cpu_temp="$t"
             fi
