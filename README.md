@@ -25,7 +25,7 @@
 ![WordPress](https://img.shields.io/badge/WordPress-21759B?style=for-the-badge&logo=wordpress&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-8.1+-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
-![PowerShell](https://img.shields.io/badge/PowerShell_7-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
+![PowerShell](https://img.shields.io/badge/PowerShell_5.1+-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
 ![Bash](https://img.shields.io/badge/Bash_4+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)
 ![Python](https://img.shields.io/badge/Python_3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS_12+-000000?style=for-the-badge&logo=apple&logoColor=white)
@@ -57,7 +57,7 @@
 
 ## Resumen ejecutivo
 
-**ResolvCore** es un ecosistema diseñado bajo los estándares de **Administración de Sistemas Informáticos en Red (ASIR)**. Centraliza el ciclo completo de soporte técnico remoto en siete fases automatizadas, integrando un CMS público (WordPress), un sistema de tickets enterprise (MantisBT), un motor de scripts cross-platform (PowerShell 7 + Bash) y un escáner de vulnerabilidades multi-feed (Python stdlib).
+**ResolvCore** es un ecosistema diseñado bajo los estándares de **Administración de Sistemas Informáticos en Red (ASIR)**. Centraliza el ciclo completo de soporte técnico remoto en siete fases automatizadas, integrando un CMS público (WordPress), un sistema de tickets enterprise (MantisBT), un motor de scripts cross-platform (PowerShell 5.1+ + Bash) y un escáner de vulnerabilidades multi-feed (Python stdlib).
 
 **Propuesta de valor**
 
@@ -106,7 +106,7 @@ flowchart LR
 | **Presentación** | Tema WordPress + plugin shortcode + landing FSE. |
 | **Tickets** | MantisBT 2.26 con REST API y plugin de integración. |
 | **Acceso remoto** | AnyDesk (sesiones supervisadas). |
-| **Diagnóstico** | PowerShell 7 / Bash 4+ — scripts modulares con salida JSON. |
+| **Diagnóstico** | PowerShell 5.1+ / Bash 4+ — scripts modulares con salida JSON. |
 | **Análisis CVE** | Python 3.8+ stdlib, multi-feed, paralelo, sin red privada. |
 | **Persistencia** | MariaDB con prefijo `rc_` y migraciones idempotentes. |
 | **Reporting** | Plantilla HTML + wkhtmltopdf/DomPDF → PDF auto-adjunto al ticket. |
@@ -117,8 +117,8 @@ flowchart LR
 
 | Capa | Tecnología | Versión | Nota |
 |---|---|---|---|
-| Core engine | PowerShell / Bash | 7+ / 4+ | Multiplataforma con paridad funcional. |
-| TUI launcher | PowerShell / Bash | 7+ / 4+ | Menú interactivo + pass-through. |
+| Core engine | PowerShell / Bash | 5.1+ / 4+ | Multiplataforma con paridad funcional. |
+| TUI launcher | PowerShell / Bash | 5.1+ / 4+ | Menú interactivo + pass-through. |
 | Vuln scanner | Python | 3.8+ stdlib | Sin dependencias `pip`. |
 | Backend | PHP / WordPress | 8.1+ / 6.x | Gestión de contenido y REST. |
 | Base de datos | MariaDB / MySQL | 10.4+ / 8.0+ | Tickets, histórico CVE. |
@@ -142,7 +142,7 @@ ResolvCore/
 │   └── plugins/
 │       └── rc-mantisbt/               Cliente REST de MantisBT.
 ├── scripts/
-│   ├── windows/                       PowerShell 7: ResolveCore.ps1, diagnostico.ps1, optimizacion.ps1.
+│   ├── windows/                       PowerShell 5.1+: ResolveCore.ps1, diagnostico.ps1, optimizacion.ps1.
 │   ├── linux/                         Bash: ResolveCore.sh, diagnostico.sh, optimizacion.sh.
 │   ├── macos/                         Bash: paridad con Linux para macOS 12+.
 │   ├── android/                       ADB shell: diagnostico.sh, optimizacion.sh, ResolveCore.sh.
@@ -171,7 +171,7 @@ ResolvCore/
 | WordPress | 6.0 |
 | PHP | 8.1 |
 | MariaDB / MySQL | 10.4 / 8.0 |
-| PowerShell (Windows) | 7.0 |
+| PowerShell (Windows) | 5.1 (default Win10/11) |
 | Bash (Linux / macOS) | 4.0 |
 | Python (scanner CVE) | 3.8 |
 | MantisBT | 2.26 |

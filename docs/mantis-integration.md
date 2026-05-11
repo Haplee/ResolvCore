@@ -117,6 +117,35 @@ mysql -umantis_user -p mantisbt < mantisbt/sql/resolvecore-setup.sql
 | ID Proyecto | ID numérico del proyecto (ver URL al editar el proyecto) |
 | Activar | Checkbox para habilitar la creación automática de tickets |
 
+### Almacenamiento de credenciales
+
+El plugin lee URL y token con el siguiente orden de prioridad:
+
+1. **Constantes en `wp-config.php`** (recomendado en producción):
+
+   ```php
+   define( 'RC_MANTIS_URL',   'https://tudominio.com/mantis' );
+   define( 'RC_MANTIS_TOKEN', 'tu_api_token' );
+   ```
+
+   El token nunca se persiste en `wp_options`. La pantalla de ajustes detecta la constante y desactiva el campo correspondiente con un aviso.
+
+2. **`wp_options`** (fallback): si la constante no está definida, se usa el valor guardado por el formulario. El token se guarda en claro, así que solo es aceptable en entornos de desarrollo aislados.
+
+**CLAUDE.md** prohíbe guardar tokens sin cifrar en opciones de WordPress. Si la constante está definida y además existe un token en `wp_options`, la pantalla muestra un aviso recomendando vaciar el campo.
+
+Funciones públicas equivalentes (uso desde código propio):
+
+```php
+$url   = rc_mantis_get_url();   // constante > wp_options
+$token = rc_mantis_get_token(); // constante > wp_options
+$api   = rc_mantis_get_api();   // null si falta cualquiera de los dos
+```
+
+### Verificar conexión (CSRF)
+
+El botón "Verificar conexión con MantisBT" en la página de ajustes está protegido por nonce (`wp_nonce_url` + `check_admin_referer`). Un enlace `?rc_mantis_test=1` falsificado ya no dispara la prueba.
+
 ### Generar API Token en MantisBT
 
 1. Iniciar sesión como administrador
