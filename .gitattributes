@@ -1,0 +1,14 @@
+# Force LF endings for shell + config scripts (CRLF break bash in WSL/Linux)
+*.sh        text eol=lf
+*.bash      text eol=lf
+bootstrap-* text eol=lf
+
+# Windows-native stays CRLF
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Defaults
+* text=auto
