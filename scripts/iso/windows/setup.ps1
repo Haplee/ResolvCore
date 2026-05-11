@@ -117,7 +117,7 @@ $SCRIPTS_DIR = "$RC_BASE\scripts"
 $LOG_FILE    = "$RC_BASE\install.log"
 $CREDS_FILE  = "$RC_BASE\credenciales.txt"
 
-$MANTIS_VER  = "2.27.0"
+$MANTIS_VER  = "2.28.1"
 
 # Contrasenas aleatorias
 function New-Password { [System.Convert]::ToBase64String((1..24 | ForEach-Object { [byte](Get-Random -Max 256) })) -replace '[^a-zA-Z0-9]','' | Select-Object -First 1 }
@@ -291,7 +291,7 @@ Write-Ok "WordPress instalado"
 Write-Info "Instalando MantisBT $MANTIS_VER..."
 New-Item -ItemType Directory -Force -Path $MANTIS_DIR | Out-Null
 $mantisTar = "$env:TEMP\mantisbt-$MANTIS_VER.tar.gz"
-Invoke-WebRequest "https://github.com/mantisbt/mantisbt/releases/download/release-$MANTIS_VER/mantisbt-$MANTIS_VER.tar.gz" -OutFile $mantisTar
+Invoke-WebRequest "https://github.com/mantisbt/mantisbt/releases/download/$MANTIS_VER/mantisbt-$MANTIS_VER.tar.gz" -OutFile $mantisTar
 7z x $mantisTar -o"$env:TEMP" -y | Out-Null
 7z x "$env:TEMP\mantisbt-$MANTIS_VER.tar" -o"$env:TEMP\mantisbt-extracted" -y | Out-Null
 Copy-Item "$env:TEMP\mantisbt-extracted\mantisbt-$MANTIS_VER\*" $MANTIS_DIR -Recurse -Force

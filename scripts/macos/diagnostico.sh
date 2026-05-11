@@ -16,7 +16,7 @@
 #    2. Remoto vía SSH:    bash diagnostico.sh --host IP --user usuario
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_VERSION="0.1.0-demo"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

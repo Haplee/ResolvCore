@@ -507,10 +507,11 @@ Cada paso deja **artefactos auditables**: nota en ticket, fichero adjunto, log l
 
 ## 14. Decisiones técnicas defendibles
 
-### 14.1 PowerShell 7 en Windows, Bash en Linux/Android
+### 14.1 PowerShell 5.1 (target) en Windows, Bash en Linux/Android
 
-- **PowerShell 7+**: cross-platform real (PowerShell Core corre en Linux/macOS). Soporte oficial Microsoft a largo plazo. Sintaxis moderna (`??`, ternario, pipeline chain).
-- **Bash**: universal en distros Linux y Termux. `set -euo pipefail` + `command -v <tool> || exit 1` cubre fail-fast sin dependencias.
+- **PowerShell 5.1**: nativo en Windows 10/11. Es el target real para los scripts de cliente — pedir PS7 en sesión remota AnyDesk obliga al técnico a instalarlo primero, fricción innecesaria. PS7 se admite como opt-in con `#Requires -Version 7.0` cuando un script concreto necesita una capacidad PS7 (`ForEach-Object -Parallel`, ternario, `??`). Ejemplo: `scripts/iso/windows/setup.ps1`.
+- **Aviso sintaxis**: `#Requires` sin espacio. `# Requires` (con espacio) es un comentario inerte que PowerShell ignora.
+- **Bash**: universal en distros Linux y Termux. **`set -uo pipefail`** por defecto (omite `-e` deliberadamente): los scripts de diagnóstico/optimización capturan fallos comando a comando con `|| echo …`, `|| true` y validaciones regex; `-e` los abortaría antes de poder rellenar el JSON. `set -euo pipefail` se reserva para scripts auxiliares cortos sin captura granular (`bootstrap-mantis.sh`).
 
 ### 14.2 Python stdlib para vulnerabilidades
 
@@ -570,3 +571,4 @@ R: Generador PDF (plantilla diseñada, falta cablear wkhtmltopdf), cron NVD sync
 | Fecha | Cambio |
 |-------|--------|
 | 2026-05-11 | Creación inicial. Catálogo completo de los 17 scripts del proyecto, integración MantisBT detallada, flujo end-to-end, decisiones defendibles, FAQ tribunal. |
+| 2026-05-11 | Sección 14.1 actualizada: PowerShell **5.1 target** (Win 10/11 nativo, sin fricción técnico) + PS7 opt-in con `#Requires -Version 7.0` para casos concretos. Bash: `set -uo pipefail` por defecto (sin `-e`) para preservar captura granular del JSON; `set -euo pipefail` solo en auxiliares cortos. Sincroniza con CLAUDE.md actualizado. |
