@@ -41,13 +41,23 @@ function rc_mantis_register_settings(): void {
 function rc_mantis_settings_page(): void {
     if ( ! current_user_can( 'manage_options' ) ) return;
 
-    $url        = get_option( 'rc_mantis_url', '' );
-    $token      = get_option( 'rc_mantis_token', '' );
+    $url        = rc_mantis_get_url();
+    $token      = rc_mantis_get_token();
+    $url_const_active   = defined( 'RC_MANTIS_URL' )   && RC_MANTIS_URL;
+    $token_const_active = defined( 'RC_MANTIS_TOKEN' ) && RC_MANTIS_TOKEN;
+    $stored_token       = get_option( 'rc_mantis_token', '' );
     $project_id = get_option( 'rc_mantis_project_id', 1 );
     $enabled    = get_option( 'rc_mantis_enabled', 0 );
     ?>
     <div class="wrap">
         <h1>MantisBT · ResolveCore</h1>
+
+        <?php if ( $token_const_active && $stored_token ): ?>
+            <div class="notice notice-warning">
+                <p><strong>Token duplicado.</strong> <code>RC_MANTIS_TOKEN</code> está definida en <code>wp-config.php</code> y tiene prioridad. El valor guardado en la base de datos (en claro) ya no se usa: se recomienda <strong>vaciarlo</strong> en este formulario para no dejar el token en <code>wp_options</code>.</p>
+            </div>
+        <?php endif; ?>
+
         <form method="post" action="options.php">
             <?php settings_fields( 'rc_mantis_group' ); ?>
             <table class="form-table">
@@ -61,14 +71,28 @@ function rc_mantis_settings_page(): void {
                 <tr>
                     <th><label for="rc_mantis_url">URL de MantisBT</label></th>
                     <td>
-                        <input type="url" id="rc_mantis_url" name="rc_mantis_url" value="<?php echo esc_attr( $url ); ?>" class="regular-text" placeholder="https://tudominio.com/mantis">
+                        <?php if ( $url_const_active ): ?>
+                            <input type="url" id="rc_mantis_url" value="<?php echo esc_attr( $url ); ?>" class="regular-text" disabled>
+                            <p class="description">Definida vía <code>RC_MANTIS_URL</code> en <code>wp-config.php</code>.</p>
+                        <?php else: ?>
+                            <input type="url" id="rc_mantis_url" name="rc_mantis_url" value="<?php echo esc_attr( get_option( 'rc_mantis_url', '' ) ); ?>" class="regular-text" placeholder="https://tudominio.com/mantis">
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <tr>
                     <th><label for="rc_mantis_token">API Token</label></th>
                     <td>
-                        <input type="password" id="rc_mantis_token" name="rc_mantis_token" value="<?php echo esc_attr( $token ); ?>" class="regular-text" placeholder="Token generado en MantisBT → Mi cuenta → API Tokens">
-                        <p class="description">MantisBT: <strong>Mi cuenta → API Tokens → Crear token</strong></p>
+                        <?php if ( $token_const_active ): ?>
+                            <input type="password" id="rc_mantis_token" value="<?php echo esc_attr( str_repeat( '•', 12 ) ); ?>" class="regular-text" disabled>
+                            <p class="description">Definido vía <code>RC_MANTIS_TOKEN</code> en <code>wp-config.php</code> (recomendado: nunca se guarda en BD).</p>
+                        <?php else: ?>
+                            <input type="password" id="rc_mantis_token" name="rc_mantis_token" value="<?php echo esc_attr( $stored_token ); ?>" class="regular-text" placeholder="Token generado en MantisBT → Mi cuenta → API Tokens">
+                            <p class="description">
+                                MantisBT: <strong>Mi cuenta → API Tokens → Crear token</strong>.<br>
+                                <strong>Recomendado:</strong> moverlo a <code>wp-config.php</code> con
+                                <code>define('RC_MANTIS_TOKEN', '...');</code> para no almacenarlo en <code>wp_options</code> en claro.
+                            </p>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <tr>
@@ -86,12 +110,16 @@ function rc_mantis_settings_page(): void {
             <hr>
             <h2>Probar conexión</h2>
             <p>
-                <a href="<?php echo esc_url( add_query_arg( [ 'page' => 'rc-mantisbt', 'rc_mantis_test' => '1' ], admin_url( 'options-general.php' ) ) ); ?>" class="button">
+                <a href="<?php echo esc_url( wp_nonce_url(
+                    add_query_arg( [ 'page' => 'rc-mantisbt', 'rc_mantis_test' => '1' ], admin_url( 'options-general.php' ) ),
+                    'rc_mantis_test', 'rc_mantis_nonce'
+                ) ); ?>" class="button">
                     Verificar conexión con MantisBT
                 </a>
             </p>
             <?php
                 if ( isset( $_GET['rc_mantis_test'] ) && current_user_can( 'manage_options' ) ) {
+                    check_admin_referer( 'rc_mantis_test', 'rc_mantis_nonce' );
                     $api    = rc_mantis_get_api();
                     $result = $api ? $api->get_projects() : null;
                     if ( is_wp_error( $result ) ) {
@@ -110,9 +138,32 @@ function rc_mantis_settings_page(): void {
 
 // ── Public API helper ──────────────────────────────────────────────────────────
 
+/**
+ * URL de MantisBT. Prioridad: constante RC_MANTIS_URL > opción wp_options.
+ */
+function rc_mantis_get_url(): string {
+    if ( defined( 'RC_MANTIS_URL' ) && RC_MANTIS_URL ) {
+        return (string) RC_MANTIS_URL;
+    }
+    return (string) get_option( 'rc_mantis_url', '' );
+}
+
+/**
+ * API token de MantisBT. Prioridad: constante RC_MANTIS_TOKEN > opción wp_options.
+ *
+ * Almacenar el token en wp-config.php evita guardarlo en wp_options en claro
+ * (CLAUDE.md: nunca almacenar tokens sin cifrar en opciones de WordPress).
+ */
+function rc_mantis_get_token(): string {
+    if ( defined( 'RC_MANTIS_TOKEN' ) && RC_MANTIS_TOKEN ) {
+        return (string) RC_MANTIS_TOKEN;
+    }
+    return (string) get_option( 'rc_mantis_token', '' );
+}
+
 function rc_mantis_get_api(): ?RC_Mantis_API {
-    $url   = get_option( 'rc_mantis_url', '' );
-    $token = get_option( 'rc_mantis_token', '' );
+    $url   = rc_mantis_get_url();
+    $token = rc_mantis_get_token();
     if ( ! $url || ! $token ) return null;
     return new RC_Mantis_API( $url, $token );
 }
