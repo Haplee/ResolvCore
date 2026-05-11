@@ -91,7 +91,7 @@ read -rp "¿Continuar? [s/N] " CONFIRM
 # ============================================================
 RC_DOMAIN="resolvecore.local"
 PHP_VER="8.2"
-MANTIS_VER="2.27.0"
+MANTIS_VER="2.28.1"
 WP_DIR="/var/www/wordpress"
 MANTIS_DIR="/var/www/mantis"
 SCRIPTS_DIR="/opt/resolvecore"
@@ -237,7 +237,7 @@ info "Instalando MantisBT ${MANTIS_VER}..."
 mkdir -p "$MANTIS_DIR"
 MANTIS_TAR="/tmp/mantisbt-${MANTIS_VER}.tar.gz"
 
-wget -q "https://github.com/mantisbt/mantisbt/releases/download/release-${MANTIS_VER}/mantisbt-${MANTIS_VER}.tar.gz" \
+wget -q "https://github.com/mantisbt/mantisbt/releases/download/${MANTIS_VER}/mantisbt-${MANTIS_VER}.tar.gz" \
     -O "$MANTIS_TAR"
 tar -xzf "$MANTIS_TAR" -C /tmp/
 cp -r "/tmp/mantisbt-${MANTIS_VER}/." "$MANTIS_DIR/"
