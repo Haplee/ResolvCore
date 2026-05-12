@@ -448,7 +448,7 @@ function Invoke-Vulnerabilidades {
         return
     }
 
-    $script = Join-Path $PROJECT_ROOT "buscar_vulnerabilidades.py"
+    $script = Join-Path $PROJECT_ROOT "common\buscar_vulnerabilidades.py"
     if (-not (Test-Path $script)) {
         Write-Host "  [X] No encontrado: $script" -ForegroundColor Red
         Read-Host "  Presiona ENTER"

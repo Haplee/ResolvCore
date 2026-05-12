@@ -799,7 +799,7 @@ try {
 }
 
 # Informe HTML (best-effort: el JSON es la fuente autoritativa)
-$templatePath = Join-Path $PSScriptRoot '../informe.html'
+$templatePath = Join-Path $PSScriptRoot '../../reports/informe.html'
 $htmlFile = $outFile -replace '\.json$', '.html'
 if (Test-Path $templatePath) {
     try {
