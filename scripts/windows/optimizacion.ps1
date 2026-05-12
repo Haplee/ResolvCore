@@ -30,8 +30,7 @@ NAME
     optimizacion.ps1 - Optimizacion de sistema Windows para ResolveCore
 
 SYNOPSIS
-    .\optimizacion.ps1 [-Nivel <nivel>] [-DryRun] [-Undo] [-BackupOnly]
-                       [-Help]
+    .\optimizacion.ps1 [-Nivel <nivel>] [-DryRun] [-Undo] [-BackupOnly] [-Help]
 
 DESCRIPTION
     Aplica optimizaciones por niveles: telemetria off, servicios no
@@ -41,15 +40,12 @@ DESCRIPTION
     para permitir -Undo. Requiere consola Administrador.
 
 PARAMETERS
-    -Nivel <nivel>              Nivel a aplicar (default: estandar):
-                                  ligero       Limpieza basica + servicios
-                                               no criticos.
-                                  estandar     Telemetria off + servicios +
-                                               visual effects.
-                                  rendimiento  Estandar + optimizaciones
-                                               disco/red/RAM.
-                                  extreme      Rendimiento + bloqueo de
-                                               Cortana/OneDrive/Bing.
+    -Nivel <nivel>              
+        Nivel a aplicar (default: estandar):
+        ligero:       Limpieza basica + servicios no criticos.
+        estandar:     Telemetria off + servicios + visual effects.
+        rendimiento:  Estandar + optimizaciones disco/red/RAM.
+        extreme:      Rendimiento + bloqueo de Cortana/OneDrive/Bing.
     -DryRun                     Simula sin aplicar cambios. Imprime las
                                 acciones planificadas.
     -Undo                       Deshace cambios usando estado_previo.json.
@@ -246,7 +242,7 @@ foreach ($svc in $servicesToDisable) {
                 Write-Ok "Desactivado: $svc (previo: $($svcObj.StartType))"
                 $REPORT.acciones += "servicio_desactivado:$svc"
             } catch {
-                Write-Warn "No se pudo desactivar $svc: $($_.Exception.Message)"
+                Write-Warn "No se pudo desactivar ${svc}: $($_.Exception.Message)"
             }
         } else {
             Write-Info "DryRun: desactivaria servicio $svc (actual: $($svcObj.StartType))"
