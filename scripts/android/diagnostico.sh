@@ -509,7 +509,7 @@ fi
 rm -f /tmp/diagnostico_android_jq_err.$$
 
 # Generar informe HTML (disponible en el host que ejecute adb)
-_tmpl="${SCRIPT_DIR}/../informe.html"
+_tmpl="${SCRIPT_DIR}/../../reports/informe.html"
 _html_file="${OUTPUT_FILE%.json}.html"
 if [[ -f "$_tmpl" ]]; then
     _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)

@@ -48,5 +48,11 @@ scripts/diagnosticos/
 # Empaquetados del tema/plugin (distribuir vía GitHub Releases)
 wordpress/*.zip
 
-# Vendor MantisBT (instalar con: bash scripts/bootstrap-mantis.sh)
+# Vendor MantisBT (instalar con: bash scripts/server/bootstrap-mantis.sh)
 mantisbt-2.28.1/
+
+# Análisis de grafos generados (herramienta externa, no fuente del proyecto)
+graphify-out/
+
+# Agent rules de herramientas AI dentro de carpetas de scripts
+scripts/**/.agent/

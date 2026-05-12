@@ -917,7 +917,7 @@ rm -f /tmp/diagnostico_jq_err.$$
 
 # Generar informe HTML
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-_tmpl="${_script_dir}/../informe.html"
+_tmpl="${_script_dir}/../../reports/informe.html"
 _html_file="${out_file%.json}.html"
 if [[ -f "$_tmpl" ]]; then
     _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)

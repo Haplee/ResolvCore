@@ -74,13 +74,18 @@ resolvecore/
 │   │   ├── diagnostico.sh
 │   │   ├── optimizacion.sh
 │   │   └── ResolveCore.sh
-│   ├── iso/
+│   ├── common/
+│   │   └── buscar_vulnerabilidades.py   # Escáner CVE multiplataforma
+│   ├── server/
 │   │   ├── linux/
 │   │   │   ├── post-install.sh      # Setup stack completo Ubuntu
 │   │   │   └── autoinstall.yaml     # Preseed Ubuntu 24.04 desatendido
 │   │   └── windows/
 │   │       └── setup.ps1            # Setup stack completo Windows
-│   ├── buscar_vulnerabilidades.py   # Escáner CVE multiplataforma
+│   └── setup/
+│       ├── setup-tecnico-linux.sh   # Setup máquina técnico (Linux)
+│       └── setup-tecnico-windows.ps1 # Setup máquina técnico (Windows)
+├── reports/
 │   └── informe.html                 # Plantilla HTML para informe visual
 ├── diagnosticos/                    # Salida JSON/HTML generada
 └── .env                             # Variables de entorno (opcional)
@@ -669,7 +674,7 @@ Scripts para provisionar la máquina física del técnico desde cero. No son scr
 
 ### 10.1 post-install.sh (Linux)
 
-**Ruta:** `scripts/iso/linux/post-install.sh`  
+**Ruta:** `scripts/server/linux/post-install.sh`  
 **Requiere:** Ubuntu/Debian, root (`sudo`), internet  
 **Uso:** `sudo bash post-install.sh`
 
@@ -715,7 +720,7 @@ Configura `resolvecore.local` en `/etc/hosts`. Acceso tras instalación:
 
 ### 10.2 setup.ps1 (Windows)
 
-**Ruta:** `scripts/iso/windows/setup.ps1`  
+**Ruta:** `scripts/server/windows/setup.ps1`  
 **Requiere:** PowerShell 7+, Administrador, internet  
 **Uso:** `pwsh -ExecutionPolicy Bypass -File setup.ps1`
 
@@ -760,7 +765,7 @@ Equivalente Windows de `post-install.sh`. Provisiona la máquina del técnico en
 
 ### 10.3 autoinstall.yaml (Ubuntu preseed)
 
-**Ruta:** `scripts/iso/linux/autoinstall.yaml`  
+**Ruta:** `scripts/server/linux/autoinstall.yaml`  
 **Formato:** Ubuntu Autoinstall (cloud-init v1)  
 **Propósito:** Instalación desatendida de Ubuntu Server 24.04 LTS para la máquina del técnico.
 
