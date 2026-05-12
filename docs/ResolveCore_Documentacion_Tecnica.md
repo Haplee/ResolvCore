@@ -492,21 +492,24 @@ Todos los scripts generan JSON con una estructura base similar:
 
 ```json
 {
-  "hardware": { ... },
+  "hardware": {
+    "cpu_nombre": "...", "cpu_cores": 0, "cpu_hilos": 0, "cpu_mhz": 0,
+    "cpu_temp_c": 0,
+    "ram_gb": 0,
+    "discos": [ ... ],             // discos físicos con smart_atributos anidado
+    "gpu": { ... },                // GPU con vram_mb, temperatura_c
+    "bateria": { ... }             // nivel, estado, desgaste_pct, ciclos
+  },
   "sistema_operativo": { ... },
   "red": { ... },
   "seguridad": { ... },
-  "aplicaciones": { ... },        // Android
-  "servicios": { ... },           // Windows
-  "drivers": { ... },              // Linux
-  "software": { ... },             // Windows
-  "rendimiento": { ... },          // Windows
-  "usuarios": [ ... ],             // Windows
-  "discos": { ... },               // Windows
-  "gpu": [ ... ],                  // Windows
-  "smart": [ ... ],                // Windows
-  "placa_base": { ... },           // Windows
-  "bateria": { ... },              // Windows/Linux/Android
+  "drivers": { ... },              // Linux: módulos kernel, errores dmesg
+  "servicios": { ... },            // Windows + Linux (systemd)
+  "software": [ ... ],             // Windows + Linux (dpkg/rpm/pacman), primeros 50
+  "rendimiento": { ... },          // Windows + Linux: cpu_uso_pct, mem_uso_pct, top_procesos
+  "usuarios": [ ... ],             // Windows + Linux: UID ≥ 1000
+  "placa_base": { ... },           // Windows + Linux (sysfs DMI / dmidecode)
+  "aplicaciones": { ... },         // Android únicamente
   "_meta": {
     "version": "3.2.0",
     "plataforma": "windows|linux|android",
@@ -573,7 +576,7 @@ Todos los scripts generan JSON con una estructura base similar:
 | Característica | Windows (PS) | Linux (Bash) | Android (Bash+ADB) |
 |---------------|--------------|--------------|-------------------|
 | **Lenguaje** | PowerShell 5.1+ | Bash 4+ | Bash 4+ |
-| **Interfaz** | CLI + Help | CLI + Menú TUI | CLI + Menú TUI |
+| **Interfaz** | CLI + Menú TUI | CLI + Menú TUI | CLI + Menú TUI |
 | **JSON** | `ConvertTo-Json` | `jq -n` (validado) | `jq -n` (validado) |
 | **HTML** | Sí (plantilla informe.html) | Sí (plantilla informe.html) | Sí (plantilla informe.html) |
 | **Dry Run** | Sí | Sí | Sí |
@@ -586,6 +589,11 @@ Todos los scripts generan JSON con una estructura base similar:
 | **Firewall** | Get-NetFirewallProfile | ufw/firewalld/iptables | SELinux |
 | **Antivirus** | Get-MpComputerStatus | ClamAV | N/A |
 | **Batería** | Win32_Battery / WMI | sysfs power_supply | dumpsys battery / sysfs |
+| **Servicios** | Win32_Service / Get-Service | systemctl list-units | N/A |
+| **Software instalado** | Registro Uninstall (50) | dpkg/rpm/pacman (50) | pm list packages |
+| **Rendimiento** | CPU%/RAM% + top 5 procs | /proc/stat + ps aux | N/A |
+| **Usuarios** | Win32_UserAccount | /etc/passwd (UID≥1000) | N/A |
+| **Placa base** | Win32_BaseBoard / WMI | sysfs DMI / dmidecode | N/A |
 | **Root requerido** | Opt: Admin / Opt: root | Opt: root / Req: root | No |
 
 ---
