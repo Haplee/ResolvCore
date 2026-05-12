@@ -31,7 +31,9 @@
       "Bash(echo \"\\(exit $?\\)\")",
       "Bash(php *)",
       "Bash(git reset *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git mv *)",
+      "Bash(git checkout *)"
     ]
   }
 }
