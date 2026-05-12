@@ -662,7 +662,188 @@ seguridad_json="{
 }"
 
 # ═════════════════════════════════════════════════════════════════════════════
-# 6. METADATA
+# 6. SERVICIOS
+# ═════════════════════════════════════════════════════════════════════════════
+section "Servicios — Estado de servicios systemd"
+
+servicios_total=0; servicios_activos=0; servicios_detenidos=0
+servicios_automaticos_detenidos=0; servicios_criticos_json="[]"
+
+if command -v systemctl &>/dev/null; then
+    _st=$(systemctl list-units --type=service --no-pager --no-legend 2>/dev/null | wc -l || echo "0")
+    _sa=$(systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null | wc -l || echo "0")
+    [[ "$_st" =~ ^[0-9]+$ ]] && servicios_total="$_st"
+    [[ "$_sa" =~ ^[0-9]+$ ]] && servicios_activos="$_sa"
+    servicios_detenidos=$((servicios_total - servicios_activos))
+
+    _svc_inact=$(systemctl list-units --type=service --state=inactive --no-pager --no-legend 2>/dev/null | wc -l || echo "0")
+    [[ "$_svc_inact" =~ ^[0-9]+$ ]] && servicios_automaticos_detenidos="$_svc_inact"
+
+    _criticos_list=""
+    for _svc in sshd ssh cron crond NetworkManager network mariadb mysql nginx apache2 ufw firewalld; do
+        _svc_state=$(systemctl is-active "$_svc" 2>/dev/null || echo "")
+        [[ -z "$_svc_state" || "$_svc_state" == "not-found" ]] && continue
+        [[ -n "$_criticos_list" ]] && _criticos_list="$_criticos_list,"
+        _criticos_list="${_criticos_list}{\"nombre\":\"$_svc\",\"estado\":\"$_svc_state\"}"
+        if [[ "$_svc_state" == "active" ]]; then
+            ok "Servicio $_svc: activo"
+        else
+            warn "Servicio $_svc: $_svc_state"
+        fi
+    done
+    [[ -n "$_criticos_list" ]] && servicios_criticos_json="[$_criticos_list]"
+
+    ok "Servicios: $servicios_total total, $servicios_activos activos"
+fi
+
+servicios_json="{
+    \"total\": $(json_num "$servicios_total"),
+    \"activos\": $(json_num "$servicios_activos"),
+    \"detenidos\": $(json_num "$servicios_detenidos"),
+    \"automaticos_detenidos\": $(json_num "$servicios_automaticos_detenidos"),
+    \"criticos\": $servicios_criticos_json
+}"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 7. SOFTWARE INSTALADO
+# ═════════════════════════════════════════════════════════════════════════════
+section "Software instalado — Primeros 50 paquetes"
+
+software_json="[]"; _sw_list=""; _sw_count=0; _max_sw=50
+
+if command -v dpkg-query &>/dev/null; then
+    while IFS=' ' read -r _sname _sver && [[ $_sw_count -lt $_max_sw ]]; do
+        [[ -z "$_sname" ]] && continue
+        [[ -n "$_sw_list" ]] && _sw_list="$_sw_list,"
+        _sw_list="${_sw_list}{\"nombre\":\"$(json_escape "$_sname")\",\"version\":\"$(json_escape "$_sver")\"}"
+        _sw_count=$((_sw_count + 1))
+    done < <(dpkg-query -W --showformat='${Package} ${Version}\n' 2>/dev/null | sort | head -"$_max_sw")
+elif command -v rpm &>/dev/null; then
+    while IFS=' ' read -r _sname _sver && [[ $_sw_count -lt $_max_sw ]]; do
+        [[ -z "$_sname" ]] && continue
+        [[ -n "$_sw_list" ]] && _sw_list="$_sw_list,"
+        _sw_list="${_sw_list}{\"nombre\":\"$(json_escape "$_sname")\",\"version\":\"$(json_escape "$_sver")\"}"
+        _sw_count=$((_sw_count + 1))
+    done < <(rpm -qa --queryformat '%{NAME} %{VERSION}\n' 2>/dev/null | sort | head -"$_max_sw")
+elif command -v pacman &>/dev/null; then
+    while IFS=' ' read -r _sname _sver && [[ $_sw_count -lt $_max_sw ]]; do
+        [[ -z "$_sname" ]] && continue
+        [[ -n "$_sw_list" ]] && _sw_list="$_sw_list,"
+        _sw_list="${_sw_list}{\"nombre\":\"$(json_escape "$_sname")\",\"version\":\"$(json_escape "$_sver")\"}"
+        _sw_count=$((_sw_count + 1))
+    done < <(pacman -Q 2>/dev/null | head -"$_max_sw")
+fi
+
+[[ -n "$_sw_list" ]] && software_json="[$_sw_list]"
+ok "Software inventariado: $_sw_count paquetes"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 8. RENDIMIENTO
+# ═════════════════════════════════════════════════════════════════════════════
+section "Rendimiento — CPU · Memoria · Top procesos"
+
+cpu_uso_pct="null"; mem_uso_pct="null"; top_procs_json="[]"
+
+# Uso CPU: dos lecturas de /proc/stat separadas 0.5s
+if [[ -f /proc/stat ]]; then
+    _s1=$(awk '/^cpu /{t=$2+$3+$4+$5+$6+$7+$8+$9; i=$5+$6; printf "%d %d", t, i}' /proc/stat 2>/dev/null || echo "0 0")
+    sleep 0.5
+    _s2=$(awk '/^cpu /{t=$2+$3+$4+$5+$6+$7+$8+$9; i=$5+$6; printf "%d %d", t, i}' /proc/stat 2>/dev/null || echo "0 0")
+    _t1=$(echo "$_s1" | awk '{print $1}'); _i1=$(echo "$_s1" | awk '{print $2}')
+    _t2=$(echo "$_s2" | awk '{print $1}'); _i2=$(echo "$_s2" | awk '{print $2}')
+    if [[ "$_t1" =~ ^[0-9]+$ && "$_t2" =~ ^[0-9]+$ && $((_t2 - _t1)) -gt 0 ]]; then
+        cpu_uso_pct=$(LC_ALL=C awk "BEGIN{dt=$_t2-$_t1; di=$_i2-$_i1; printf \"%.1f\", (1-di/dt)*100}")
+    fi
+fi
+
+# Uso memoria desde /proc/meminfo
+_mt=$(grep MemTotal     /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
+_ma=$(grep MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
+if [[ "$_mt" =~ ^[0-9]+$ && "$_mt" -gt 0 && "$_ma" =~ ^[0-9]+$ ]]; then
+    mem_uso_pct=$(LC_ALL=C awk "BEGIN{printf \"%.1f\", (1 - $_ma/$_mt)*100}")
+fi
+
+[[ "$cpu_uso_pct" != "null" ]] && ok "CPU uso: ${cpu_uso_pct}%"
+[[ "$mem_uso_pct" != "null" ]] && ok "Memoria uso: ${mem_uso_pct}%"
+
+# Top 5 procesos por RAM
+_procs_list=""; _proc_count=0
+if command -v ps &>/dev/null; then
+    while IFS=' ' read -r _ppid _pmem _pname && [[ $_proc_count -lt 5 ]]; do
+        [[ -z "$_ppid" || "$_ppid" == "PID" ]] && continue
+        [[ -n "$_procs_list" ]] && _procs_list="$_procs_list,"
+        _procs_list="${_procs_list}{\"pid\":$(json_num "$_ppid"),\"memoria_pct\":$(json_num "$_pmem"),\"nombre\":\"$(json_escape "$_pname")\"}"
+        _proc_count=$((_proc_count + 1))
+    done < <(ps aux --sort=-%mem 2>/dev/null | awk 'NR>1{print $2, $4, $11}' | head -5)
+fi
+[[ -n "$_procs_list" ]] && top_procs_json="[$_procs_list]"
+
+rendimiento_json="{
+    \"cpu_uso_pct\": $(json_num "$cpu_uso_pct"),
+    \"memoria_uso_pct\": $(json_num "$mem_uso_pct"),
+    \"top_procesos\": $top_procs_json
+}"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 9. USUARIOS
+# ═════════════════════════════════════════════════════════════════════════════
+section "Usuarios — Cuentas locales"
+
+usuarios_json="[]"; _users_list=""; _users_count=0
+
+while IFS=: read -r _uname _ _uid _ _ _home _shell; do
+    [[ "$_uid" =~ ^[0-9]+$ ]] || continue
+    [[ "$_uid" -lt 1000 || "$_uname" == "nobody" ]] && continue
+    _uactive="true"
+    echo "$_shell" | grep -qE "nologin|false" && _uactive="false"
+    [[ -n "$_users_list" ]] && _users_list="$_users_list,"
+    _users_list="${_users_list}{\"nombre\":\"$(json_escape "$_uname")\",\"uid\":$(json_num "$_uid"),\"activo\":$_uactive,\"home\":\"$(json_escape "$_home")\"}"
+    _users_count=$((_users_count + 1))
+done < /etc/passwd 2>/dev/null || true
+
+[[ -n "$_users_list" ]] && usuarios_json="[$_users_list]"
+ok "Usuarios locales: $_users_count"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 10. PLACA BASE
+# ═════════════════════════════════════════════════════════════════════════════
+section "Placa base — Fabricante · Modelo · BIOS"
+
+placa_fabricante="Unknown"; placa_modelo="Unknown"
+bios_version="Unknown"; bios_fecha="Unknown"; uuid_sistema="Unknown"
+
+# Sysfs DMI (no requiere root — disponible en la mayoría de kernels)
+[[ -f /sys/class/dmi/id/board_vendor ]] && placa_fabricante=$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/board_name   ]] && placa_modelo=$(cat    /sys/class/dmi/id/board_name   2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/bios_version ]] && bios_version=$(cat    /sys/class/dmi/id/bios_version 2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/bios_date    ]] && bios_fecha=$(cat      /sys/class/dmi/id/bios_date    2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/product_uuid ]] && uuid_sistema=$(cat    /sys/class/dmi/id/product_uuid 2>/dev/null || echo "Unknown")
+
+# Complemento con dmidecode si root (puede añadir info no expuesta en sysfs)
+if [[ "$is_admin" == "true" ]] && command -v dmidecode &>/dev/null; then
+    _dmi_board=$(dmidecode -t baseboard 2>/dev/null || echo "")
+    _dmi_bios=$(dmidecode  -t bios      2>/dev/null || echo "")
+    _dmi_sys=$(dmidecode   -t system    2>/dev/null || echo "")
+    [[ "$placa_fabricante" == "Unknown" ]] && placa_fabricante=$(echo "$_dmi_board" | awk -F': ' '/Manufacturer:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$placa_modelo"     == "Unknown" ]] && placa_modelo=$(echo     "$_dmi_board" | awk -F': ' '/Product Name:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$bios_version"     == "Unknown" ]] && bios_version=$(echo     "$_dmi_bios"  | awk -F': ' '/Version:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$bios_fecha"       == "Unknown" ]] && bios_fecha=$(echo       "$_dmi_bios"  | awk -F': ' '/Release Date:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$uuid_sistema"     == "Unknown" ]] && uuid_sistema=$(echo     "$_dmi_sys"   | awk -F': ' '/UUID:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+fi
+
+ok "Placa: $placa_fabricante — $placa_modelo"
+ok "BIOS: $bios_version ($bios_fecha)"
+
+placa_base_json="{
+    \"fabricante\": \"$(json_escape "$placa_fabricante")\",
+    \"producto\": \"$(json_escape "$placa_modelo")\",
+    \"version_bios\": \"$(json_escape "$bios_version")\",
+    \"fecha_bios\": \"$(json_escape "$bios_fecha")\",
+    \"uuid\": \"$(json_escape "$uuid_sistema")\"
+}"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 11. METADATA
 # ═════════════════════════════════════════════════════════════════════════════
 hostname_str=$(hostname 2>/dev/null || echo "unknown")
 timestamp=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')
@@ -687,18 +868,28 @@ out_file="$OUTPUT_DIR/diagnostico_${hostname_str}_$(date '+%Y%m%d_%H%M%S').json"
 # falla con un mensaje que apunta al fragmento problemático en vez de generar
 # silenciosamente un fichero inválido.
 if ! jq -n \
-    --argjson hardware "$hardware_json" \
+    --argjson hardware        "$hardware_json" \
     --argjson sistema_operativo "$sistema_json" \
-    --argjson drivers "$drivers_json" \
-    --argjson red "$red_json" \
-    --argjson seguridad "$seguridad_json" \
-    --argjson meta "$meta_json" \
+    --argjson drivers         "$drivers_json" \
+    --argjson red             "$red_json" \
+    --argjson seguridad       "$seguridad_json" \
+    --argjson servicios       "$servicios_json" \
+    --argjson software        "$software_json" \
+    --argjson rendimiento     "$rendimiento_json" \
+    --argjson usuarios        "$usuarios_json" \
+    --argjson placa_base      "$placa_base_json" \
+    --argjson meta            "$meta_json" \
     '{
         hardware: $hardware,
         sistema_operativo: $sistema_operativo,
         drivers: $drivers,
         red: $red,
         seguridad: $seguridad,
+        servicios: $servicios,
+        software: $software,
+        rendimiento: $rendimiento,
+        usuarios: $usuarios,
+        placa_base: $placa_base,
         _meta: $meta
     }' > "$out_file" 2>/tmp/diagnostico_jq_err.$$; then
     echo -e "  ${RED}✗  jq falló al ensamblar el JSON. Detalle:${NC}" >&2
@@ -707,12 +898,17 @@ if ! jq -n \
     # Volcar fragmentos a un .debug.json para que el técnico pueda inspeccionar
     debug_file="${out_file%.json}.debug.txt"
     {
-        printf '== hardware_json ==\n%s\n\n' "$hardware_json"
-        printf '== sistema_json ==\n%s\n\n'  "$sistema_json"
-        printf '== drivers_json ==\n%s\n\n'  "$drivers_json"
-        printf '== red_json ==\n%s\n\n'      "$red_json"
-        printf '== seguridad_json ==\n%s\n\n' "$seguridad_json"
-        printf '== meta_json ==\n%s\n'        "$meta_json"
+        printf '== hardware_json ==\n%s\n\n'      "$hardware_json"
+        printf '== sistema_json ==\n%s\n\n'       "$sistema_json"
+        printf '== drivers_json ==\n%s\n\n'       "$drivers_json"
+        printf '== red_json ==\n%s\n\n'           "$red_json"
+        printf '== seguridad_json ==\n%s\n\n'     "$seguridad_json"
+        printf '== servicios_json ==\n%s\n\n'     "$servicios_json"
+        printf '== software_json ==\n%s\n\n'      "$software_json"
+        printf '== rendimiento_json ==\n%s\n\n'   "$rendimiento_json"
+        printf '== usuarios_json ==\n%s\n\n'      "$usuarios_json"
+        printf '== placa_base_json ==\n%s\n\n'    "$placa_base_json"
+        printf '== meta_json ==\n%s\n'            "$meta_json"
     } > "$debug_file"
     echo -e "  ${YELLOW}↳ Fragmentos volcados en: $debug_file${NC}" >&2
     exit 1
