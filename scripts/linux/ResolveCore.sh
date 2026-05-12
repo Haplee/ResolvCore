@@ -271,7 +271,7 @@ ensure_python() {
 }
 
 run_vulnerabilidades() {
-    VULN="$(dirname "$SCRIPT_DIR")/buscar_vulnerabilidades.py"
+    VULN="$(dirname "$SCRIPT_DIR")/common/buscar_vulnerabilidades.py"
     if ! ensure_python; then
         echo -e "  ${RED}[X] No se pudo instalar Python3 automaticamente${NC}"
         read -p "  Presiona ENTER..."

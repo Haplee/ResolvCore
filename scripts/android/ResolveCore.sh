@@ -254,7 +254,7 @@ ensure_deps() {
 }
 
 run_vulnerabilidades() {
-    VULN="$(dirname "$SCRIPT_DIR")/buscar_vulnerabilidades.py"
+    VULN="$(dirname "$SCRIPT_DIR")/common/buscar_vulnerabilidades.py"
     if ! ensure_deps; then
         echo -e "  ${RED}[X] No se pudieron instalar las dependencias automaticamente${NC}"
         read -p "  Presiona ENTER..."
