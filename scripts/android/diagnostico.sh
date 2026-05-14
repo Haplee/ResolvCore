@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  ResolveCore — Diagnóstico de dispositivo Android (vía ADB)
-#  Versión: 2.0.0
+#  Versión: 2.1.0
 #
 #  Genera diagnostico_android_<serial>_<timestamp>.json compatible con ResolveCore.
 #
@@ -19,7 +19,7 @@
 
 set -uo pipefail
 
-SCRIPT_VERSION="2.0.0"
+SCRIPT_VERSION="2.1.0"
 SERIAL=""
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
@@ -27,7 +27,47 @@ OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --output) OUTPUT_DIR="$2"; shift 2 ;;
+        -h|--help)
+            cat <<EOF
+NAME
+    diagnostico.sh - Diagnostico de dispositivo Android via ADB
+
+SYNOPSIS
+    bash diagnostico.sh [-O <dir>] [-h] [SERIAL]
+
+DESCRIPTION
+    Recoge metricas del dispositivo Android conectado via ADB: hardware
+    (modelo, fabricante, SoC, RAM), bateria (capacidad, salud, ciclos),
+    almacenamiento, version de Android, parches de seguridad, paquetes
+    instalados, permisos sensibles. Genera JSON v${SCRIPT_VERSION} compatible
+    con el importador de ResolveCore.
+
+ARGUMENTS
+    SERIAL                      Numero de serie del dispositivo ADB.
+                                Default: primer dispositivo detectado.
+
+OPTIONS
+    -O, --output <dir>          Directorio de salida del JSON.
+                                Default: ../diagnosticos
+    -h, --help                  Muestra esta ayuda y sale.
+
+REQUISITOS
+    - adb instalado (apt install adb / brew install android-platform-tools).
+    - Depuracion USB o ADB inalambrico habilitada en el dispositivo.
+    - Dispositivo conectado y autorizado (acepta el prompt RSA).
+
+EXAMPLES
+    bash diagnostico.sh
+    bash diagnostico.sh ABC123XYZ
+    bash diagnostico.sh -O /tmp
+    bash diagnostico.sh ABC123XYZ -O /tmp
+
+EXIT CODES
+    0    Diagnostico generado correctamente.
+    1    adb no instalado o sin dispositivo autorizado.
+EOF
+            exit 0 ;;
+        -O|--output) OUTPUT_DIR="$2"; shift 2 ;;
         -*) shift ;;
         *)  [[ -z "$SERIAL" ]] && SERIAL="$1"; shift ;;
     esac
@@ -48,6 +88,13 @@ fail() { echo -e "${RED}    ✗ $1${NC}"; }
 if ! command -v adb &>/dev/null; then
     fail "adb no encontrado. Instálalo con:  apt install adb  |  brew install android-platform-tools"
     exit 1
+fi
+
+# jq es obligatorio: ensamblamos el JSON con `jq -n` para validar cada sección
+# antes de persistir el fichero. Evita JSON corrupto silencioso (ver S3).
+if ! command -v jq &>/dev/null; then
+    fail "jq no encontrado. Instálalo con:  sudo apt install jq  |  brew install jq"
+    exit 3
 fi
 
 # Seleccionar dispositivo
@@ -211,7 +258,7 @@ if [[ -n "$bat_raw" ]]; then
     bat_full_cap=$(adb_s 'cat /sys/class/power_supply/battery/charge_full 2>/dev/null || cat /sys/class/power_supply/Battery/charge_full 2>/dev/null || echo ""' | head -1 || echo '')
     bat_design_cap=$(adb_s 'cat /sys/class/power_supply/battery/charge_full_design 2>/dev/null || cat /sys/class/power_supply/Battery/charge_full_design 2>/dev/null || echo ""' | head -1 || echo '')
     if [[ "$bat_full_cap" =~ ^[0-9]+$ && "$bat_design_cap" =~ ^[0-9]+$ && "$bat_design_cap" -gt 0 ]]; then
-        bat_desgaste=$(awk "BEGIN{v=(1 - $bat_full_cap / $bat_design_cap) * 100; printf \"%.1f\", (v<0?0:v)}")
+        bat_desgaste=$(LC_NUMERIC=C awk "BEGIN{v=(1 - $bat_full_cap / $bat_design_cap) * 100; printf \"%.1f\", (v<0?0:v)}")
         ok "Desgaste batería: ${bat_desgaste}%"
     fi
 
@@ -238,7 +285,7 @@ for zone in $(adb_s ls /sys/class/thermal/ 2>/dev/null | grep thermal_zone); do
         t=$(adb_s "cat /sys/class/thermal/$zone/temp 2>/dev/null" | xargs || echo '')
         if [[ "$t" =~ ^[0-9]+$ && "$t" -gt 0 ]]; then
             if [[ "$t" -gt 1000 ]]; then
-                cpu_temp=$(awk "BEGIN{printf \"%.1f\", $t/1000}")
+                cpu_temp=$(LC_NUMERIC=C awk "BEGIN{printf \"%.1f\", $t/1000}")
             else
                 cpu_temp="$t"
             fi
@@ -347,79 +394,122 @@ apps_s=$(adb_s pm list packages -s 2>/dev/null | wc -l | xargs || echo '')  # -s
 ok "Apps instaladas: ${apps_total} (usuario: ${apps_user}, sistema: ${apps_system})"
 
 # ═════════════════════════════════════════════════════════════════════════════
-# 7. OUTPUT JSON
+# 7. OUTPUT JSON — ensamblaje vía jq -n
+#
+# Cada sección se construye como objeto JSON independiente y se pasa a jq con
+# --argjson. Si una sección está mal formada (p.ej. una sub-string capturada
+# de adb con caracteres extraños), jq falla con error claro y volcamos los
+# fragmentos a *.debug.txt. Reemplaza al heredoc anterior, que producía
+# silenciosamente JSON inválido si algún valor contenía saltos de línea.
 # ═════════════════════════════════════════════════════════════════════════════
 
 mkdir -p "$OUTPUT_DIR"
 
-cat > "$OUTPUT_FILE" << EOF
-{
-  "hardware": {
-    "cpu_cores":    $(json_num "$cpu_cores"),
-    "ram_gb":       $(json_num "$ram_gb_int"),
-    "disk_type":    "Flash",
-    "disk_gb":      null,
-    "smart_status": "N/A",
-    "cpu_nombre":   $(json_str "$cpu_name"),
-    "cpu_temp_c":   $(json_num "$cpu_temp"),
-    "almacenamiento": ${storage_json},
-    "sd_presente":  ${sd_present},
-    "bateria":      ${battery_json}
-  },
-  "sistema_operativo": {
-    "actualizaciones_pendientes": null,
-    "nombre":         "Android",
-    "version":        $(json_str "$android_version"),
-    "build":          $(json_str "$build_number"),
-    "sdk":            $(json_num "$sdk_version"),
-    "kernel":         $(json_str "$kernel"),
-    "arquitectura":   $(json_str "$architecture"),
-    "parche_seguridad": $(json_str "$sec_patch")
-  },
-  "red": {
-    "latencia_ms":          $(json_num "$latency_ms"),
-    "perdida_paquetes_pct": $(json_num "$packet_loss"),
-    "dns":       [],
-    "interfaz":  "wifi",
-    "wifi_ssid": $(json_str "$wifi_ssid"),
-    "wifi_ip":   $(json_str "$wifi_ip"),
-    "wifi_rssi_dbm": $(json_num "$wifi_signal")
-  },
-  "seguridad": {
-    "antivirus":             null,
-    "firewall":              false,
-    "cifrado":               ${encrypted},
-    "tipo_cifrado":          $(json_str "$encryption_type"),
-    "fuentes_desconocidas":  ${unknown_sources},
-    "modo_desarrollador":    ${dev_mode},
-    "rooteado":              ${rooted},
-    "selinux":               $(json_str "$selinux"),
-    "bootloader_bloqueado":  ${bootloader_locked}
-  },
-  "aplicaciones": {
-    "total":   $(json_num "$apps_total"),
-    "usuario": $(json_num "$apps_user"),
-    "sistema": $(json_num "$apps_system")
-  },
-  "dispositivo": {
-    "fabricante": $(json_str "$manufacturer"),
-    "modelo":     $(json_str "$model"),
-    "nombre":     $(json_str "$device_name"),
-    "marca":      $(json_str "$brand"),
-    "serial":     $(json_str "$SERIAL")
-  },
-  "_meta": {
-    "version":    "$SCRIPT_VERSION",
-    "plataforma": "android",
-    "hostname":   $(json_str "${manufacturer}_${model}"),
-    "generado_en": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
-    "root":       false
-  }
-}
-EOF
+hardware_json="{
+    \"cpu_cores\":    $(json_num "$cpu_cores"),
+    \"ram_gb\":       $(json_num "$ram_gb_int"),
+    \"disk_type\":    \"Flash\",
+    \"disk_gb\":      null,
+    \"smart_status\": \"N/A\",
+    \"cpu_nombre\":   $(json_str "$cpu_name"),
+    \"cpu_temp_c\":   $(json_num "$cpu_temp"),
+    \"almacenamiento\": ${storage_json},
+    \"sd_presente\":  ${sd_present},
+    \"bateria\":      ${battery_json}
+}"
+
+sistema_json="{
+    \"actualizaciones_pendientes\": null,
+    \"nombre\":         \"Android\",
+    \"version\":        $(json_str "$android_version"),
+    \"build\":          $(json_str "$build_number"),
+    \"sdk\":            $(json_num "$sdk_version"),
+    \"kernel\":         $(json_str "$kernel"),
+    \"arquitectura\":   $(json_str "$architecture"),
+    \"parche_seguridad\": $(json_str "$sec_patch")
+}"
+
+red_json="{
+    \"latencia_ms\":          $(json_num "$latency_ms"),
+    \"perdida_paquetes_pct\": $(json_num "$packet_loss"),
+    \"dns\":       [],
+    \"interfaz\":  \"wifi\",
+    \"wifi_ssid\": $(json_str "$wifi_ssid"),
+    \"wifi_ip\":   $(json_str "$wifi_ip"),
+    \"wifi_rssi_dbm\": $(json_num "$wifi_signal")
+}"
+
+seguridad_json="{
+    \"antivirus\":             null,
+    \"firewall\":              false,
+    \"cifrado\":               ${encrypted},
+    \"tipo_cifrado\":          $(json_str "$encryption_type"),
+    \"fuentes_desconocidas\":  ${unknown_sources},
+    \"modo_desarrollador\":    ${dev_mode},
+    \"rooteado\":              ${rooted},
+    \"selinux\":               $(json_str "$selinux"),
+    \"bootloader_bloqueado\":  ${bootloader_locked}
+}"
+
+apps_json="{
+    \"total\":   $(json_num "$apps_total"),
+    \"usuario\": $(json_num "$apps_user"),
+    \"sistema\": $(json_num "$apps_system")
+}"
+
+dispositivo_json="{
+    \"fabricante\": $(json_str "$manufacturer"),
+    \"modelo\":     $(json_str "$model"),
+    \"nombre\":     $(json_str "$device_name"),
+    \"marca\":      $(json_str "$brand"),
+    \"serial\":     $(json_str "$SERIAL")
+}"
+
+meta_json="{
+    \"version\":    \"$SCRIPT_VERSION\",
+    \"plataforma\": \"android\",
+    \"hostname\":   $(json_str "${manufacturer}_${model}"),
+    \"generado_en\": \"$(date -u '+%Y-%m-%dT%H:%M:%SZ')\",
+    \"root\":       false
+}"
+
+if ! jq -n \
+    --argjson hardware "$hardware_json" \
+    --argjson sistema_operativo "$sistema_json" \
+    --argjson red "$red_json" \
+    --argjson seguridad "$seguridad_json" \
+    --argjson aplicaciones "$apps_json" \
+    --argjson dispositivo "$dispositivo_json" \
+    --argjson meta "$meta_json" \
+    '{
+        hardware: $hardware,
+        sistema_operativo: $sistema_operativo,
+        red: $red,
+        seguridad: $seguridad,
+        aplicaciones: $aplicaciones,
+        dispositivo: $dispositivo,
+        _meta: $meta
+    }' > "$OUTPUT_FILE" 2>/tmp/diagnostico_android_jq_err.$$; then
+    fail "jq falló al ensamblar el JSON. Detalle:"
+    cat /tmp/diagnostico_android_jq_err.$$ >&2 || true
+    rm -f /tmp/diagnostico_android_jq_err.$$
+    debug_file="${OUTPUT_FILE%.json}.debug.txt"
+    {
+        printf '== hardware ==\n%s\n\n'        "$hardware_json"
+        printf '== sistema_operativo ==\n%s\n\n' "$sistema_json"
+        printf '== red ==\n%s\n\n'             "$red_json"
+        printf '== seguridad ==\n%s\n\n'       "$seguridad_json"
+        printf '== aplicaciones ==\n%s\n\n'    "$apps_json"
+        printf '== dispositivo ==\n%s\n\n'     "$dispositivo_json"
+        printf '== _meta ==\n%s\n'             "$meta_json"
+    } > "$debug_file"
+    warn "Fragmentos volcados en: $debug_file"
+    exit 1
+fi
+rm -f /tmp/diagnostico_android_jq_err.$$
 
 # Generar informe HTML (disponible en el host que ejecute adb)
-_tmpl="${SCRIPT_DIR}/../informe.html"
+_tmpl="${SCRIPT_DIR}/../../reports/informe.html"
 _html_file="${OUTPUT_FILE%.json}.html"
 if [[ -f "$_tmpl" ]]; then
     _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)

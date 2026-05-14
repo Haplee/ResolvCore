@@ -53,11 +53,12 @@ a:hover { text-decoration: underline; }
   padding: 1.5rem; overflow-y: auto;
 }
 .rc-docs-logo {
-  font-family: var(--rc-mono); font-size: 14px; font-weight: 700;
-  color: var(--rc-accent); margin-bottom: 2rem; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 2rem; display: flex; align-items: center;
 }
-.rc-docs-logo-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--rc-accent);
+.rc-docs-logo-img {
+  width: 140px; height: 34px;
+  object-fit: cover; object-position: left top;
+  filter: invert(1) hue-rotate(180deg);
 }
 .rc-docs-nav { list-style: none; }
 .rc-docs-nav li { margin-bottom: 4px; }
@@ -126,11 +127,12 @@ a:hover { text-decoration: underline; }
   padding: 1.5rem;
 }
 .rc-cl-logo {
-  font-family: var(--rc-mono); font-size: 14px; font-weight: 700;
-  color: var(--rc-accent); margin-bottom: 2rem; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 2rem; display: flex; align-items: center;
 }
-.rc-cl-logo-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--rc-accent);
+.rc-cl-logo-img {
+  width: 140px; height: 34px;
+  object-fit: cover; object-position: left top;
+  filter: invert(1) hue-rotate(180deg);
 }
 .rc-cl-nav { list-style: none; }
 .rc-cl-nav a {

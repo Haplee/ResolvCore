@@ -1,109 +1,162 @@
-# CLAUDE.md
+# ResolveCore — CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project summary
-
-ResolveCore — ASIR final project by Francisco Vidal Mateo. Cross-platform diagnostic and optimization platform. Stack: **WordPress theme (PHP + vanilla JS + CSS) + standalone shell scripts (PowerShell/Bash)**. No build step. No npm. No React. No Supabase.
-
-> **Legacy warning:** `.env.example`, `notes/falta.md` and `notes/investigacion.md` reference a previous React/Supabase version that no longer exists. The authoritative state document is `notes/analiza.md`.
+> Plataforma de mantenimiento y optimización remota para equipos Windows, Linux y Android.
+> Eslogan: "Solución a tus problemas informáticos." — Francisco Vidal Mateo
 
 ---
 
-## Running scripts
+## Descripción del proyecto
+
+ResolveCore es un sistema de soporte técnico remoto estructurado en 7 fases:
+solicitud del usuario → ticket (MantisBT) → conexión remota (AnyDesk) → diagnóstico
+(PowerShell / Bash) → resolución → informe PDF → facturación.
+
+El proyecto se implementa sobre WordPress (frontend de soporte) + MantisBT (gestión
+de incidencias) + scripts de diagnóstico multiplataforma + generación automática
+de informes PDF.
+
+---
+
+## Stack técnico
+
+- **CMS / Frontend:** WordPress (PHP)
+- **Tickets:** MantisBT
+- **Acceso remoto:** AnyDesk
+- **Scripts diagnóstico:** PowerShell (Windows), Bash (Linux / macOS)
+- **Generación de informes:** PDF automatizado
+- **Base de datos de vulnerabilidades:** MySQL / MariaDB
+- **Android (futuro):** Kotlin + Jetpack Compose + Material 3
+
+Para la parte web usa PHP moderno. No mezcles jQuery con vanilla JS sin motivo.
+Para los scripts, usa PowerShell 7+ en Windows y Bash compatible con sh en Linux.
+
+---
+
+## Comandos esenciales
 
 ```bash
-# Windows — run as Administrator for full S.M.A.R.T. and security metrics
-.\scripts\windows\diagnostico.ps1
-.\scripts\windows\optimizacion.ps1
-.\scripts\windows\ResolveCore.ps1          # interactive menu (calls the two above)
+# WordPress local (si usas DevKinsta / wp-cli)
+wp server --host=0.0.0.0 --port=8080
 
-# Linux
-bash scripts/linux/diagnostico.sh [output_dir] [silent:true]
-bash scripts/linux/optimizacion.sh
-bash scripts/linux/ResolveCore.sh
+# Ejecutar script de diagnóstico Windows (PowerShell)
+pwsh ./scripts/windows/diagnostico.ps1
 
-# macOS
-bash scripts/macos/diagnostico.sh
-bash scripts/macos/ResolveCore.sh
+# Ejecutar script de diagnóstico Linux
+bash ./scripts/linux/diagnostico.sh
 
-# Android (requires ADB enabled on device)
-bash scripts/android/diagnostico.sh
-bash scripts/android/ResolveCore.sh
-```
+# Generar informe PDF (cuando esté implementado)
+php artisan resolvecore:report --ticket=ID
 
-Scripts write JSON output to `scripts/diagnosticos/<timestamp>_<platform>.json`.
-
-## PHP syntax check
-
-```bash
-php -l wordpress/resolvecore-theme/front-page.php
-php -l wordpress/resolvecore-theme/functions.php
-php -l wordpress/resolvecore-theme/page-docs.php
-php -l wordpress/resolvecore-theme/page-changelog.php
-```
-
-## WordPress theme installation
-
-```bash
-cp -r wordpress/resolvecore-theme/ /path/to/wp-content/themes/resolvecore-theme/
-# Then: WP Admin → Appearance → Themes → activate ResolveCore
-# Create pages: Docs (Template: ResolveCore Docs), Changelog (Template: ResolveCore Changelog)
+# Tests (cuando existan)
+composer test
 ```
 
 ---
 
-## Architecture
+## Arquitectura del proyecto
 
-### WordPress theme (`wordpress/resolvecore-theme/`)
-
-| File | Role |
-|------|------|
-| `front-page.php` | Main landing (~1150 lines): navbar, hero, services, interactive demo, vulnerabilities table, downloads, pricing, contact form |
-| `functions.php` | WP hooks: enqueue styles/fonts, AJAX contact handler, honeypot check, maintenance mode |
-| `page-docs.php` | `Template Name: ResolveCore Docs` — sidebar nav + scrollable content, inline CSS |
-| `page-changelog.php` | `Template Name: ResolveCore Changelog` — vertical timeline, inline CSS |
-| `style.css` | Shared styles: fonts, CSS variables, shared layout rules |
-| `index.php` | WP required fallback |
-
-**Key patterns:**
-- All CSS classes prefixed `rc-` to avoid WordPress theme conflicts
-- CSS variables defined in `:root` inside `front-page.php` `<style>` block (dark theme: `--rc-bg`, `--rc-accent`, `--rc-mono`, etc.)
-- All JS is vanilla — no jQuery, no external libraries
-- AJAX contact form: `wp_ajax_resolvecore_contact` / `wp_ajax_nopriv_resolvecore_contact` with `check_ajax_referer('resolvecore_contact', 'nonce')` + honeypot field `rc_website`
-- Maintenance mode: flip `RESOLVECORE_MAINTENANCE` constant in `functions.php` to `true`
-- Page-specific CSS lives inline in each `page-*.php` file (not in `style.css`)
-
-### Scripts (`scripts/`)
-
-Each platform has the same three scripts:
-- `diagnostico.*` — collects system metrics (OS, CPU, RAM, disk, network, security, S.M.A.R.T.) → writes JSON
-- `optimizacion.*` — performs safe cleanup (temp files, cache, startup items) → writes JSON report
-- `ResolveCore.*` — interactive menu wrapper that invokes the two above
-
-PowerShell scripts use `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'SilentlyContinue'`. Bash scripts use `set -o pipefail`. Both output colored console feedback with `[OK]`/`[!]`/`[X]` levels.
-
-S.M.A.R.T. data: Linux uses `smartctl` (optional, graceful fallback). Windows uses `Get-StorageReliabilityCounter` (primary) → `Get-PhysicalDisk` (fallback). Missing data is reported as `null` in the JSON, not as an error.
-
-### Notes (`notes/`)
-
-| File | Content |
-|------|---------|
-| `analiza.md` | **Current audit** — issues, scores, action plan. Use this as source of truth |
-| `PROPUESTA DE PROYECTO INTEGRADO.md` | Original project proposal |
-| `Plan de desarrollo.md` | Development timeline |
-| `investigacion.md` | Technical research (CVE APIs, S.M.A.R.T., architecture decisions) — written for old React version but research is still valid |
-| `falta.md` | Pending items — **marked as legacy** (references old React paths) |
-| `diary.md` | Dev diary |
+```
+resolvecore/
+├── wordpress/          # Tema + plugins personalizados
+│   ├── theme/          # Tema ResolveCore (PHP + CSS)
+│   └── plugins/        # Plugin de integración MantisBT
+├── scripts/
+│   ├── windows/        # Scripts PowerShell de diagnóstico
+│   └── linux/          # Scripts Bash de diagnóstico
+├── reports/            # Plantillas y generación de informes PDF
+├── vulnerabilities/    # Base de datos de vulnerabilidades (SQL + seeders)
+├── android/            # App nativa (Kotlin, fase futura)
+└── docs/               # Documentación técnica
+```
 
 ---
 
-## Constraints
+## Convenciones de código
 
-- **No npm / no build step** — the theme has zero npm dependencies. Do not add any.
-- **Vanilla JS only** — no jQuery, no frameworks inside the theme.
-- **CSS prefix** — all new theme CSS classes must use `rc-` prefix.
-- **`rel="noopener noreferrer"`** on all `target="_blank"` links.
-- **ARIA** — icon-only buttons need `aria-label`; interactive `<span>` elements need `role="button" tabindex="0"` and keyboard handlers.
-- macOS scripts exist (`scripts/macos/`) but macOS is **not shown** in the platform strip on the landing page. Do not add it to the UI without confirming scope.
-- The `og-image.png` exists at `wordpress/resolvecore-theme/og-image.png` (1200×630).
+### PHP / WordPress
+- Sigue los estándares de WordPress Coding Standards (WPCS).
+- Usa prefijo `rc_` en todas las funciones y opciones del plugin.
+- Sanitiza siempre los inputs con `sanitize_text_field()` / `intval()`.
+- Escapa siempre los outputs con `esc_html()` / `esc_attr()`.
+- YOU MUST never store sensitive data (contraseñas, tokens) en opciones de WordPress sin cifrar.
+
+### PowerShell
+- Usa `#Requires -Version 5.1` al inicio de cada script (sin espacio entre `#` y `Requires` — `# Requires` es un comentario inerte). El target real es Windows 10/11, que ship con 5.1; pedir PS7 obliga al técnico a instalarlo y suma fricción.
+- Si un script necesita una capacidad PS7 concreta (`ForEach-Object -Parallel`, ternario, `??`), añade ese script a una excepción con `#Requires -Version 7.0` y documenta el por qué en cabecera.
+- Maneja errores con `try/catch` y escribe al log con `Write-EventLog` o fichero.
+- Los scripts de diagnóstico deben devolver un objeto `[PSCustomObject]` estructurado.
+- IMPORTANT: nunca ejecutes comandos destructivos sin confirmación explícita del técnico.
+
+### Bash
+- `#!/usr/bin/env bash` en todos los scripts (nunca `#!/bin/bash` — rompe portabilidad en macOS y BSD).
+- **`set -uo pipefail` por defecto** en scripts de diagnóstico/optimización. Se omite `-e` deliberadamente: estos scripts capturan fallos comando a comando (`|| echo ...`, `|| true`, validaciones regex) y `-e` los aborta antes de poder rellenar el JSON. Si añades `-e` a un script existente, rompes la captura granular y vuelves al bug del 2026-05-09 con `apt-get -s upgrade | grep -c '^Inst'`.
+- Para scripts auxiliares cortos sin captura granular sí se usa `set -euo pipefail` (p.ej. `scripts/bootstrap-mantis.sh`).
+- Variables en UPPER_CASE. Funciones en snake_case.
+- Comprueba dependencias al inicio con `command -v <tool> || exit 1`.
+
+### SQL
+- Tablas con prefijo `rc_`. Ej.: `rc_tickets`, `rc_vulnerabilities`.
+- Usa migraciones idempotentes (IF NOT EXISTS, IF EXISTS).
+
+---
+
+## Módulos principales
+
+### 1. Diagnóstico multiplataforma
+- Windows: rendimiento (CPU/RAM/disco), servicios críticos, logs de eventos, Windows Update.
+- Linux: top/htop, journalctl, df, apt/dnf, cron, puertos abiertos.
+- Salida estructurada JSON para alimentar el generador de informes.
+
+### 2. Base de datos de vulnerabilidades
+- Tabla `rc_vulnerabilities`: CVE, gravedad, SO afectado, descripción, fix.
+- Script de sincronización con NVD/NIST (cron semanal).
+- Los scripts de diagnóstico consultan esta tabla para alertar al técnico.
+
+### 3. Informe técnico PDF
+- Plantilla HTML → PDF via wkhtmltopdf o DomPDF.
+- Secciones fijas: resumen ejecutivo, incidencias detectadas, problemas solucionados,
+  estado actual del sistema, recomendaciones, proyección de vida útil del equipo.
+- Se adjunta automáticamente al ticket en MantisBT al cerrar la incidencia.
+
+### 4. Modelo de facturación
+- **Pago por servicio:** genera factura por intervención al cerrar ticket.
+- **Suscripción:** revisiones programadas vía cron + notificación automática al usuario.
+
+---
+
+## Reglas de comportamiento para Claude Code
+
+- Cuando modifiques un script de diagnóstico, SIEMPRE actualiza el esquema JSON de salida en `docs/schema-diagnostico.md`.
+- Antes de crear una nueva tabla SQL, comprueba si ya existe en `vulnerabilities/migrations/`.
+- Los scripts destructivos (limpiar disco, desinstalar, eliminar) requieren flag `--confirm` explícito.
+- No generes datos de prueba con IPs, MACs o emails reales. Usa fixtures ficticios.
+- Al añadir una nueva fase al flujo del sistema, actualiza el diagrama en `docs/flujo-sistema.md`.
+- YOU MUST seguir el patrón de informe existente al generar nuevas secciones PDF.
+
+---
+
+## Contexto de desarrollo
+
+- Autor: Francisco Vidal Mateo (GitHub: Haplee)
+- Entorno: Windows 11 + Ubuntu (dual boot), IDE Antigravity (VS Code-based)
+- Despliegue objetivo: servidor VPS Linux (nginx + PHP-FPM + MariaDB)
+- TFG ASIR — curso 2024/25
+
+---
+
+## Lo que Claude NO debe hacer
+
+- No instalar dependencias globales sin avisar.
+- No hacer commits directamente a `main`. Usa ramas con prefijo `feat/`, `fix/`, `docs/`.
+- No modificar `wp-config.php` con credenciales reales.
+- No generar código que asuma privilegios root sin comprobarlo antes.
+- No acortar el informe PDF: las secciones son obligatorias por diseño del servicio.
+
+---
+
+## Referencias útiles
+
+- Diagrama del sistema: `docs/flujo-sistema.md`
+- Esquema JSON de diagnóstico: `docs/schema-diagnostico.md`
+- Estructura de tickets MantisBT: `docs/mantis-integration.md`
+- Ver `@README.md` para instrucciones de instalación del entorno local.

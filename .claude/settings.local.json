@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\front-page.php\")",
+      "Bash(php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\functions.php\")",
+      "Bash(php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\page-docs.php\")",
+      "Bash(php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\page-changelog.php\")",
+      "PowerShell(php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\front-page.php\"; php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\functions.php\"; php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\page-docs.php\"; php -l \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wordpress\\\\resolvecore-theme\\\\page-changelog.php\")",
+      "PowerShell(Compress-Archive *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(Copy-Item *)",
+      "WebFetch(domain:github.com)",
+      "Bash(grep -nB1 '<hr class=\"rc-section-divider\">\\\\|</main>' \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\")",
+      "Bash(command -v php)",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/functions.php\")",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\")",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/page-resolvecore.php\")",
+      "Bash(php -l \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-landing.php\")",
+      "Bash(python scripts/buscar_vulnerabilidades.py --help)",
+      "Bash(bash -n scripts/linux/ResolveCore.sh)",
+      "Bash(bash -n scripts/android/ResolveCore.sh)",
+      "PowerShell(Out-Null *)",
+      "Bash(php -l wordpress/page-resolvecore.php wordpress/resolvecore-landing.php)",
+      "PowerShell(Get-Command *)",
+      "Bash(grep -E '\\(\\\\.zip$|__pycache__|diagnosticos/.*\\\\.\\(json|txt\\)\\)')",
+      "Bash(chmod +x /home/franvi/proyectos/ResolvCore/scripts/bootstrap-mantis.sh)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(bash *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"\\(exit $?\\)\")",
+      "Bash(php *)",
+      "Bash(git reset *)",
+      "Bash(git commit *)",
+      "Bash(git mv *)",
+      "Bash(git checkout *)"
+    ]
+  }
+}
