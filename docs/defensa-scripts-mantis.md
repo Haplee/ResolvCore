@@ -343,7 +343,7 @@ MultiHostRunner  → ejecuta en N máquinas vía SSH (script base64 embebido)
 |-----|----------|--------|
 | NIST NVD 2.0 | Pública USG | Catálogo CVE + CVSS v3.1/v3.0/v2.0 |
 | CISA KEV | Dominio público | CVEs *explotados activamente ahora* |
-| OSV.dev (Google) | Apache 2.0 | Vulns por ecosistema (PyPI/npm/Maven/Go) |
+| OSV.dev (Google) | Apache 2.0 | Vulns por ecosistema (PyPI/pnpm/Maven/Go) |
 | EPSS (FIRST.org) | Pública | Probabilidad de explotación a 30 días |
 
 **Argumento defendible**: CVSS = gravedad estática. EPSS = urgencia real. KEV = ya está siendo explotado. Combinarlas da una señal mucho más útil para priorizar parches que solo CVSS, que es el criterio que usan la mayoría de herramientas básicas.
@@ -547,7 +547,7 @@ R: El JSON se guarda localmente con timestamp. `rc_mantis_attach_diagnostic` se 
 R: Tres capas: (1) flag `--confirm` obligatorio para niveles altos, (2) `--dry-run` por defecto en demo, (3) snapshot pre-cambio + `--undo`. Regla durable de CLAUDE.md: scripts destructivos requieren flag explícito.
 
 **P: ¿Por qué NVD + KEV + OSV + EPSS y no solo CVSS?**
-R: CVSS es gravedad estática y se publica una vez. KEV indica explotación activa *hoy*. EPSS la probabilidad a 30 días. OSV cubre ecosistemas (PyPI, npm, Maven) que NVD ignora. Combinarlos prioriza mejor que CVSS solo.
+R: CVSS es gravedad estática y se publica una vez. KEV indica explotación activa *hoy*. EPSS la probabilidad a 30 días. OSV cubre ecosistemas (PyPI, pnpm, Maven) que NVD ignora. Combinarlos prioriza mejor que CVSS solo.
 
 **P: ¿Qué pasaría si Mantis publica una versión con cambios en la REST API?**
 R: Todo el contrato HTTP vive en `RC_Mantis_API`. Adaptarse a un cambio de schema sería editar esa clase. El resto del plugin (validaciones, helpers, hooks WP) es independiente.

@@ -20,7 +20,10 @@
 10. [Control de versiones — Git / GitHub](#10-control-de-versiones--git--github)
 11. [Generación de informes — PDF](#11-generación-de-informes--pdf)
 12. [Futuro — App Android](#12-futuro--app-android)
-13. [Resumen comparativo](#13-resumen-comparativo)
+13. [Auditoría de exposición — Shodan](#13-auditoría-de-exposición--shodan)
+14. [Clonado e imágenes de SO](#14-clonado-e-imágenes-de-so)
+15. [Seguridad en cliente — Cifrado y gestores](#15-seguridad-en-cliente--cifrado-y-gestores)
+16. [Resumen comparativo](#16-resumen-comparativo)
 
 ---
 
@@ -42,6 +45,28 @@ El stack combina herramientas de código abierto maduras, con integración vía 
 ### Tecnología elegida
 
 **WordPress 6.x** con tema personalizado `resolvecore-theme` (PHP puro, sin builders).
+
+### Plan de WordPress elegido
+
+WordPress.com ofrece cuatro planes. ResolveCore requiere el plan **Business** (mínimo) por la necesidad de instalar plugins propios.
+
+| Característica | Gratuito | Personal | Business | VIP |
+|---------------|----------|---------|---------|-----|
+| Precio (aprox.) | 0 €/mes | ~4 €/mes | ~25 €/mes | Contacto |
+| Plugins propios | ❌ | ❌ | ✅ | ✅ |
+| Themes propios | ❌ | ❌ | ✅ | ✅ |
+| Dominio personalizado | ❌ | ✅ | ✅ | ✅ |
+| SSL automático | ✅ | ✅ | ✅ | ✅ |
+| Acceso SFTP/DB | ❌ | ❌ | ✅ | ✅ |
+| Soporte prioritario | ❌ | Chat | Chat + Email | Dedicado |
+| Sin anuncios WordPress.com | ❌ | ✅ | ✅ | ✅ |
+| WooCommerce | ❌ | ❌ | ✅ | ✅ |
+
+**Por qué Business y no VIP:** VIP está orientado a grandes medios (CNN, TechCrunch). El coste es desproporcionado para un proyecto académico. Business proporciona todo lo necesario: plugin `rc-mantisbt`, tema personalizado `resolvecore-theme`, dominio `resolvecore.com` y acceso SFTP para despliegue.
+
+**Alternativa considerada (WordPress.org + hosting propio):** WordPress.org (software libre) sobre VPS propio daría control total. Se descarta para la fase actual porque WordPress.com Business elimina la gestión de servidor en el periodo del TFG. El despliegue en VPS propio (Oracle Cloud Free Tier) está planificado para producción final.
+
+---
 
 ### Por qué WordPress
 
@@ -71,6 +96,22 @@ El stack combina herramientas de código abierto maduras, con integración vía 
 ### Tecnología elegida
 
 **MantisBT 2.x** (Bug Tracker de código abierto, PHP + MySQL).
+
+### Evolución de versiones MantisBT
+
+| Versión | Año | Hitos principales |
+|---------|-----|-------------------|
+| 1.0.x | 2002-2006 | Primera versión estable. Solo SOAP, sin REST. PHP 4. |
+| 1.2.x | 2010-2014 | Campos personalizados, plugins básicos. PHP 5. |
+| 1.3.x LTS | 2015-2018 | Última rama 1.x. Soporte extendido. Sin REST nativa. |
+| 2.0.x | 2017 | Reescritura UI (Bootstrap), REST API v1 introducida, PHP 5.6+. |
+| 2.4.x – 2.25.x | 2018-2023 | Mejoras incrementales: API OAuth, 2FA, JSON configurable. |
+| **2.26.x LTS** | 2023-2024 | Long Term Support. PHP 8.1+. Soporte hasta 2025. |
+| **2.27.x** | 2024-act. | Versión actual. PHP 8.2, MariaDB 10.6, mejoras API. Elegida para ResolveCore. |
+
+**Por qué 2.27 y no 2.26 LTS:** La rama LTS garantiza parches de seguridad sin nuevas features. Para un entorno de producción de empresa, LTS sería la elección. Para un TFG donde se demuestran capacidades técnicas actuales, 2.27 incluye mejoras en la API REST que simplifican la integración con el plugin WordPress.
+
+---
 
 ### Por qué MantisBT
 
@@ -410,7 +451,7 @@ En desarrollo. Las opciones evaluadas son:
 | **mPDF** | PHP | Muy alta | `composer require mpdf/mpdf` | GPL |
 | **wkhtmltopdf** | Binario | Muy alta (Webkit real) | Binario en servidor | LGPL |
 | **TCPDF** | PHP | Media | `composer require tecnickcom/tcpdf` | LGPL |
-| **Puppeteer** | Node.js | Muy alta | npm + Chrome headless | MIT |
+| **Puppeteer** | Node.js | Muy alta | pnpm + Chrome headless | MIT |
 
 **Decisión prevista:** DomPDF o mPDF (PHP nativo, sin binarios externos). wkhtmltopdf produce la mejor calidad pero requiere instalar un binario en el VPS y tiene mantenimiento discontinuado desde 2023.
 
@@ -445,22 +486,142 @@ En desarrollo. Las opciones evaluadas son:
 
 ---
 
-## 13. Resumen comparativo
+## 13. Auditoría de exposición — Shodan
+
+### Tecnología elegida
+
+**Shodan API REST** (free tier) + módulo Python `shodan_lookup.py` (stdlib, sin `pip install shodan`).
+
+### Por qué Shodan
+
+| Criterio | Shodan | Censys | Fofa | Nmap (local) |
+|----------|--------|--------|------|---------------|
+| Datos históricos de internet | Sí | Sí | Sí | No |
+| Free tier útil | 100 créditos/mes | 250 queries/mes | Limitado | N/A |
+| CVEs en respuesta | Sí (campo `vulns`) | Sí | Parcial | No |
+| API REST simple | Sí | Sí (más compleja) | Sí | N/A |
+| Sin instalación en cliente | Sí | Sí | Sí | No |
+| Referencia en ASIR/ciberseguridad | Alta | Media | Baja | Alta |
+
+**Razón principal:** Shodan indexa puertos, banners de servicios y CVEs detectados pasivamente para cualquier IP pública. Permite a ResolveCore ofrecer un informe de exposición sin instalar nada en el equipo del cliente. El free tier (100 créditos/mes, 1 crédito por IP) es suficiente para el TFG.
+
+**Implementación:** `scripts/common/shodan_lookup.py` — Python 3.8+ stdlib, sin dependencias pip. Lee `SHODAN_API_KEY` desde variable de entorno o `.env` local.
+
+```
+python shodan_lookup.py --ip 8.8.8.8
+python shodan_lookup.py --ip 1.1.1.1 --json
+```
+
+**Integración en el catálogo:** Auditoría de exposición Shodan → 30 €/IP/informe → `shodan_lookup.py` genera el JSON que `generar_informe.py` formatea en PDF.
+
+---
+
+## 14. Clonado e imágenes de SO
+
+### Herramientas comparadas
+
+| Herramienta | Tipo | Licencia | Red/Local | SO soportados | Curva | Coste |
+|-------------|------|---------|-----------|--------------|-------|-------|
+| **Clonezilla Live** | Live USB | GPL | Local (USB/NFS/SFTP) | Windows, Linux, macOS | Baja-Media | Gratis |
+| **FOG Project** | Servidor PXE | GPL | Red (LAN) | Windows, Linux | Media | Gratis |
+| **WDS + MDT** | Servicio Windows Server | Incluido en Win Server | Red (PXE) | Solo Windows | Alta | Win Server |
+| **Veeam Agent Free** | Agente | Freemium | Local + NFS/SMB | Windows, Linux | Baja | Gratis |
+| **Acronis Cyber Backup** | Agente + consola | Comercial | Local + Cloud | Windows, Linux | Baja | ~150 €/equipo/año |
+
+### Criterios de elección para ResolveCore
+
+```
+Un equipo o intervención puntual     → Clonezilla Live (USB)
+Flota mixta >5 equipos (aulas, PYME) → FOG Project
+Entorno Windows AD corporativo        → WDS + MDT
+Backup programado en producción       → Veeam Agent Free
+```
+
+### Casos de uso empresariales
+
+| Escenario | Herramienta elegida | Beneficio |
+|-----------|--------------------|-----------|
+| Incorporación de nuevo empleado | FOG Project | Imagen corporativa en <20 min |
+| Restauración post-ransomware | Clonezilla / Veeam | Vuelta a imagen limpia sin pagar rescate |
+| Migración HDD → SSD | Clonezilla | Sector a sector, sin reinstalar SO |
+| Actualización de SO en flota | FOG Project | Imagen actualizada → despliegue masivo en LAN |
+| Backup previo a intervención mayor | Veeam Agent Free | Punto de restauración antes de cambios |
+
+### Posición en el catálogo ResolveCore
+
+- **Clonación puntual:** 30-60 €/equipo — Clonezilla Live, técnico con USB en cliente
+- **Despliegue de imagen en flota:** 15-30 €/equipo — FOG Project (mínimo 3 equipos)
+- Ambos servicios se documentan en `docs/servicios-adicionales.md` § 2 y § 6
+
+---
+
+## 15. Seguridad en cliente — Cifrado y gestores
+
+### 15.1 Cifrado de disco
+
+| Herramienta | SO | Licencia | TPM | Algoritmo | Recuperación | Caso de uso |
+|-------------|-----|---------|-----|-----------|--------------|-------------|
+| **BitLocker** | Windows Pro/Ent | Incluido | Opcional (recomendado) | AES-256-XTS | Clave 48 dígitos | Portátiles corporativos |
+| **LUKS (dm-crypt)** | Linux | GPL (kernel) | No | AES-256-XTS | Header de recuperación | Servidores y estaciones Linux |
+| **VeraCrypt** | Windows/Linux/macOS | Apache 2.0 | No | AES/Twofish/Serpent | Disco de rescate | Multiplataforma, contenedores cifrados |
+| **ecryptfs** | Linux | GPL | No | AES-256 | — | Solo directorio home, sin reinstalar |
+
+**Criterios de elección:**
+
+```
+Empresa con Win Pro/Ent + TPM 2.0 → BitLocker (sin coste, integración nativa)
+Usuario doméstico con Win Home    → VeraCrypt (gratuito, open source)
+Servidor Linux (instalación nueva) → LUKS durante instalación del SO
+Portátil Linux sin reinstalar      → VeraCrypt contenedor o ecryptfs home
+```
+
+**Por qué no DiskCryptor:** sin mantenimiento activo desde 2014. VeraCrypt lo sustituye con soporte multiplataforma y auditorías de seguridad recientes (2016, 2020).
+
+### 15.2 Gestores de contraseñas
+
+| Gestor | Licencia | Almacenamiento | Sync | 2FA | Compartir | Auditoría | Precio |
+|--------|---------|---------------|------|-----|-----------|-----------|--------|
+| **Bitwarden** | AGPL (OSS) | Cloud o self-hosted | ✅ | ✅ | ✅ Teams | ✅ | Gratis / 10 €/año Premium |
+| **KeePassXC** | GPL | Local (`.kdbx`) | Manual (Dropbox/NAS) | ✅ (TOTP) | ❌ nativo | ❌ nativo | Gratis |
+| **1Password** | Propietario | Cloud | ✅ | ✅ | ✅ | ✅ | ~3 €/mes |
+| **Dashlane** | Propietario | Cloud | ✅ | ✅ | ✅ | ✅ | ~4 €/mes |
+
+**Decisión para clientes ResolveCore:**
+
+| Perfil cliente | Gestor recomendado | Razón |
+|---------------|-------------------|---------|
+| Usuario doméstico / autónomo | Bitwarden free | Sync automático, app móvil, sin coste |
+| PYME (2-10 personas) | Bitwarden Teams | Compartir contraseñas + auditoría de accesos |
+| Máxima seguridad / sin cloud | KeePassXC + NAS | Sin dependencia de terceros |
+
+**Por qué Bitwarden sobre alternativas de pago:** código auditado públicamente (auditorías independientes 2018, 2020, 2022), opción self-hosted (Vaultwarden en VPS propio para clientes con requisitos GDPR estrictos), importación desde LastPass, 1Password o CSV.
+
+**Integración en ResolveCore:** recomendación documentada en el informe PDF de auditoría generado por `generar_informe.py`. Se incluye en la sección "Recomendaciones de seguridad" del informe de cada cliente.
+
+---
+
+## 16. Resumen comparativo
 
 | Componente | Elegido | Alternativa principal | Razón del descarte |
 |-----------|---------|----------------------|-------------------|
-| CMS | WordPress | CMS custom PHP | Tiempo de desarrollo, plugins, comunidad |
-| Bug tracker | MantisBT | Jira | Coste, complejidad, PHP incompatible |
+| CMS | WordPress Business | CMS custom PHP | Tiempo de desarrollo, plugins, comunidad |
+| Bug tracker | MantisBT 2.27 | Jira | Coste, complejidad, PHP incompatible |
 | Acceso remoto | AnyDesk | TeamViewer | Bloqueo sesiones largas en free |
 | Scripts Windows | PowerShell 7 | Python | No requiere instalación adicional |
 | Scripts Linux | Bash | Python | Universal, sin dependencias |
-| Base de datos | MariaDB | MySql | WordPress + MantisBT, mismo stack |
-| Servidor web | Nginx | Apache | Mejor rendimiento, menor consumo RAM |
+| Base de datos | MariaDB | MySQL 8 | WordPress + MantisBT, mismo stack, GPL pura |
+| Servidor web | Nginx + PHP-FPM | Apache | Mejor rendimiento, menor consumo RAM |
 | Kanban | MantisKanban | Trello | Integración nativa MantisBT |
 | VCS integration | source-integration | Manual | Plugin oficial, webhooks automáticos |
-| SLA automático | SetDuedate | Manual | Automatiza promesa < 2h |
-| PDF (previsto) | DomPDF/mPDF | wkhtmltopdf | wkhtmltopdf sin mantenimiento desde 2023 |
-| App Android (futuro) | Kotlin/Compose | Flutter | Acceso total APIs nativas Android |
+| SLA automático | SetDuedate | Manual | Automatiza promesa <2h |
+| PDF (previsto) | DomPDF/mPDF | wkhtmltopdf | Sin mantenimiento desde 2023 |
+| App Android (futuro) | Kotlin/Compose | Flutter | Acceso total a APIs nativas Android |
+| Auditoría exposición | Shodan API | Censys | Free tier más generoso, CVEs en respuesta |
+| Clonación puntual | Clonezilla Live | Macrium Reflect | GPL, multiplataforma (Linux/Windows/macOS) |
+| Despliegue en flota | FOG Project | WDS + MDT | No requiere Windows Server, multiplataforma |
+| Cifrado Windows | BitLocker / VeraCrypt | DiskCryptor | Sin mantenimiento activo |
+| Cifrado Linux | LUKS | ecryptfs | Cifrado completo de disco, estándar |
+| Gestor contraseñas | Bitwarden | 1Password | OSS, self-hosted, auditorías públicas |
 
 ---
 
