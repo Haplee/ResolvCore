@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
 # ResolveCore — Diagnóstico de sistema Linux
 #
@@ -20,9 +20,73 @@
 # Versión: 3.0.0
 # ─────────────────────────────────────────────────────────────────────────────
 
-set -o pipefail
-OUTPUT_DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/diagnosticos}"
-SILENT="${2:-false}"
+set -uo pipefail
+
+# ── Parseo de argumentos ────────────────────────────────────────────────────
+INSTALL_DEPS=false
+AUTO_INSTALL=false
+OUTPUT_DIR=""
+SILENT="false"
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -O|--output)            OUTPUT_DIR="${2:-}"; shift 2 ;;
+        -S|--silent)            SILENT="true"; shift ;;
+        -I|--install|--install-deps) INSTALL_DEPS=true; shift ;;
+        -A|--auto-install)      INSTALL_DEPS=true; AUTO_INSTALL=true; shift ;;
+        -h|--help)
+            cat <<EOF
+NAME
+    diagnostico.sh - Diagnostico de sistema Linux para ResolveCore
+
+SYNOPSIS
+    bash diagnostico.sh [-O <dir>] [-S] [-I] [-A] [-h]
+
+DESCRIPTION
+    Recoge metricas de hardware (CPU, RAM, discos con SMART, bateria, GPU,
+    temperatura), sistema operativo (version, uptime, actualizaciones,
+    integridad de paquetes, plan energia), drivers/modulos, red (latencia,
+    DNS, perdida paquetes) y seguridad (firewall, antivirus, SELinux).
+    Genera JSON estructurado y un informe HTML autocontenido.
+
+OPTIONS
+    -O, --output <dir>          Directorio de salida del JSON/HTML.
+                                Default: <repo>/scripts/diagnosticos
+    -S, --silent                Suprime salida por consola.
+    -I, --install               Detecta paquetes opcionales faltantes y los
+                                instala via apt/dnf/yum/pacman/zypper. Pide
+                                confirmacion interactiva.
+                                (Alias retro-compat: --install-deps)
+    -A, --auto-install          Igual que -I sin confirmar.
+    -h, --help                  Muestra esta ayuda y sale.
+
+PAQUETES OPCIONALES
+    lm-sensors                  Temperatura CPU/GPU.
+    smartmontools               S.M.A.R.T. extendido (sectores, horas).
+    pciutils                    Deteccion GPU (lspci).
+    nvidia-utils                GPU NVIDIA via nvidia-smi.
+    jq                          Validacion JSON generado.
+    bc, iputils-ping, ufw, iproute2
+
+EXAMPLES
+    bash diagnostico.sh
+    bash diagnostico.sh -O /tmp
+    bash diagnostico.sh -S -O /tmp -I
+    sudo bash diagnostico.sh -A -S
+    ssh user@host 'bash -s' < diagnostico.sh
+
+EXIT CODES
+    0    Diagnostico generado correctamente.
+    1    JSON generado no valido (jq empty fallo).
+EOF
+            exit 0 ;;
+        *) POSITIONAL+=("$1"); shift ;;
+    esac
+done
+# Posicionales legacy: bash diagnostico.sh <output_dir> <silent>
+[[ -z "$OUTPUT_DIR" && -n "${POSITIONAL[0]:-}" ]] && OUTPUT_DIR="${POSITIONAL[0]}"
+[[ -n "${POSITIONAL[1]:-}" ]] && SILENT="${POSITIONAL[1]}"
+[[ -z "$OUTPUT_DIR" ]] && OUTPUT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/diagnosticos"
 
 # ── Colores ──────────────────────────────────────────────────────────────────
 if [[ -t 1 ]] && [[ "$SILENT" != "true" ]]; then
@@ -60,6 +124,89 @@ if [[ "$is_admin" == "false" ]] && [[ "$SILENT" != "true" ]]; then
     echo ""
 fi
 
+# ── Instalación opcional de dependencias ────────────────────────────────────
+# Tabla cmd → paquete por gestor. Si el comando ya existe, no se reinstala.
+install_dependencies() {
+    local pm="" install_cmd="" update_cmd=""
+    if   command -v apt-get  &>/dev/null; then pm="apt";    update_cmd="apt-get update -qq";          install_cmd="apt-get install -y"
+    elif command -v dnf      &>/dev/null; then pm="dnf";    update_cmd="dnf -y makecache";            install_cmd="dnf install -y"
+    elif command -v yum      &>/dev/null; then pm="yum";    update_cmd="yum -y makecache";            install_cmd="yum install -y"
+    elif command -v pacman   &>/dev/null; then pm="pacman"; update_cmd="pacman -Sy --noconfirm";      install_cmd="pacman -S --noconfirm --needed"
+    elif command -v zypper   &>/dev/null; then pm="zypper"; update_cmd="zypper refresh";              install_cmd="zypper install -y"
+    else
+        warn "Gestor de paquetes no soportado. Instala manualmente: lm-sensors smartmontools pciutils jq bc"
+        return 1
+    fi
+
+    # cmd:apt:dnf:pacman:zypper  (yum hereda dnf)
+    local deps=(
+        "sensors:lm-sensors:lm_sensors:lm_sensors:sensors"
+        "smartctl:smartmontools:smartmontools:smartmontools:smartmontools"
+        "lspci:pciutils:pciutils:pciutils:pciutils"
+        "jq:jq:jq:jq:jq"
+        "bc:bc:bc:bc:bc"
+        "ping:iputils-ping:iputils:iputils:iputils"
+        "ufw:ufw:ufw:ufw:ufw"
+        "ip:iproute2:iproute:iproute2:iproute2"
+    )
+
+    local missing=() pkg_to_install=()
+    for entry in "${deps[@]}"; do
+        IFS=':' read -r cmd p_apt p_dnf p_pac p_zyp <<<"$entry"
+        if ! command -v "$cmd" &>/dev/null; then
+            local pkg=""
+            case "$pm" in
+                apt)         pkg="$p_apt" ;;
+                dnf|yum)     pkg="$p_dnf" ;;
+                pacman)      pkg="$p_pac" ;;
+                zypper)      pkg="$p_zyp" ;;
+            esac
+            missing+=("$cmd")
+            pkg_to_install+=("$pkg")
+        fi
+    done
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        ok "Dependencias: todas presentes"
+        return 0
+    fi
+
+    section "Dependencias — paquetes faltantes detectados"
+    warn "Faltan: ${missing[*]}"
+    echo -e "    ${GRAY}Paquetes a instalar (${pm}): ${pkg_to_install[*]}${NC}"
+
+    if [[ "$AUTO_INSTALL" != "true" ]]; then
+        read -r -p "    ¿Proceder con la instalación? [y/N] " _ans
+        [[ "$_ans" =~ ^[YySs]$ ]] || { warn "Instalación cancelada"; return 1; }
+    fi
+
+    local sudo_pfx=""
+    [[ "$is_admin" == "false" ]] && sudo_pfx="sudo "
+    if [[ "$is_admin" == "false" ]] && ! command -v sudo &>/dev/null; then
+        fail "Se requiere root o sudo para instalar paquetes"
+        return 1
+    fi
+
+    eval "$sudo_pfx$update_cmd" || warn "Fallo en update — continúo con install"
+    if eval "$sudo_pfx$install_cmd ${pkg_to_install[*]}"; then
+        ok "Paquetes instalados correctamente"
+    else
+        fail "Error al instalar paquetes"
+        return 1
+    fi
+
+    # sensors-detect tras instalar lm-sensors (modo no interactivo)
+    if [[ " ${missing[*]} " == *" sensors "* ]] && command -v sensors-detect &>/dev/null; then
+        ok "Ejecutando sensors-detect --auto"
+        eval "${sudo_pfx}sensors-detect --auto" >/dev/null 2>&1 || warn "sensors-detect terminó con avisos"
+    fi
+}
+
+if [[ "$INSTALL_DEPS" == "true" ]]; then
+    install_dependencies
+    echo ""
+fi
+
 # ── JSON helpers ────────────────────────────────────────────────────────────
 json_escape() {
     local s="$1"
@@ -69,6 +216,25 @@ json_escape() {
     s="${s//$'\t'/\\t}"
     printf '%s' "$s"
 }
+
+# json_num: emite el valor si es numérico válido, "null" en caso contrario.
+# Defensa contra capturas multi-línea (p.ej. `grep -c | echo "0"` con pipefail
+# que devuelve "0\n0") que romperían el JSON al interpolarse en un campo numérico.
+json_num() {
+    local v="$1"
+    if [[ "$v" =~ ^-?[0-9]+(\.[0-9]+)?$ ]]; then
+        printf '%s' "$v"
+    else
+        printf 'null'
+    fi
+}
+
+# Verificación de jq como dependencia obligatoria (la usamos para ensamblar JSON).
+if ! command -v jq &>/dev/null; then
+    echo "  ✗  jq no encontrado. Instala con: sudo apt install jq" >&2
+    echo "     O ejecuta: bash $0 -A   (auto-instalación de dependencias)" >&2
+    exit 3
+fi
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. HARDWARE
@@ -156,7 +322,7 @@ if command -v lsblk &>/dev/null; then
         else
             disks_list="$disks_list,{\"modelo\":\"$(json_escape "$d_model")\",\"tipo\":\"$dtype\",\"capacidad_gb\":$d_gb,\"smart\":\"$smart\",\"bus\":\"$d_type\",\"smart_atributos\":$smart_attrs_json}"
         fi
-    done < <(lsblk -d -o NAME,SIZE,TYPE,MODEL 2>/dev/null | tail -n +2 | grep -E "disk|nvme")
+    done < <(lsblk -d -b -o NAME,SIZE,TYPE,MODEL 2>/dev/null | tail -n +2 | grep -E "disk|nvme")
     disks_json="[$disks_list]"
 fi
 
@@ -248,18 +414,18 @@ if [[ -n "$_df" ]]; then
 fi
 [[ "$disk_free_gb" != "null" ]] && ok "Disco / libre: ${disk_free_gb}GB (uso: ${disk_used_pct}%)"
 
-hardware_json="\"hardware\": {
-    \"cpu_cores\": $cpu_cores,
-    \"ram_gb\": $ram_gb,
+hardware_json="{
+    \"cpu_cores\": $(json_num "$cpu_cores"),
+    \"ram_gb\": $(json_num "$ram_gb"),
     \"disk_type\": \"$disk_type\",
-    \"disk_gb\": $disk_gb,
-    \"disk_free_gb\": $disk_free_gb,
-    \"disk_uso_pct\": $disk_used_pct,
+    \"disk_gb\": $(json_num "$disk_gb"),
+    \"disk_free_gb\": $(json_num "$disk_free_gb"),
+    \"disk_uso_pct\": $(json_num "$disk_used_pct"),
     \"smart_status\": \"$smart_status\",
     \"cpu_nombre\": \"$(json_escape "$cpu_name")\",
-    \"cpu_hilos\": $cpu_threads,
-    \"cpu_mhz\": $cpu_mhz,
-    \"cpu_temp_c\": $cpu_temp,
+    \"cpu_hilos\": $(json_num "$cpu_threads"),
+    \"cpu_mhz\": $(json_num "$cpu_mhz"),
+    \"cpu_temp_c\": $(json_num "$cpu_temp"),
     \"discos\": $disks_json,
     \"bateria\": $battery_json,
     \"gpu\": $gpu_json
@@ -279,32 +445,40 @@ fi
 os_arch=$(uname -m)
 os_build=$(uname -r)
 uptime_s=$(cat /proc/uptime 2>/dev/null | awk '{print int($1)}' || echo "0")
-uptime_h=$(echo "scale=1; $uptime_s / 3600" | bc 2>/dev/null || echo "0")
+uptime_h=$(LC_ALL=C awk "BEGIN{printf \"%.1f\", ${uptime_s:-0}/3600}")
 
 ok "OS: $os_name (build $os_build, $os_arch)"
 ok "Uptime: ${uptime_h}h"
 
 # Actualizaciones pendientes
+# Nota: `grep -c` imprime el conteo (incluido "0") y sale con código 1 si no hay
+# matches. Con `pipefail` la sustitución hereda ese exit 1, así que usamos
+# `|| true` para no inyectar valores extra. La regex final blinda contra cualquier
+# output imprevisto del package manager.
 pending_updates="null"
 if command -v apt &>/dev/null; then
     # Usa cache local — no ejecuta apt update para evitar efectos secundarios en diagnóstico
-    pending_updates=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates (caché local)"
+    pending_updates=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0} (caché local)"
 elif command -v dnf &>/dev/null; then
-    pending_updates=$(dnf check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates"
+    pending_updates=$(dnf check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0}"
 elif command -v yum &>/dev/null; then
-    pending_updates=$(yum check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates"
+    pending_updates=$(yum check-update --quiet 2>/dev/null | grep -c "^[A-Za-z]" || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0}"
 elif command -v pacman &>/dev/null; then
-    pending_updates=$(pacman -Qu 2>/dev/null | wc -l | xargs || echo "0")
-    ok "Actualizaciones pendientes: $pending_updates"
+    pending_updates=$(pacman -Qu 2>/dev/null | wc -l | xargs || true)
+    ok "Actualizaciones pendientes: ${pending_updates:-0}"
 fi
+[[ "$pending_updates" =~ ^[0-9]+$ ]] || pending_updates=0
 
 # Integridad del sistema (check de paquetes)
 sfc_issues=0
 if command -v dpkg &>/dev/null; then
-    sfc_issues=$(dpkg -l | grep -c "^..[^i]" 2>/dev/null || echo "0")
+    # Solo paquetes con estado distinto de "ii" (correctamente instalado).
+    # Filtra cabeceras de dpkg-list (||/, +++, Desired=...) por longitud y formato.
+    sfc_issues=$(dpkg -l 2>/dev/null | awk '/^[a-zA-Z]{2,3}[[:space:]]/ && $1 != "ii" {c++} END{print c+0}')
+    [[ "$sfc_issues" =~ ^[0-9]+$ ]] || sfc_issues=0
 elif command -v rpm &>/dev/null; then
     sfc_issues=$(rpm -Va 2>/dev/null | wc -l || echo "0")
 fi
@@ -326,13 +500,13 @@ if [[ -f /sys/class/power_supply/*/status ]]; then
     ok "Plan de energía: $power_plan"
 fi
 
-sistema_json="\"sistema_operativo\": {
-    \"actualizaciones_pendientes\": $pending_updates,
+sistema_json="{
+    \"actualizaciones_pendientes\": $(json_num "$pending_updates"),
     \"nombre\": \"$(json_escape "$os_name")\",
     \"build\": \"$os_build\",
     \"arquitectura\": \"$os_arch\",
-    \"uptime_horas\": $uptime_h,
-    \"sfc_archivos_danados\": $sfc_issues,
+    \"uptime_horas\": $(json_num "$uptime_h"),
+    \"sfc_archivos_danados\": $(json_num "$sfc_issues"),
     \"plan_energia\": \"$power_plan\"
 }"
 
@@ -370,9 +544,9 @@ if command -v lsmod &>/dev/null; then
     ok "Módulos sin firma: $unsigned_count"
 fi
 
-drivers_json="\"drivers\": {
-    \"detenidos\": $stopped_count,
-    \"sin_firma\": $unsigned_count,
+drivers_json="{
+    \"detenidos\": $(json_num "$stopped_count"),
+    \"sin_firma\": $(json_num "$unsigned_count"),
     \"detenidos_lista\": [],
     \"sin_firma_lista\": []
 }"
@@ -424,11 +598,11 @@ if command -v ping &>/dev/null; then
     fi
 fi
 
-red_json="\"red\": {
-    \"latencia_ms\": $latency_ms,
-    \"perdida_paquetes_pct\": $packet_loss_pct,
+red_json="{
+    \"latencia_ms\": $(json_num "$latency_ms"),
+    \"perdida_paquetes_pct\": $(json_num "$packet_loss_pct"),
     \"dns\": $dns_json,
-    \"interfaz\": \"$active_iface\"
+    \"interfaz\": \"$(json_escape "$active_iface")\"
 }"
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -478,25 +652,206 @@ if command -v getenforce &>/dev/null; then
     ok "SELinux: $selinux_status"
 fi
 
-seguridad_json="\"seguridad\": {
+seguridad_json="{
     \"antivirus\": $antivirus_name,
     \"firewall\": $firewall_active,
     \"uac_habilitado\": null,
     \"defender_activo\": $defender_active,
-    \"defender_firma_dias\": $def_sig_days,
-    \"selinux\": \"$selinux_status\"
+    \"defender_firma_dias\": $(json_num "$def_sig_days"),
+    \"selinux\": \"$(json_escape "$selinux_status")\"
 }"
 
 # ═════════════════════════════════════════════════════════════════════════════
-# 6. METADATA
+# 6. SERVICIOS
+# ═════════════════════════════════════════════════════════════════════════════
+section "Servicios — Estado de servicios systemd"
+
+servicios_total=0; servicios_activos=0; servicios_detenidos=0
+servicios_automaticos_detenidos=0; servicios_criticos_json="[]"
+
+if command -v systemctl &>/dev/null; then
+    _st=$(systemctl list-units --type=service --no-pager --no-legend 2>/dev/null | wc -l || echo "0")
+    _sa=$(systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null | wc -l || echo "0")
+    [[ "$_st" =~ ^[0-9]+$ ]] && servicios_total="$_st"
+    [[ "$_sa" =~ ^[0-9]+$ ]] && servicios_activos="$_sa"
+    servicios_detenidos=$((servicios_total - servicios_activos))
+
+    _svc_inact=$(systemctl list-units --type=service --state=inactive --no-pager --no-legend 2>/dev/null | wc -l || echo "0")
+    [[ "$_svc_inact" =~ ^[0-9]+$ ]] && servicios_automaticos_detenidos="$_svc_inact"
+
+    _criticos_list=""
+    for _svc in sshd ssh cron crond NetworkManager network mariadb mysql nginx apache2 ufw firewalld; do
+        _svc_state=$(systemctl is-active "$_svc" 2>/dev/null || echo "")
+        [[ -z "$_svc_state" || "$_svc_state" == "not-found" ]] && continue
+        [[ -n "$_criticos_list" ]] && _criticos_list="$_criticos_list,"
+        _criticos_list="${_criticos_list}{\"nombre\":\"$_svc\",\"estado\":\"$_svc_state\"}"
+        if [[ "$_svc_state" == "active" ]]; then
+            ok "Servicio $_svc: activo"
+        else
+            warn "Servicio $_svc: $_svc_state"
+        fi
+    done
+    [[ -n "$_criticos_list" ]] && servicios_criticos_json="[$_criticos_list]"
+
+    ok "Servicios: $servicios_total total, $servicios_activos activos"
+fi
+
+servicios_json="{
+    \"total\": $(json_num "$servicios_total"),
+    \"activos\": $(json_num "$servicios_activos"),
+    \"detenidos\": $(json_num "$servicios_detenidos"),
+    \"automaticos_detenidos\": $(json_num "$servicios_automaticos_detenidos"),
+    \"criticos\": $servicios_criticos_json
+}"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 7. SOFTWARE INSTALADO
+# ═════════════════════════════════════════════════════════════════════════════
+section "Software instalado — Primeros 50 paquetes"
+
+software_json="[]"; _sw_list=""; _sw_count=0; _max_sw=50
+
+if command -v dpkg-query &>/dev/null; then
+    while IFS=' ' read -r _sname _sver && [[ $_sw_count -lt $_max_sw ]]; do
+        [[ -z "$_sname" ]] && continue
+        [[ -n "$_sw_list" ]] && _sw_list="$_sw_list,"
+        _sw_list="${_sw_list}{\"nombre\":\"$(json_escape "$_sname")\",\"version\":\"$(json_escape "$_sver")\"}"
+        _sw_count=$((_sw_count + 1))
+    done < <(dpkg-query -W --showformat='${Package} ${Version}\n' 2>/dev/null | sort | head -"$_max_sw")
+elif command -v rpm &>/dev/null; then
+    while IFS=' ' read -r _sname _sver && [[ $_sw_count -lt $_max_sw ]]; do
+        [[ -z "$_sname" ]] && continue
+        [[ -n "$_sw_list" ]] && _sw_list="$_sw_list,"
+        _sw_list="${_sw_list}{\"nombre\":\"$(json_escape "$_sname")\",\"version\":\"$(json_escape "$_sver")\"}"
+        _sw_count=$((_sw_count + 1))
+    done < <(rpm -qa --queryformat '%{NAME} %{VERSION}\n' 2>/dev/null | sort | head -"$_max_sw")
+elif command -v pacman &>/dev/null; then
+    while IFS=' ' read -r _sname _sver && [[ $_sw_count -lt $_max_sw ]]; do
+        [[ -z "$_sname" ]] && continue
+        [[ -n "$_sw_list" ]] && _sw_list="$_sw_list,"
+        _sw_list="${_sw_list}{\"nombre\":\"$(json_escape "$_sname")\",\"version\":\"$(json_escape "$_sver")\"}"
+        _sw_count=$((_sw_count + 1))
+    done < <(pacman -Q 2>/dev/null | head -"$_max_sw")
+fi
+
+[[ -n "$_sw_list" ]] && software_json="[$_sw_list]"
+ok "Software inventariado: $_sw_count paquetes"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 8. RENDIMIENTO
+# ═════════════════════════════════════════════════════════════════════════════
+section "Rendimiento — CPU · Memoria · Top procesos"
+
+cpu_uso_pct="null"; mem_uso_pct="null"; top_procs_json="[]"
+
+# Uso CPU: dos lecturas de /proc/stat separadas 0.5s
+if [[ -f /proc/stat ]]; then
+    _s1=$(awk '/^cpu /{t=$2+$3+$4+$5+$6+$7+$8+$9; i=$5+$6; printf "%d %d", t, i}' /proc/stat 2>/dev/null || echo "0 0")
+    sleep 0.5
+    _s2=$(awk '/^cpu /{t=$2+$3+$4+$5+$6+$7+$8+$9; i=$5+$6; printf "%d %d", t, i}' /proc/stat 2>/dev/null || echo "0 0")
+    _t1=$(echo "$_s1" | awk '{print $1}'); _i1=$(echo "$_s1" | awk '{print $2}')
+    _t2=$(echo "$_s2" | awk '{print $1}'); _i2=$(echo "$_s2" | awk '{print $2}')
+    if [[ "$_t1" =~ ^[0-9]+$ && "$_t2" =~ ^[0-9]+$ && $((_t2 - _t1)) -gt 0 ]]; then
+        cpu_uso_pct=$(LC_ALL=C awk "BEGIN{dt=$_t2-$_t1; di=$_i2-$_i1; printf \"%.1f\", (1-di/dt)*100}")
+    fi
+fi
+
+# Uso memoria desde /proc/meminfo
+_mt=$(grep MemTotal     /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
+_ma=$(grep MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
+if [[ "$_mt" =~ ^[0-9]+$ && "$_mt" -gt 0 && "$_ma" =~ ^[0-9]+$ ]]; then
+    mem_uso_pct=$(LC_ALL=C awk "BEGIN{printf \"%.1f\", (1 - $_ma/$_mt)*100}")
+fi
+
+[[ "$cpu_uso_pct" != "null" ]] && ok "CPU uso: ${cpu_uso_pct}%"
+[[ "$mem_uso_pct" != "null" ]] && ok "Memoria uso: ${mem_uso_pct}%"
+
+# Top 5 procesos por RAM
+_procs_list=""; _proc_count=0
+if command -v ps &>/dev/null; then
+    while IFS=' ' read -r _ppid _pmem _pname && [[ $_proc_count -lt 5 ]]; do
+        [[ -z "$_ppid" || "$_ppid" == "PID" ]] && continue
+        [[ -n "$_procs_list" ]] && _procs_list="$_procs_list,"
+        _procs_list="${_procs_list}{\"pid\":$(json_num "$_ppid"),\"memoria_pct\":$(json_num "$_pmem"),\"nombre\":\"$(json_escape "$_pname")\"}"
+        _proc_count=$((_proc_count + 1))
+    done < <(ps aux --sort=-%mem 2>/dev/null | awk 'NR>1{print $2, $4, $11}' | head -5)
+fi
+[[ -n "$_procs_list" ]] && top_procs_json="[$_procs_list]"
+
+rendimiento_json="{
+    \"cpu_uso_pct\": $(json_num "$cpu_uso_pct"),
+    \"memoria_uso_pct\": $(json_num "$mem_uso_pct"),
+    \"top_procesos\": $top_procs_json
+}"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 9. USUARIOS
+# ═════════════════════════════════════════════════════════════════════════════
+section "Usuarios — Cuentas locales"
+
+usuarios_json="[]"; _users_list=""; _users_count=0
+
+while IFS=: read -r _uname _ _uid _ _ _home _shell; do
+    [[ "$_uid" =~ ^[0-9]+$ ]] || continue
+    [[ "$_uid" -lt 1000 || "$_uname" == "nobody" ]] && continue
+    _uactive="true"
+    echo "$_shell" | grep -qE "nologin|false" && _uactive="false"
+    [[ -n "$_users_list" ]] && _users_list="$_users_list,"
+    _users_list="${_users_list}{\"nombre\":\"$(json_escape "$_uname")\",\"uid\":$(json_num "$_uid"),\"activo\":$_uactive,\"home\":\"$(json_escape "$_home")\"}"
+    _users_count=$((_users_count + 1))
+done < /etc/passwd 2>/dev/null || true
+
+[[ -n "$_users_list" ]] && usuarios_json="[$_users_list]"
+ok "Usuarios locales: $_users_count"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 10. PLACA BASE
+# ═════════════════════════════════════════════════════════════════════════════
+section "Placa base — Fabricante · Modelo · BIOS"
+
+placa_fabricante="Unknown"; placa_modelo="Unknown"
+bios_version="Unknown"; bios_fecha="Unknown"; uuid_sistema="Unknown"
+
+# Sysfs DMI (no requiere root — disponible en la mayoría de kernels)
+[[ -f /sys/class/dmi/id/board_vendor ]] && placa_fabricante=$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/board_name   ]] && placa_modelo=$(cat    /sys/class/dmi/id/board_name   2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/bios_version ]] && bios_version=$(cat    /sys/class/dmi/id/bios_version 2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/bios_date    ]] && bios_fecha=$(cat      /sys/class/dmi/id/bios_date    2>/dev/null || echo "Unknown")
+[[ -f /sys/class/dmi/id/product_uuid ]] && uuid_sistema=$(cat    /sys/class/dmi/id/product_uuid 2>/dev/null || echo "Unknown")
+
+# Complemento con dmidecode si root (puede añadir info no expuesta en sysfs)
+if [[ "$is_admin" == "true" ]] && command -v dmidecode &>/dev/null; then
+    _dmi_board=$(dmidecode -t baseboard 2>/dev/null || echo "")
+    _dmi_bios=$(dmidecode  -t bios      2>/dev/null || echo "")
+    _dmi_sys=$(dmidecode   -t system    2>/dev/null || echo "")
+    [[ "$placa_fabricante" == "Unknown" ]] && placa_fabricante=$(echo "$_dmi_board" | awk -F': ' '/Manufacturer:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$placa_modelo"     == "Unknown" ]] && placa_modelo=$(echo     "$_dmi_board" | awk -F': ' '/Product Name:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$bios_version"     == "Unknown" ]] && bios_version=$(echo     "$_dmi_bios"  | awk -F': ' '/Version:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$bios_fecha"       == "Unknown" ]] && bios_fecha=$(echo       "$_dmi_bios"  | awk -F': ' '/Release Date:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    [[ "$uuid_sistema"     == "Unknown" ]] && uuid_sistema=$(echo     "$_dmi_sys"   | awk -F': ' '/UUID:/{gsub(/^[ \t]+/,"",$2); print $2; exit}')
+fi
+
+ok "Placa: $placa_fabricante — $placa_modelo"
+ok "BIOS: $bios_version ($bios_fecha)"
+
+placa_base_json="{
+    \"fabricante\": \"$(json_escape "$placa_fabricante")\",
+    \"producto\": \"$(json_escape "$placa_modelo")\",
+    \"version_bios\": \"$(json_escape "$bios_version")\",
+    \"fecha_bios\": \"$(json_escape "$bios_fecha")\",
+    \"uuid\": \"$(json_escape "$uuid_sistema")\"
+}"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 11. METADATA
 # ═════════════════════════════════════════════════════════════════════════════
 hostname_str=$(hostname 2>/dev/null || echo "unknown")
 timestamp=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')
 
-meta_json="\"_meta\": {
-    \"version\": \"3.0.0\",
+meta_json="{
+    \"version\": \"3.1.0\",
     \"plataforma\": \"linux\",
-    \"hostname\": \"$hostname_str\",
+    \"hostname\": \"$(json_escape "$hostname_str")\",
     \"generado_en\": \"$timestamp\",
     \"admin\": $is_admin
 }"
@@ -508,27 +863,61 @@ meta_json="\"_meta\": {
 mkdir -p "$OUTPUT_DIR" 2>/dev/null
 out_file="$OUTPUT_DIR/diagnostico_${hostname_str}_$(date '+%Y%m%d_%H%M%S').json"
 
-cat > "$out_file" <<EOF
-{
-    $hardware_json,
-    $sistema_json,
-    $drivers_json,
-    $red_json,
-    $seguridad_json,
-    $meta_json
-}
-EOF
-
-if command -v jq &>/dev/null; then
-    if ! jq empty "$out_file" 2>/dev/null; then
-        echo -e "  ${RED}✗  JSON generado no válido. Revisa la salida.${NC}" >&2
-        exit 1
-    fi
+# Ensamblaje vía jq -n: cada sección llega como --argjson y jq valida que sea
+# JSON bien formado antes de incluirla. Si alguna sección está corrupta, jq -n
+# falla con un mensaje que apunta al fragmento problemático en vez de generar
+# silenciosamente un fichero inválido.
+if ! jq -n \
+    --argjson hardware        "$hardware_json" \
+    --argjson sistema_operativo "$sistema_json" \
+    --argjson drivers         "$drivers_json" \
+    --argjson red             "$red_json" \
+    --argjson seguridad       "$seguridad_json" \
+    --argjson servicios       "$servicios_json" \
+    --argjson software        "$software_json" \
+    --argjson rendimiento     "$rendimiento_json" \
+    --argjson usuarios        "$usuarios_json" \
+    --argjson placa_base      "$placa_base_json" \
+    --argjson meta            "$meta_json" \
+    '{
+        hardware: $hardware,
+        sistema_operativo: $sistema_operativo,
+        drivers: $drivers,
+        red: $red,
+        seguridad: $seguridad,
+        servicios: $servicios,
+        software: $software,
+        rendimiento: $rendimiento,
+        usuarios: $usuarios,
+        placa_base: $placa_base,
+        _meta: $meta
+    }' > "$out_file" 2>/tmp/diagnostico_jq_err.$$; then
+    echo -e "  ${RED}✗  jq falló al ensamblar el JSON. Detalle:${NC}" >&2
+    cat /tmp/diagnostico_jq_err.$$ >&2 || true
+    rm -f /tmp/diagnostico_jq_err.$$
+    # Volcar fragmentos a un .debug.json para que el técnico pueda inspeccionar
+    debug_file="${out_file%.json}.debug.txt"
+    {
+        printf '== hardware_json ==\n%s\n\n'      "$hardware_json"
+        printf '== sistema_json ==\n%s\n\n'       "$sistema_json"
+        printf '== drivers_json ==\n%s\n\n'       "$drivers_json"
+        printf '== red_json ==\n%s\n\n'           "$red_json"
+        printf '== seguridad_json ==\n%s\n\n'     "$seguridad_json"
+        printf '== servicios_json ==\n%s\n\n'     "$servicios_json"
+        printf '== software_json ==\n%s\n\n'      "$software_json"
+        printf '== rendimiento_json ==\n%s\n\n'   "$rendimiento_json"
+        printf '== usuarios_json ==\n%s\n\n'      "$usuarios_json"
+        printf '== placa_base_json ==\n%s\n\n'    "$placa_base_json"
+        printf '== meta_json ==\n%s\n'            "$meta_json"
+    } > "$debug_file"
+    echo -e "  ${YELLOW}↳ Fragmentos volcados en: $debug_file${NC}" >&2
+    exit 1
 fi
+rm -f /tmp/diagnostico_jq_err.$$
 
 # Generar informe HTML
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-_tmpl="${_script_dir}/../informe.html"
+_tmpl="${_script_dir}/../../reports/informe.html"
 _html_file="${out_file%.json}.html"
 if [[ -f "$_tmpl" ]]; then
     _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
@@ -540,7 +929,17 @@ if [[ -f "$_tmpl" ]]; then
             printf ';\n'
             tail -n +"$((_split + 1))" "$_tmpl"
         } > "$_html_file"
-        command -v xdg-open &>/dev/null && xdg-open "$_html_file" 2>/dev/null &
+        # Abrir con navegador (prioriza $BROWSER, luego comunes; xdg-open como último recurso
+        # porque el default del sistema puede ser Text Editor).
+        _opener=""
+        for _b in "$BROWSER" sensible-browser firefox google-chrome chromium chromium-browser brave-browser; do
+            [[ -n "$_b" ]] && command -v "$_b" &>/dev/null && { _opener="$_b"; break; }
+        done
+        if [[ -n "$_opener" ]]; then
+            "$_opener" "$_html_file" >/dev/null 2>&1 &
+        elif command -v xdg-open &>/dev/null; then
+            xdg-open "$_html_file" 2>/dev/null &
+        fi
     fi
 fi
 
