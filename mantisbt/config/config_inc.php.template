@@ -1,0 +1,60 @@
+<?php
+# ============================================================
+# MantisBT — ResolveCore configuration
+# Copiar como:  mantisbt/config/config_inc.php
+# NO subir al repo con credenciales reales.
+# ============================================================
+
+# ── Base de datos ────────────────────────────────────────────
+$g_hostname      = 'localhost';
+$g_db_username   = 'mantis_user';       # CAMBIAR
+$g_db_password   = 'CHANGE_ME';         # CAMBIAR — usar contraseña segura
+$g_database_name = 'mantisbt';
+$g_db_type       = 'mysqli';
+
+# ── URL base ─────────────────────────────────────────────────
+# Incluye la barra final. Debe coincidir con la URL real del servidor.
+$g_path = 'https://tudominio.com/mantis/';   # CAMBIAR
+
+# ── API REST ─────────────────────────────────────────────────
+$g_allow_rest_api = ON;
+
+# ── Email ────────────────────────────────────────────────────
+$g_from_address    = 'resolvecore@tudominio.com';   # CAMBIAR
+$g_from_name       = 'ResolveCore Support';
+$g_smtp_host       = 'localhost';
+$g_smtp_port       = 25;
+# Para SMTP externo (p.ej. Gmail):
+# $g_smtp_host       = 'smtp.gmail.com';
+# $g_smtp_port       = 587;
+# $g_smtp_connection_mode = 'tls';
+# $g_smtp_username   = 'tu@gmail.com';
+# $g_smtp_password   = 'app_password';
+
+# ── Registro y acceso ────────────────────────────────────────
+$g_allow_signup            = OFF;    # Solo técnicos crean cuentas
+$g_report_bug_threshold    = REPORTER;
+$g_update_bug_threshold    = DEVELOPER;
+$g_resolve_bug_threshold   = DEVELOPER;
+$g_close_bug_threshold     = MANAGER;
+
+# ── Workflow ─────────────────────────────────────────────────
+$g_bug_submit_status         = NEW_;
+$g_auto_set_status_to_assigned = ON;
+$g_bug_reopen_status         = FEEDBACK;
+
+# ── Adjuntos ─────────────────────────────────────────────────
+$g_allow_file_upload  = ON;
+$g_file_upload_method = DISK;
+$g_absolute_path_default_upload_folder = '/var/www/mantis/uploads/';   # CAMBIAR según servidor
+
+# ── Personalización ResolveCore ──────────────────────────────
+$g_window_title        = 'ResolveCore Support';
+$g_favicon_image       = 'favicon.ico';
+$g_show_product_version = OFF;
+
+# ── Seguridad ────────────────────────────────────────────────
+$g_crypto_master_salt = 'GENERATE_WITH: php -r "echo bin2hex(random_bytes(32));"';  # CAMBIAR
+
+# ── Zona horaria ─────────────────────────────────────────────
+$g_default_timezone = 'Europe/Madrid';

@@ -20,16 +20,68 @@ param(
     [string]$Nivel = 'estandar',
     [switch]$DryRun,
     [switch]$Undo,
-    [switch]$BackupOnly
+    [switch]$BackupOnly,
+    [Alias('h')][switch]$Help
 )
 
-$ErrorActionPreference = 'SilentlyContinue'
+if ($Help) {
+    @"
+NAME
+    optimizacion.ps1 - Optimizacion de sistema Windows para ResolveCore
+
+SYNOPSIS
+    .\optimizacion.ps1 [-Nivel <nivel>] [-DryRun] [-Undo] [-BackupOnly] [-Help]
+
+DESCRIPTION
+    Aplica optimizaciones por niveles: telemetria off, servicios no
+    criticos (Spooler EXCLUIDO siempre), visual effects, ajustes del
+    registro, debloat de Cortana/OneDrive/Bing en niveles altos. Antes
+    de modificar nada hace backup del registro y guarda estado_previo.json
+    para permitir -Undo. Requiere consola Administrador.
+
+PARAMETERS
+    -Nivel <nivel>              
+        Nivel a aplicar (default: estandar):
+        ligero:       Limpieza basica + servicios no criticos.
+        estandar:     Telemetria off + servicios + visual effects.
+        rendimiento:  Estandar + optimizaciones disco/red/RAM.
+        extreme:      Rendimiento + bloqueo de Cortana/OneDrive/Bing.
+    -DryRun                     Simula sin aplicar cambios. Imprime las
+                                acciones planificadas.
+    -Undo                       Deshace cambios usando estado_previo.json.
+    -BackupOnly                 Solo crea copia del registro, no aplica.
+    -Help, -h                   Muestra esta ayuda y sale.
+
+FILES
+    %TEMP%\ResolveCore_Optimizacion\optimizacion.log
+    %TEMP%\ResolveCore_Optimizacion\backup\         (copias .reg)
+    %TEMP%\ResolveCore_Optimizacion\estado_previo.json
+
+REQUISITOS
+    - Consola PowerShell como Administrador.
+    - PowerShell 5.1+ (Windows 10/11 trae 5.1).
+
+EXAMPLES
+    .\optimizacion.ps1 -Nivel ligero -DryRun
+    .\optimizacion.ps1 -Nivel rendimiento
+    .\optimizacion.ps1 -BackupOnly
+    .\optimizacion.ps1 -Undo
+
+EXIT CODES
+    0    Optimizacion aplicada correctamente.
+    1    Sin privilegios de Administrador.
+"@ | Write-Host
+    exit 0
+}
+
+$ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 
-$SCRIPT_VERSION = "3.1.0"
+$SCRIPT_VERSION = "3.2.0"
 $LOG_DIR = "$env:TEMP\ResolveCore_Optimizacion"
 $LOG_FILE = "$LOG_DIR\optimizacion.log"
 $REG_BACKUP_DIR = "$LOG_DIR\backup"
+$STATE_FILE = "$LOG_DIR\estado_previo.json"
 $REPORT = [ordered]@{ nivel = $Nivel; dry_run = [bool]$DryRun; acciones = @(); inicio = (Get-Date -Format 'o') }
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -43,6 +95,9 @@ if (-not $isAdmin) {
 
 if (-not (Test-Path $LOG_DIR)) {
     New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null
+}
+if (-not (Test-Path $REG_BACKUP_DIR)) {
+    New-Item -ItemType Directory -Path $REG_BACKUP_DIR -Force | Out-Null
 }
 
 # Funciones
@@ -108,10 +163,39 @@ if ($BackupOnly) {
 }
 
 if ($Undo) {
-    Write-Section "Deshaciendo cambios..."
-    Write-Ok "Restaurando plan equilibrado"
+    Write-Section "Deshaciendo cambios"
+
+    # 1. Plan equilibrado
     powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
-    Write-Ok "Completado"
+    Write-Ok "Plan equilibrado restaurado"
+
+    # 2. Restaurar servicios desde estado previo
+    if (Test-Path $STATE_FILE) {
+        try {
+            $previo = Get-Content $STATE_FILE -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($s in $previo.servicios) {
+                try {
+                    Set-Service -Name $s.nombre -StartupType $s.inicio -ErrorAction Stop
+                    Write-Ok "Servicio $($s.nombre) -> $($s.inicio)"
+                } catch {
+                    Write-Warn "No se pudo restaurar $($s.nombre): $($_.Exception.Message)"
+                }
+            }
+        } catch {
+            Write-Warn "Estado previo ilegible: $($_.Exception.Message)"
+        }
+    } else {
+        Write-Warn "Sin estado previo en $STATE_FILE — no hay servicios que restaurar"
+    }
+
+    # 3. Restaurar registro desde reg export (.reg)
+    Get-ChildItem -Path $REG_BACKUP_DIR -Filter '*.reg' -ErrorAction SilentlyContinue | ForEach-Object {
+        $proc = Start-Process -FilePath 'reg.exe' -ArgumentList @('import', "`"$($_.FullName)`"") -Wait -PassThru -WindowStyle Hidden
+        if ($proc.ExitCode -eq 0) { Write-Ok "Registro importado: $($_.Name)" }
+        else { Write-Warn "Falló import de $($_.Name) (exit $($proc.ExitCode))" }
+    }
+
+    Write-Ok "Undo completado"
     exit 0
 }
 
@@ -137,25 +221,37 @@ if (-not $DryRun) {
 
 Write-Section "Servicios del sistema"
 
+# Spooler (cola de impresion) NUNCA se desactiva — requerido por usuarios con impresoras.
 $servicesToDisable = @()
 switch ($Nivel) {
-    'ligero' { $servicesToDisable = @('Spooler') }
-    'estandar' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch') }
-    'rendimiento' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch', 'DiagTrack', 'DPS') }
-    'extreme' { $servicesToDisable = @('Spooler', 'BITS', 'WSearch', 'DiagTrack', 'DPS', 'SysMain') }
+    'ligero' { $servicesToDisable = @() }
+    'estandar' { $servicesToDisable = @('BITS', 'WSearch') }
+    'rendimiento' { $servicesToDisable = @('BITS', 'WSearch', 'DiagTrack', 'DPS') }
+    'extreme' { $servicesToDisable = @('BITS', 'WSearch', 'DiagTrack', 'DPS', 'SysMain') }
 }
 
+# Snapshot estado previo para Undo
+$estadoPrevio = @{ servicios = @() }
 foreach ($svc in $servicesToDisable) {
     $svcObj = Get-Service -Name $svc -ErrorAction SilentlyContinue
     if ($svcObj) {
+        $estadoPrevio.servicios += [ordered]@{ nombre = $svc; inicio = $svcObj.StartType.ToString() }
         if (-not $DryRun) {
-            Set-Service -Name $svc -StartupType Disabled -ErrorAction SilentlyContinue
-            Write-Ok "Desactivado: $svc"
-            $REPORT.acciones += "servicio_desactivado:$svc"
+            try {
+                Set-Service -Name $svc -StartupType Disabled -ErrorAction Stop
+                Write-Ok "Desactivado: $svc (previo: $($svcObj.StartType))"
+                $REPORT.acciones += "servicio_desactivado:$svc"
+            } catch {
+                Write-Warn "No se pudo desactivar ${svc}: $($_.Exception.Message)"
+            }
         } else {
             Write-Info "DryRun: desactivaria servicio $svc (actual: $($svcObj.StartType))"
         }
     }
+}
+
+if (-not $DryRun -and $estadoPrevio.servicios.Count -gt 0) {
+    $estadoPrevio | ConvertTo-Json -Depth 5 | Out-File -FilePath $STATE_FILE -Encoding UTF8
 }
 
 Write-Section "Plan de energia"
@@ -193,9 +289,13 @@ Write-Section "Registro - Memoria"
 $memPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management'
 if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
     if (-not $DryRun) {
+        # Backup previo del subarbol antes de modificar — habilita Undo
+        $regBackup = Join-Path $REG_BACKUP_DIR 'memory_management.reg'
+        reg export 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management' "$regBackup" /y 2>$null | Out-Null
+
         Set-ItemProperty -Path $memPath -Name DisablePagingExecutive -Value 1 -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $memPath -Name LargeSystemCache -Value 1 -ErrorAction SilentlyContinue
-        Write-Ok "Optimizacion memoria"
+        Write-Ok "Optimizacion memoria (backup: memory_management.reg)"
         $REPORT.acciones += "registro_memoria"
     } else {
         Write-Info "DryRun: modificaria registro memoria (DisablePagingExecutive, LargeSystemCache)"
@@ -207,8 +307,10 @@ Write-Section "Explorador"
 if ($Nivel -eq 'rendimiento' -or $Nivel -eq 'extreme') {
     if (-not $DryRun) {
         $expPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer'
+        $regBackup = Join-Path $REG_BACKUP_DIR 'explorer.reg'
+        reg export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer' "$regBackup" /y 2>$null | Out-Null
         Set-ItemProperty -Path $expPath -Name AlwaysUnloadDLL -Value 1 -ErrorAction SilentlyContinue
-        Write-Ok "AlwaysUnloadDLL"
+        Write-Ok "AlwaysUnloadDLL (backup: explorer.reg)"
         $REPORT.acciones += "registro_explorer"
     } else {
         Write-Info "DryRun: modificaria Explorer AlwaysUnloadDLL"

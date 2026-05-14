@@ -4,6 +4,104 @@
 # Menu interactivo para tecnicos ResolveCore en Mac
 # =============================================================================
 
+set -uo pipefail
+
+SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+DIAG_FLAGS=()
+OPT_FLAGS=()
+NIVEL_POSITIONAL=""
+DIAG_HAS_FLAG=false
+OPT_HAS_FLAG=false
+
+show_help() {
+    cat <<'EOF'
+NAME
+    ResolveCore.sh - Menu interactivo de herramientas ResolveCore para macOS
+
+SYNOPSIS
+    bash ResolveCore.sh                                          # menu
+    bash ResolveCore.sh [-O <dir>] [--host <ip>] [--user <name>]
+                        [--port <n>] [--local]                   # forward diagnostico
+    bash ResolveCore.sh [--dry-run] [--confirm] [--undo] [NIVEL] # forward optimizacion
+
+DESCRIPTION
+    Sin flags: lanza menu TUI (diagnostico, optimizacion, ayuda, salir).
+    Con flags de modulo: salta el menu e invoca diagnostico.sh u
+    optimizacion.sh con esos flags.
+
+    NOTA: los modulos macOS son STUB (DEMO). Implementacion completa
+    pendiente para fase futura del TFG.
+
+OPTIONS DEL LAUNCHER
+    -h, --help        Muestra esta ayuda y sale.
+
+FLAGS DE DIAGNOSTICO (forward a diagnostico.sh)
+    -O, --output <dir>      Directorio salida JSON.
+    --local                 Forzar modo local (default).
+    --host <ip>             Modo remoto via SSH.
+    --user <name>           Usuario SSH.
+    --port <n>              Puerto SSH (default: 22).
+
+FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
+    NIVEL                   ligero | estandar | rendimiento | extreme.
+    --dry-run               Simula sin aplicar.
+    --confirm               Confirma acciones destructivas.
+    --undo                  Deshace cambios (cuando se implemente).
+
+MENU
+    1. DIAGNOSTICO    Lanza diagnostico.sh.
+    2. OPTIMIZACION   Lanza optimizacion.sh.
+    3. AYUDA          Guia rapida embebida.
+    4. SALIR          Cierra el programa.
+
+REQUISITOS
+    - Terminal interactiva (modo menu).
+    - bash 3.2+ (preinstalado en macOS).
+    - brew install osx-cpu-temp (opcional, diagnostico termico).
+
+EXAMPLES
+    bash scripts/macos/ResolveCore.sh
+    bash scripts/macos/ResolveCore.sh -O /tmp
+    bash scripts/macos/ResolveCore.sh --host 192.168.1.10 --user fran
+    bash scripts/macos/ResolveCore.sh --dry-run rendimiento
+
+EXIT CODES
+    0    Salida normal o ayuda mostrada.
+    1    No es terminal interactiva (modo menu).
+    2    Combinacion invalida de flags.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)    show_help; exit 0 ;;
+        -O|--output)  DIAG_FLAGS+=("--output" "${2:-}"); DIAG_HAS_FLAG=true; shift 2 ;;
+        --host)       DIAG_FLAGS+=("--host" "${2:-}"); DIAG_HAS_FLAG=true; shift 2 ;;
+        --user)       DIAG_FLAGS+=("--user" "${2:-}"); DIAG_HAS_FLAG=true; shift 2 ;;
+        --port)       DIAG_FLAGS+=("--port" "${2:-}"); DIAG_HAS_FLAG=true; shift 2 ;;
+        --local)      DIAG_FLAGS+=("--local"); DIAG_HAS_FLAG=true; shift ;;
+        --dry-run)    OPT_FLAGS+=("--dry-run"); OPT_HAS_FLAG=true; shift ;;
+        --confirm)    OPT_FLAGS+=("--confirm"); OPT_HAS_FLAG=true; shift ;;
+        --undo)       OPT_FLAGS+=("--undo"); OPT_HAS_FLAG=true; shift ;;
+        ligero|estandar|rendimiento|extreme) NIVEL_POSITIONAL="$1"; OPT_HAS_FLAG=true; shift ;;
+        *) shift ;;
+    esac
+done
+
+if [[ "$DIAG_HAS_FLAG" == "true" && "$OPT_HAS_FLAG" == "true" ]]; then
+    echo "[X] Flags de diagnostico y optimizacion son mutuamente exclusivos." >&2
+    exit 2
+fi
+if [[ "$DIAG_HAS_FLAG" == "true" ]]; then
+    exec bash "$SCRIPT_DIR_EARLY/diagnostico.sh" "${DIAG_FLAGS[@]}"
+fi
+if [[ "$OPT_HAS_FLAG" == "true" ]]; then
+    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh" "${OPT_FLAGS[@]}")
+    [[ -n "$NIVEL_POSITIONAL" ]] && OPT_CMD+=("$NIVEL_POSITIONAL")
+    exec "${OPT_CMD[@]}"
+fi
+
 if [[ ! -t 0 ]]; then
     echo "Este script debe ejecutarse en una terminal interactiva"
     echo "Ejemplo: bash scripts/macos/ResolveCore.sh"
@@ -159,7 +257,7 @@ run_optimizacion() {
     read -p "  Selecciona opcion (1-4): " nivel
 
     case $nivel in
-        1) nivel_opt="basico" ;;
+        1) nivel_opt="ligero" ;;
         2) nivel_opt="estandar" ;;
         3) nivel_opt="rendimiento" ;;
         4) return ;;

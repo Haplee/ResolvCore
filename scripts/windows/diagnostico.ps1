@@ -4,38 +4,108 @@
     ResolveCore - Diagnostico completo de sistema Windows
 
 .DESCRIPTION
-    Recoge metricas completas de hardware, software, red y seguridad.
-    Genera un archivo JSON compatible con ResolveCore.
+    Recoge metricas de hardware, software, red y seguridad.
+    Genera JSON estructurado consumible por el generador de informes.
+
+    Exit codes:
+      0  ok
+      1  error de escritura del informe
+      2  error fatal en recogida de datos
 
 .PARAMETER OutputDir
-    Directorio donde se guardara diagnostico
+    Directorio donde se guardara el diagnostico (default: ../diagnosticos)
 
 .PARAMETER Silent
     Suprime la salida por consola
 
+.PARAMETER InstallDeps
+    Detecta paquetes opcionales faltantes (smartmontools, OpenHardwareMonitor, speedtest,
+    nmap, git) y los instala con winget o choco. Pide confirmacion interactiva.
+
+.PARAMETER AutoInstall
+    Igual que -InstallDeps pero sin pedir confirmacion. Util para despliegues automatizados.
+
 .EXAMPLE
     .\diagnostico.ps1
-    .\diagnostico.ps1 -Silent
+    .\diagnostico.ps1 -Silent -OutputDir C:\reports
+    .\diagnostico.ps1 -InstallDeps
+    .\diagnostico.ps1 -AutoInstall -Silent
 #>
 
 [CmdletBinding()]
 param(
-    [string]$OutputDir,
-    [switch]$Silent
+    [Alias('O','Output')][string]$OutputDir,
+    [Alias('S')][switch]$Silent,
+    [Alias('I','Install')][switch]$InstallDeps,
+    [Alias('A')][switch]$AutoInstall,
+    [Alias('h')][switch]$Help
 )
+
+if ($Help) {
+    @"
+NAME
+    diagnostico.ps1 - Diagnostico de sistema Windows para ResolveCore
+
+SYNOPSIS
+    .\diagnostico.ps1 [-O <dir>] [-S] [-I] [-A] [-h]
+
+DESCRIPTION
+    Recoge metricas de hardware (CPU, RAM, discos con MediaType y SMART,
+    GPU, bateria, temperatura), sistema operativo (version, build, parches,
+    Windows Update, plan de energia, integridad SFC), drivers, red
+    (latencia, DNS, perdida) y seguridad (Defender, firewall, UAC).
+    Genera JSON estructurado v4.0.0 + informe HTML autocontenido.
+
+PARAMETERS
+    -O, -OutputDir, -Output <dir>
+                                Directorio de salida del JSON/HTML.
+                                Default: ..\diagnosticos
+    -S, -Silent                 Suprime salida por consola. Util para CI.
+    -I, -InstallDeps, -Install  Detecta paquetes opcionales faltantes
+                                (smartmontools, OpenHardwareMonitor,
+                                speedtest, nmap, git) y los instala via
+                                winget o choco. Pide confirmacion.
+    -A, -AutoInstall            Igual que -I sin pedir confirmacion.
+                                Requiere consola Administrador.
+    -h, -Help                   Muestra esta ayuda y sale.
+
+REQUISITOS
+    - PowerShell 5.1+ (Windows 10/11 trae 5.1; recomendado pwsh 7+).
+    - Recomendado consola Administrador para metricas completas.
+
+EXAMPLES
+    .\diagnostico.ps1
+    .\diagnostico.ps1 -S -O C:\reports
+    .\diagnostico.ps1 -I
+    .\diagnostico.ps1 -A -S
+
+EXIT CODES
+    0    Diagnostico generado correctamente.
+    1    Error escribiendo informe.
+    2    Error fatal recogiendo datos.
+"@ | Write-Host
+    exit 0
+}
 
 if (-not $OutputDir) {
     $OutputDir = Join-Path (Split-Path $PSScriptRoot -Parent) "diagnosticos"
 }
 
-$ErrorActionPreference = 'SilentlyContinue'
+# Captura no-fatal: cada bloque hace su propio try/catch local.
+# 'SilentlyContinue' silencia tambien bugs reales; usamos 'Continue' y try/catch granular.
+$ErrorActionPreference = 'Continue'
+
+function Invoke-Safe {
+    param([scriptblock]$Block, $Default = $null)
+    try { & $Block } catch { return $Default }
+}
 
 # Helpers de salida
 
 function Write-Header {
     Write-Host ''
     Write-Host '  +---------------------------------------------------------------+' -ForegroundColor DarkCyan
-    Write-Host '  |   ResolveCore - Diagnostico Completo - v3.2.0                |' -ForegroundColor Cyan
+    Write-Host '  |   ResolveCore - Diagnostico Completo - v4.0.0                |' -ForegroundColor Cyan
     Write-Host "  |   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')                                       |" -ForegroundColor DarkGray
     Write-Host '  +---------------------------------------------------------------+' -ForegroundColor DarkCyan
     Write-Host ''
@@ -59,7 +129,95 @@ if (-not $Silent) {
     }
 }
 
+function Install-Dependencies {
+    # Instala paquetes opcionales para diagnóstico extendido (smartmontools, LibreHardwareMonitor, etc.).
+    # Requiere winget (Windows 10 1809+) o Chocolatey. No falla si el gestor falta.
+    $pm = $null; $installCmd = $null
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        $pm = 'winget'
+        $installCmd = 'winget install --silent --accept-package-agreements --accept-source-agreements --id'
+    } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+        $pm = 'choco'
+        $installCmd = 'choco install -y'
+    } else {
+        Write-Warn 'Ni winget ni choco disponibles. Instala uno y reintenta.'
+        Write-Host '    Instalar Chocolatey: https://chocolatey.org/install' -ForegroundColor DarkGray
+        return
+    }
+
+    # cmd → @{ winget=<id>; choco=<id>; desc=<descripción>; detect=<scriptblock opcional> }
+    # detect: si presente, se usa en vez de Get-Command (apps GUI sin CLI en PATH).
+    $deps = @(
+        @{ Cmd='smartctl'; winget='smartmontools.smartmontools'; choco='smartmontools'; desc='S.M.A.R.T. extendido' }
+        @{ Cmd='LibreHardwareMonitor'; winget='LibreHardwareMonitor.LibreHardwareMonitor'; choco='librehardwaremonitor'; desc='Sensores temperatura/voltaje (fork activo de OpenHardwareMonitor)';
+           detect={ Test-Path 'C:\Program Files\LibreHardwareMonitor\LibreHardwareMonitor.exe' -ErrorAction SilentlyContinue } }
+        @{ Cmd='speedtest'; winget='Ookla.Speedtest.CLI'; choco='speedtest'; desc='Test ancho de banda' }
+        @{ Cmd='nmap'; winget='Insecure.Nmap'; choco='nmap'; desc='Escaneo de puertos' }
+        @{ Cmd='git'; winget='Git.Git'; choco='git'; desc='Control de versiones' }
+    )
+
+    $missing = @()
+    foreach ($d in $deps) {
+        $present = $false
+        if ($d.detect) {
+            $present = & $d.detect
+        } else {
+            $present = [bool](Get-Command $d.Cmd -ErrorAction SilentlyContinue)
+        }
+        if (-not $present) { $missing += $d }
+    }
+
+    if ($missing.Count -eq 0) {
+        Write-Ok 'Dependencias: todas presentes'
+        return
+    }
+
+    Write-Section 'Dependencias - paquetes faltantes detectados'
+    Write-Warn ('Faltan: ' + (($missing | ForEach-Object { $_.Cmd }) -join ', '))
+    Write-Host ('    Gestor: ' + $pm) -ForegroundColor DarkGray
+    foreach ($d in $missing) {
+        $pkgId = if ($pm -eq 'winget') { $d.winget } else { $d.choco }
+        Write-Host ('    - ' + $d.Cmd + ' (' + $pkgId + ') - ' + $d.desc) -ForegroundColor DarkGray
+    }
+
+    if (-not $AutoInstall) {
+        $ans = Read-Host '    Proceder con la instalacion? [y/N]'
+        if ($ans -notmatch '^(y|Y|s|S)$') { Write-Warn 'Instalacion cancelada'; return }
+    }
+
+    if (-not $isAdmin) {
+        Write-Fail 'Se requiere consola de Administrador para instalar paquetes'
+        return
+    }
+
+    foreach ($d in $missing) {
+        $pkgId = if ($pm -eq 'winget') { $d.winget } else { $d.choco }
+        Write-Host ('    Instalando ' + $d.Cmd + '...') -ForegroundColor DarkGray
+        try {
+            Invoke-Expression "$installCmd $pkgId" | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok ($d.Cmd + ' instalado')
+            } else {
+                Write-Warn ($d.Cmd + ' devolvio codigo ' + $LASTEXITCODE)
+            }
+        } catch {
+            Write-Fail ('Error instalando ' + $d.Cmd + ': ' + $_.Exception.Message)
+        }
+    }
+
+    # Refrescar PATH para sesion actual (winget/choco anaden a PATH solo en nuevas shells)
+    $env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
+                [System.Environment]::GetEnvironmentVariable('Path','User')
+    Write-Ok 'PATH refrescado en sesion actual'
+}
+
+if ($InstallDeps -or $AutoInstall) {
+    Install-Dependencies
+    Write-Host ''
+}
+
 $report = [ordered]@{}
+$hardware = [ordered]@{}
 
 # ============================================
 # 1. SISTEMA OPERATIVO
@@ -123,7 +281,7 @@ Write-Host "    Fabricante: $($cpus[0].Manufacturer)" -ForegroundColor Gray
 Write-Host "    ID: $($cpus[0].ProcessorId)" -ForegroundColor Gray
 
 try {
-    $temp = Get-CimInstance -Namespace 'root\wmi' -ClassName 'MSAcpi_ThermalZoneTemperature'
+    $temp = Get-CimInstance -Namespace 'root\wmi' -ClassName 'MSAcpi_ThermalZoneTemperature' -ErrorAction SilentlyContinue
     if ($temp) { Write-Host "    Temperatura: $([math]::Round($temp[0].CurrentTemperature / 10 - 273.15, 1)) C" -ForegroundColor Gray }
 } catch {}
 
@@ -142,7 +300,7 @@ $cpuList = @($cpus | ForEach-Object {
     }
 })
 
-$report['cpu'] = [ordered]@{
+$hardware['cpu'] = [ordered]@{
     cantidad = $cpus.Count
     nucleos_total = $totalCores
     hilos_total = $totalThreads
@@ -182,7 +340,7 @@ foreach ($r in $ramMods) {
 
 Write-Host "    Modulos detectados: $($ramMods.Count)" -ForegroundColor Gray
 
-$report['memoria'] = [ordered]@{
+$hardware['memoria'] = [ordered]@{
     total_gb = $totalRam
     disponible_gb = $availRam
     usada_gb = [math]::Round($totalRam - $availRam, 2)
@@ -201,10 +359,13 @@ $discos = Get-CimInstance Win32_DiskDrive
 $diskList = @()
 foreach ($d in $discos) {
     $sizeGB = [math]::Round($d.Size / 1GB, 1)
-    $tipo = switch ([int]$d.MediaType) {
-        4 { 'HDD' } 3 { 'SSD' } 5 { 'SSD' }
-        default { if ($d.Caption -match 'SSD|NVMe|Solid|Flash') { 'SSD' } elseif ($d.Caption -match 'HDD|SATA') { 'HDD' } else { 'Disk' } }
-    }
+    $mt = "$($d.MediaType)"
+    $tipo = if ($mt -match 'SSD|NVMe|Solid|Flash') { 'SSD' }
+            elseif ($mt -match 'Fixed|HDD|hard') { if ($d.Caption -match 'SSD|NVMe|Solid|Flash') { 'SSD' } else { 'HDD' } }
+            elseif ($mt -match 'Removable|External') { 'Removable' }
+            elseif ($d.Caption -match 'SSD|NVMe|Solid|Flash') { 'SSD' }
+            elseif ($d.Caption -match 'HDD|SATA') { 'HDD' }
+            else { 'Disk' }
     $diskList += [ordered]@{
         modelo = $d.Caption
         capacidad_gb = $sizeGB
@@ -238,7 +399,7 @@ try {
             write_errors     = $_.WriteErrorsTotal
             horas_encendido  = $_.PowerOnHours
         }})
-        $report['smart'] = $smartJson
+        $hardware['smart'] = $smartJson
     }
 } catch {}
 
@@ -260,7 +421,7 @@ foreach ($dr in $drives) {
     }
 }
 
-$report['discos'] = [ordered]@{
+$hardware['discos'] = [ordered]@{
     fisicos = $diskList
     logicos = $driveList
 }
@@ -300,7 +461,7 @@ try {
     }
 } catch {}
 
-$report['gpu'] = $gpuList
+$hardware['gpu'] = $gpuList
 
 # ============================================
 # 6. RED
@@ -339,17 +500,49 @@ foreach ($ip in $ipconfigs) {
 }
 
 Write-Host "    ---" -ForegroundColor Gray
-$ping1 = Test-Connection -ComputerName 8.8.8.8 -Count 3 -ErrorAction SilentlyContinue
+$latMs = $null
+$lossPct = $null
+$pingCount = 4
+$ping1 = Test-Connection -ComputerName 8.8.8.8 -Count $pingCount -ErrorAction SilentlyContinue
 if ($ping1) {
-    $lat = [math]::Round(($ping1 | Measure-Object ResponseTime -Average).Average, 1)
-    Write-Ok "Internet: OK ($lat ms)"
+    $latMs = [math]::Round(($ping1 | Measure-Object ResponseTime -Average).Average, 1)
+    $received = ($ping1 | Measure-Object).Count
+    $lossPct = [math]::Round((($pingCount - $received) / $pingCount) * 100, 1)
+    Write-Ok "Internet: OK ($latMs ms, perdida $lossPct%)"
 } else {
+    $lossPct = 100
     Write-Fail "Sin conexion a internet"
 }
 
+# WiFi SSID (si esta conectado por WiFi)
+$wifiSsid = $null
+try {
+    $netshOut = & netsh wlan show interfaces 2>$null | Out-String
+    if ($netshOut -match 'SSID\s*:\s*(.+?)\r?\n') { $wifiSsid = $matches[1].Trim() }
+} catch {}
+
+# DNS e interfaz principal (primer adaptador con gateway)
+$primaryIface = $null
+$primaryDns = @()
+$primaryGw = $null
+foreach ($ip in $ipconfigs) {
+    if ($ip.IPv4DefaultGateway) {
+        $primaryIface = $ip.InterfaceAlias
+        $primaryGw = $ip.IPv4DefaultGateway.NextHop
+        $primaryDns = @($ip.DNSServer.ServerAddresses)
+        break
+    }
+}
+
 $report['red'] = [ordered]@{
-    adaptadores = $netList
-    ip = $ipList
+    adaptadores         = $netList
+    ip                  = $ipList
+    latencia_ms         = $latMs
+    perdida_paquetes_pct = $lossPct
+    wifi_ssid           = $wifiSsid
+    interfaz            = $primaryIface
+    gateway             = $primaryGw
+    dns                 = $primaryDns
 }
 
 # ============================================
@@ -369,7 +562,7 @@ Write-Host "    Version: $($bios.BIOSVersion) - Fecha: $($bios.ReleaseDate)" -Fo
 Write-Host "    UUID: $($bios.UUID)" -ForegroundColor Gray
 Write-Host "    Serial: $($bios.SerialNumber)" -ForegroundColor Gray
 
-$report['placa_base'] = [ordered]@{
+$hardware['placa_base'] = [ordered]@{
     producto = $mb.Product
     fabricante = $mb.Manufacturer
     serial = $mb.SerialNumber
@@ -394,8 +587,8 @@ if ($bat) {
     $desgaste = $null
     $batCiclos = $null
     try {
-        $bf = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryFullChargedCapacity').FullChargedCapacity
-        $bd = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryStaticData').DesignedCapacity
+        $bf = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryFullChargedCapacity' -ErrorAction SilentlyContinue).FullChargedCapacity
+        $bd = (Get-CimInstance -Namespace 'root\wmi' -ClassName 'BatteryStaticData' -ErrorAction SilentlyContinue).DesignedCapacity
         if ($bf -and $bd -and $bd -gt 0) {
             $desgaste = [math]::Round((1 - $bf / $bd) * 100, 1)
             Write-Host "    Desgaste: $desgaste%" -ForegroundColor Gray
@@ -405,7 +598,7 @@ if ($bat) {
         if ($bc) { $batCiclos = $bc.CycleCount }
     } catch {}
 
-    $report['bateria'] = [ordered]@{
+    $hardware['bateria'] = [ordered]@{
         carga_pct   = $bat.EstimatedChargeRemaining
         estado      = $bat.BatteryStatus
         voltage     = $bat.DesignVoltage
@@ -414,7 +607,7 @@ if ($bat) {
     }
 } else {
     Write-Host "    Escritorio (sin bateria)" -ForegroundColor Gray
-    $report['bateria'] = $null
+    $hardware['bateria'] = $null
 }
 
 # ============================================
@@ -494,11 +687,11 @@ $report['software'] = [ordered]@{
 
 Write-Section 'Rendimiento'
 
-$cpuLoad = [math]::Round(((Get-CimInstance Win32_Processor) | Measure-Object LoadPercentage -Average).Average, 0)
+# Reusamos $cpus (linea 114) y $os (linea 70) para evitar nuevas consultas WMI
+$cpuLoad = [math]::Round(($cpus | Measure-Object LoadPercentage -Average).Average, 0)
 Write-Ok "CPU: $cpuLoad%"
 
-$osMem = Get-CimInstance Win32_OperatingSystem
-$memUse = [math]::Round(($osMem.TotalVisibleMemorySize - $osMem.FreePhysicalMemory) / $osMem.TotalVisibleMemorySize * 100, 1)
+$memUse = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize * 100, 1)
 Write-Ok "Memoria: $memUse%"
 
 Write-Host "    Procesos (memoria):" -ForegroundColor Gray
@@ -574,8 +767,11 @@ $report['usuarios'] = @($users | ForEach-Object { [ordered]@{ nombre = $_.Name; 
 # METADATA
 # ============================================
 
+# Consolidar hardware en report una vez recogidos todos los datos
+$report['hardware'] = $hardware
+
 $report['_meta'] = [ordered]@{
-    version = '3.2.0'
+    version = '4.0.0'
     plataforma = 'windows'
     hostname = $env:COMPUTERNAME
     usuario = $env:USERNAME
@@ -587,23 +783,37 @@ $report['_meta'] = [ordered]@{
 # OUTPUT JSON
 # ============================================
 
-if (-not (Test-Path $OutputDir)) {
-    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+try {
+    if (-not (Test-Path $OutputDir)) {
+        New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+    }
+} catch {
+    Write-Fail "No se pudo crear directorio salida: $OutputDir"
+    exit 1
 }
 
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $outFile = Join-Path $OutputDir "diagnostico_$($env:COMPUTERNAME)_$timestamp.json"
 
-$report | ConvertTo-Json -Depth 10 | Out-File -FilePath $outFile -Encoding UTF8
+try {
+    $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $outFile -Encoding UTF8 -ErrorAction Stop
+} catch {
+    Write-Fail "Error escribiendo JSON: $($_.Exception.Message)"
+    exit 1
+}
 
-# Generar informe HTML
-$templatePath = Join-Path $PSScriptRoot '../informe.html'
+# Informe HTML (best-effort: el JSON es la fuente autoritativa)
+$templatePath = Join-Path $PSScriptRoot '../../reports/informe.html'
 $htmlFile = $outFile -replace '\.json$', '.html'
 if (Test-Path $templatePath) {
-    $jsonContent = Get-Content $outFile -Raw -Encoding UTF8
-    $html = (Get-Content $templatePath -Raw -Encoding UTF8) -replace '__JSON_DATA__', $jsonContent
-    $html | Out-File -FilePath $htmlFile -Encoding UTF8
-    if (-not $Silent) { Start-Process $htmlFile }
+    try {
+        $jsonContent = Get-Content $outFile -Raw -Encoding UTF8
+        $html = (Get-Content $templatePath -Raw -Encoding UTF8) -replace '__JSON_DATA__', $jsonContent
+        $html | Out-File -FilePath $htmlFile -Encoding UTF8 -ErrorAction Stop
+        if (-not $Silent) { Start-Process $htmlFile }
+    } catch {
+        if (-not $Silent) { Write-Warn "No se pudo generar HTML: $($_.Exception.Message)" }
+    }
 }
 
 if (-not $Silent) {
@@ -615,4 +825,6 @@ if (-not $Silent) {
     Write-Host ''
 }
 
-return $outFile
+# Imprimimos el path para captura por scripts padre, y exit 0 explicito
+Write-Output $outFile
+exit 0
