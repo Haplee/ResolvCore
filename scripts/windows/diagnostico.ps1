@@ -54,7 +54,7 @@ DESCRIPTION
     GPU, bateria, temperatura), sistema operativo (version, build, parches,
     Windows Update, plan de energia, integridad SFC), drivers, red
     (latencia, DNS, perdida) y seguridad (Defender, firewall, UAC).
-    Genera JSON estructurado v3.2.0 + informe HTML autocontenido.
+    Genera JSON estructurado v4.0.0 + informe HTML autocontenido.
 
 PARAMETERS
     -O, -OutputDir, -Output <dir>
@@ -105,7 +105,7 @@ function Invoke-Safe {
 function Write-Header {
     Write-Host ''
     Write-Host '  +---------------------------------------------------------------+' -ForegroundColor DarkCyan
-    Write-Host '  |   ResolveCore - Diagnostico Completo - v3.2.0                |' -ForegroundColor Cyan
+    Write-Host '  |   ResolveCore - Diagnostico Completo - v4.0.0                |' -ForegroundColor Cyan
     Write-Host "  |   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')                                       |" -ForegroundColor DarkGray
     Write-Host '  +---------------------------------------------------------------+' -ForegroundColor DarkCyan
     Write-Host ''
@@ -217,6 +217,7 @@ if ($InstallDeps -or $AutoInstall) {
 }
 
 $report = [ordered]@{}
+$hardware = [ordered]@{}
 
 # ============================================
 # 1. SISTEMA OPERATIVO
@@ -299,7 +300,7 @@ $cpuList = @($cpus | ForEach-Object {
     }
 })
 
-$report['cpu'] = [ordered]@{
+$hardware['cpu'] = [ordered]@{
     cantidad = $cpus.Count
     nucleos_total = $totalCores
     hilos_total = $totalThreads
@@ -339,7 +340,7 @@ foreach ($r in $ramMods) {
 
 Write-Host "    Modulos detectados: $($ramMods.Count)" -ForegroundColor Gray
 
-$report['memoria'] = [ordered]@{
+$hardware['memoria'] = [ordered]@{
     total_gb = $totalRam
     disponible_gb = $availRam
     usada_gb = [math]::Round($totalRam - $availRam, 2)
@@ -398,7 +399,7 @@ try {
             write_errors     = $_.WriteErrorsTotal
             horas_encendido  = $_.PowerOnHours
         }})
-        $report['smart'] = $smartJson
+        $hardware['smart'] = $smartJson
     }
 } catch {}
 
@@ -420,7 +421,7 @@ foreach ($dr in $drives) {
     }
 }
 
-$report['discos'] = [ordered]@{
+$hardware['discos'] = [ordered]@{
     fisicos = $diskList
     logicos = $driveList
 }
@@ -460,7 +461,7 @@ try {
     }
 } catch {}
 
-$report['gpu'] = $gpuList
+$hardware['gpu'] = $gpuList
 
 # ============================================
 # 6. RED
@@ -561,7 +562,7 @@ Write-Host "    Version: $($bios.BIOSVersion) - Fecha: $($bios.ReleaseDate)" -Fo
 Write-Host "    UUID: $($bios.UUID)" -ForegroundColor Gray
 Write-Host "    Serial: $($bios.SerialNumber)" -ForegroundColor Gray
 
-$report['placa_base'] = [ordered]@{
+$hardware['placa_base'] = [ordered]@{
     producto = $mb.Product
     fabricante = $mb.Manufacturer
     serial = $mb.SerialNumber
@@ -597,7 +598,7 @@ if ($bat) {
         if ($bc) { $batCiclos = $bc.CycleCount }
     } catch {}
 
-    $report['bateria'] = [ordered]@{
+    $hardware['bateria'] = [ordered]@{
         carga_pct   = $bat.EstimatedChargeRemaining
         estado      = $bat.BatteryStatus
         voltage     = $bat.DesignVoltage
@@ -606,7 +607,7 @@ if ($bat) {
     }
 } else {
     Write-Host "    Escritorio (sin bateria)" -ForegroundColor Gray
-    $report['bateria'] = $null
+    $hardware['bateria'] = $null
 }
 
 # ============================================
@@ -766,8 +767,11 @@ $report['usuarios'] = @($users | ForEach-Object { [ordered]@{ nombre = $_.Name; 
 # METADATA
 # ============================================
 
+# Consolidar hardware en report una vez recogidos todos los datos
+$report['hardware'] = $hardware
+
 $report['_meta'] = [ordered]@{
-    version = '3.2.0'
+    version = '4.0.0'
     plataforma = 'windows'
     hostname = $env:COMPUTERNAME
     usuario = $env:USERNAME

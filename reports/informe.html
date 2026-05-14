@@ -76,22 +76,32 @@ const RAW = __JSON_DATA__;
 function norm(d){
   const p=d._meta?.plataforma||'unknown';
   if(p==='windows'){
+    /* v4.0.0+: datos hardware bajo hardware{}; v3.x: en raíz (retrocompat) */
+    const hw=d.hardware||{};
+    const cpu=hw.cpu||d.cpu||{};
+    const mem=hw.memoria||d.memoria||{};
+    const discos=hw.discos||d.discos||{};
+    const gpuArr=hw.gpu||d.gpu||[];
+    const placa=hw.placa_base||d.placa_base||{};
+    const bat=hw.bateria??d.bateria??null;
+    const smart=hw.smart||d.smart||[];
     return{
       plataforma:'windows',hostname:d._meta?.hostname||'—',generado:d._meta?.generado_en||'',admin:d._meta?.admin??false,
       os:d.sistema?.nombre||'—',uptime:d.sistema?.uptime_horas??null,parches:d.sistema?.parches_count??0,
-      cpu:d.cpu?.processors?.[0]?.nombre||'—',cpu_cores:d.cpu?.nucleos_total??null,cpu_pct:d.rendimiento?.cpu_pct??null,cpu_temp:null,
-      ram_total:d.memoria?.total_gb??null,ram_libre:d.memoria?.disponible_gb??null,ram_pct:d.rendimiento?.memoria_pct??null,
-      discos:d.discos?.fisicos||[],particiones:d.discos?.logicos||[],
-      smart_rows:d.smart||[],smart_status:null,disk_free:null,disk_uso:null,
-      gpu:d.gpu?.[0]?.nombre||null,
-      bat_pct:d.bateria?.carga_pct??null,bat_desgaste:d.bateria?.desgaste_pct??null,bat_ciclos:d.bateria?.ciclos??null,bat_salud:null,
-      lat:null,loss:null,wifi:null,
+      cpu:cpu.processors?.[0]?.nombre||'—',cpu_cores:cpu.nucleos_total??null,cpu_pct:d.rendimiento?.cpu_pct??null,cpu_temp:null,
+      ram_total:mem.total_gb??null,ram_libre:mem.disponible_gb??null,ram_pct:d.rendimiento?.memoria_pct??null,
+      discos:discos.fisicos||[],particiones:discos.logicos||[],
+      smart_rows:smart,smart_status:null,disk_free:null,disk_uso:null,
+      gpu:gpuArr?.[0]?.nombre||null,
+      bios:placa.bios_version||null,
+      bat_pct:bat?.carga_pct??null,bat_desgaste:bat?.desgaste_pct??null,bat_ciclos:bat?.ciclos??null,bat_salud:null,
+      lat:d.red?.latencia_ms??null,loss:d.red?.perdida_paquetes_pct??null,wifi:d.red?.wifi_ssid||null,
       firewall:Array.isArray(d.seguridad?.firewall)&&d.seguridad.firewall.some(f=>f.activo),
       defender:d.seguridad?.windows_defender?.activo??false,
       defender_dias:d.seguridad?.windows_defender?.firmas_dias??null,
       uac:d.seguridad?.uac??false,
       selinux:null,filevault:null,gatekeeper:null,rooteado:false,
-      sec_patch:null,bootloader_locked:null,apps_total:null,
+      sec_patch:null,bootloader_locked:null,apps_total:d.software?.cantidad??null,
       svc_detenidos:d.servicios?.automaticos_detenidos??0,
     };
   }
