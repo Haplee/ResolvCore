@@ -139,7 +139,8 @@ install_pkg \
     "$(pkg pciutils       pciutils       pciutils       pciutils)"      \
     "$(pkg iproute2       iproute        iproute2       iproute2)"      \
     "$(pkg iputils-ping   iputils        iputils        iputils)"       \
-    "$(pkg ufw            ufw            ufw            ufw)"
+    "$(pkg ufw            ufw            ufw            ufw)"           \
+    "$(pkg nmap           nmap           nmap           nmap)"
 
 # sensors-detect en modo automático para registrar los sensores disponibles
 if command -v sensors-detect &>/dev/null; then
@@ -284,6 +285,7 @@ check "smartctl"      smartctl   "smartctl --version"
 check "sensors"       sensors    "sensors --version"
 check "lspci"         lspci      "lspci --version"
 check "adb"           adb        "adb --version"
+check "nmap"          nmap       "nmap --version"
 check "anydesk"       anydesk    "anydesk --version"
 check "curl"          curl
 check "wget"          wget
