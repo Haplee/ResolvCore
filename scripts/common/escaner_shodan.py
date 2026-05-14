@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ResolveCore - shodan_lookup.py
+ResolveCore - escaner_shodan.py
 Consulta de exposición de host en Shodan vía REST API pública.
 
 Política: sin dependencias pip. Solo Python 3.8+ stdlib.
@@ -9,11 +9,11 @@ API key requerida: variable de entorno SHODAN_API_KEY
 Free tier: 100 créditos/mes. host() lookup: 1 crédito/IP.
 
 Uso standalone:
-    python shodan_lookup.py --ip 8.8.8.8
-    python shodan_lookup.py --ip 1.1.1.1 --json
+    python escaner_shodan.py --ip 8.8.8.8
+    python escaner_shodan.py --ip 1.1.1.1 --json
 
 Uso como módulo:
-    from shodan_lookup import shodan_host_info, format_shodan_report
+    from escaner_shodan import shodan_host_info, format_shodan_report
     data = shodan_host_info("8.8.8.8")
 
 Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
@@ -105,7 +105,9 @@ def shodan_host_info(ip: str, api_key: Optional[str] = None) -> Dict[str, Any]:
     """
     # Validar formato IP antes de consumir un crédito
     try:
-        ipaddress.ip_address(ip)
+        ip_obj = ipaddress.ip_address(ip)
+        if ip_obj.is_private or ip_obj.is_loopback:
+            return {"ip": ip, "error": "Las direcciones IP privadas/locales no son indexables por la API pública de Shodan."}
     except ValueError:
         return {"ip": ip, "error": f"'{ip}' no es una dirección IP válida."}
 
@@ -283,7 +285,7 @@ def format_shodan_report(data: Dict[str, Any], color: bool = True) -> str:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        prog="shodan_lookup.py",
+        prog="escaner_shodan.py",
         description="ResolveCore — Consulta de exposición de host en Shodan",
     )
     p.add_argument("--ip", default=None, metavar="IP", help="IP a consultar (consume 1 crédito)")
