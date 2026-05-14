@@ -40,9 +40,16 @@ HTTP_TIMEOUT = 10
 # ---------------------------------------------------------------------------
 
 def _load_dotenv(script_dir: str) -> None:
-    env_path = os.path.join(script_dir, ".env")
-    if not os.path.isfile(env_path):
+    paths = [
+        os.path.join(os.getcwd(), ".env"),
+        os.path.join(script_dir, ".env"),
+        os.path.join(script_dir, "..", "..", ".env")
+    ]
+    env_path = next((p for p in paths if os.path.isfile(p)), None)
+    
+    if not env_path:
         return
+        
     try:
         with open(env_path, "r", encoding="utf-8") as f:
             for line in f:
