@@ -75,11 +75,11 @@ Construir una plataforma operativa que permita a un técnico:
 ### Objetivos específicos
 | ID | Objetivo | Estado |
 |----|----------|--------|
-| O1 | Scripts diagnóstico Windows (PowerShell 5.1+) | ✅ Completado v3.2.0 |
+| O1 | Scripts diagnóstico Windows (PowerShell 5.1+) | ✅ Completado v4.0.0 |
 | O2 | Scripts diagnóstico Linux (Bash) | ✅ Completado v3.0.0 |
 | O3 | Scripts diagnóstico Android (Termux/ADB) | ✅ Completado v2.1.0 |
 | O4 | Scripts diagnóstico macOS (stub demo) | ✅ Completado v0.1.0 |
-| O5 | Schema JSON cross-platform unificado | 🟡 Documentado, falta migración Win |
+| O5 | Schema JSON cross-platform unificado | ✅ Completado — Windows migrado a `hardware {}` v4.0.0 |
 | O6 | Plugin WP integración MantisBT | ✅ Completado |
 | O7 | Tema WP landing pública | ✅ Completado v3.0.0 |
 | O8 | Generador PDF informes | 🟡 Plantilla diseñada, no implementado |
@@ -175,7 +175,7 @@ Cada fase emite un **evento auditable**: log local en cliente, nota en ticket, f
 
 ## 6. Módulo 1 — Diagnóstico multiplataforma
 
-### Windows (`scripts/windows/diagnostico.ps1` v3.2.0)
+### Windows (`scripts/windows/diagnostico.ps1` v4.0.0)
 Recolecta:
 - CPU: modelo, núcleos, carga (Get-CimInstance Win32_Processor reusado)
 - RAM: total, en uso, % libre
@@ -186,7 +186,7 @@ Recolecta:
 - Eventos: últimos errores System/Application
 - Seguridad: Defender activo, firewall, BitLocker
 
-Salida: JSON + HTML resumen. Exit codes 0/1/2.
+Salida: JSON (v4.0.0 — todos los datos hardware bajo `hardware {}`) + HTML resumen. Exit codes 0/1/2.
 
 ### Linux (`scripts/linux/diagnostico.sh` v3.0.0)
 - `top`/`uptime`/`free -h` → CPU, carga, RAM
@@ -210,8 +210,9 @@ Documentado en [`docs/schema-diagnostico.md`](schema-diagnostico.md). Convencion
 - Fechas: ISO-8601 UTC
 - Valores desconocidos: `null` literal (nunca `"unknown"`)
 - `_meta { version, plataforma, hostname, generado_en }` obligatorio
+- Todas las plataformas exponen los datos de hardware bajo `hardware {}` (Windows migrado en v4.0.0)
 
-Pendiente: migrar Windows para que exponga hardware bajo `hardware {}` como Linux/Android (hoy lo expone en raíz).
+Pendiente: actualizar template `reports/informe.html` para leer de `hardware.*` en vez de raíz del JSON.
 
 ---
 
@@ -253,7 +254,7 @@ Módulo unificado en **Python 3.8+ stdlib** (sin pip, sin requirements.txt) que 
 | apt / dnf / pacman / brew | Snap, Mac App Store |
 | smtplib + msmtp (GPL) | MAPI, Outlook COM |
 | NIST NVD / CISA KEV / OSV / EPSS | Nessus, Qualys, Snyk, Tenable |
-| Python stdlib | Cualquier dep pip/npm |
+| Python stdlib | Cualquier dep pip/pnpm |
 
 ### Pipeline (16 clases, ~1700 líneas)
 
@@ -301,7 +302,7 @@ MultiHostRunner (--hosts) → ejecuta en N máquinas vía SSH (script base64 emb
 |-----|----------|-----|
 | **NIST NVD 2.0** | Pública USG | Catálogo CVE + CVSS v3.1/v3.0/v2.0 |
 | **CISA KEV** | Dominio público | CVEs explotados activamente |
-| **OSV.dev** (Google) | Apache 2.0 | Vulns por ecosistema (PyPI/npm/Maven/Go) |
+| **OSV.dev** (Google) | Apache 2.0 | Vulns por ecosistema (PyPI/pnpm/Maven/Go) |
 | **EPSS FIRST.org** | Pública | Probabilidad explotación 30 días |
 
 CVSS = gravedad estática. EPSS = urgencia real. KEV = ya está siendo explotado *ahora*. La combinación de las tres aporta señal mucho más útil que solo CVSS.
@@ -546,6 +547,11 @@ Si falla la nota pero el adjunto subió → no se aborta (el JSON ya está en el
 
 ## 13. Despliegue / Infraestructura
 
+### Entornos de desarrollo y producción
+- **Desarrollo:** Aislado mediante *LocalWP* (NGINX + PHP 8.2 + MariaDB). Permite pruebas seguras de integración con MantisBT y simulación de correos vía MailHog.
+- **Producción:** WordPress en subdominio `.com` y MantisBT planificado en VPS dedicado utilizando contenedor/raw.
+- **Backup (DRC):** Política 3-2-1. `UpdraftPlus` en WordPress (frecuencia semanal/diaria) con destino a Google Drive. Copias manuales de BBDD (`mysqldump`) y archivos (`tar -czvf`) pre-despliegues críticos para MantisBT.
+
 ### VPS — análisis
 Se evaluó hosting compartido vs VPS:
 | Componente | ¿Hosting compartido suficiente? | ¿Requiere VPS? |
@@ -652,6 +658,16 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 - Control total a11y (skip-link, ARIA, prefers-reduced-motion).
 - Sin licencias propietarias.
 
+### Por qué MantisBT y no soluciones comerciales
+- Licencia GPL, coste cero para entornos de producción en TFG frente a Jira.
+- Soporte PHP + MariaDB, mismo ecosistema que el frontal WordPress, minimizando dependencias.
+- REST API nativa soporta toda la gestión de tickets (creación, notas, subida de JSON diagnostico remoto).
+
+### Por qué Shodan API para auditoría de exposición
+- Funciona pasivamente sin requerir instalación o agente en el servidor del cliente.
+- El free tier (100 consultas/mes) cubre con creces el volumen operativo de una PYME y del TFG.
+- Además de puertos, expone los identificadores CVE vinculados a los servicios detectados.
+
 ### Por qué PowerShell 5.1 como target (no PS7)
 - Windows 10/11 ship con 5.1 nativo: cero fricción para el técnico en sesión remota AnyDesk.
 - Pedir PS7 obligaría a instalarlo en cada equipo cliente antes de poder ejecutar el script — coste innecesario para los casos de uso reales.
@@ -670,6 +686,10 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 ### Por qué stub para macOS
 - Versión completa anterior contenía operaciones destructivas sin guardas (`mdutil off`, `rm -rf ~/Library/Caches`, `networksetup -setdnsservers`). Reducir a stub es **más honesto académicamente** que entregar código peligroso. Demo funcional CLI; implementación real queda como roadmap.
 
+### Por qué pnpm y no npm
+- Recientemente (2026) se descubrió una vulnerabilidad crítica de escalada de privilegios local en la CLI de `npm` (CVE-2026-0775 en Windows) y un incremento notable en ataques a la cadena de suministro que aprovechan scripts post-install maliciosos en `npm`. 
+- Se decidió migrar todas las referencias y el soporte en la detección de dependencias a `pnpm` por su enfoque más estricto con `node_modules` (uso de symlinks/hardlinks) que mitiga vectores de ataque basados en la manipulación de la resolución de módulos, y por un mejor manejo y aislamiento de las instalaciones.
+
 ---
 
 ## 17. Errores cometidos y aprendizajes
@@ -685,6 +705,7 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 5 | Spooler en lista de servicios desactivados | Feedback usuario | Excluir de todos los niveles + memoria persistente | Optimización que rompe funcionalidad común = peor servicio |
 | 6 | MantisBT 400 errors por enums inválidos en `priority`/`severity` | Pruebas integración | Whitelist + validación previa al request | Validar payload contra schema antes de hablar con APIs externas |
 | 7 | UTF-8 roto en summary/notes con tildes | Pruebas con datos reales | `wp_check_invalid_utf8` + `JSON_UNESCAPED_UNICODE` | Configurar utf8mb4 en MariaDB no es opcional |
+| 8 | Parseo de Shodan API crasheaba por inconsistencia en el campo `cvss` (string vs float) | Testeo con IPs expuestas variadas | Try-except local con normalización forzada a `float` | Las respuestas de APIs externas nunca deben asumirse estandarizadas |
 
 ---
 
@@ -783,3 +804,5 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 2026-05-11 | Añadido `docs/defensa-scripts-mantis.md`: guion técnico de defensa orientado al tribunal. Cataloga los 17 scripts (4 Windows, 3 Linux, 3 Android, 3 macOS stub, escáner Python, ISO Win/Linux, bootstrap Mantis, install plugins) con flags, mecanismos de seguridad, exit codes. Detalla integración MantisBT (5 endpoints REST, plugin `rc-mantisbt`, helper `rc_mantis_attach_diagnostic`, flujo end-to-end 11 pasos). 9 preguntas frecuentes del tribunal con respuestas. Referencia cruzada en sección 20 de este documento. |
 | 2026-05-11 | Auditoría scripts vs reglas Bash/PS actualizadas en CLAUDE.md. Fix `set -euo pipefail` → `set -uo pipefail` en `scripts/android/optimizacion.sh`, `scripts/macos/diagnostico.sh`, `scripts/macos/optimizacion.sh`. Fix `set -o pipefail` → `set -uo pipefail` en `scripts/linux/diagnostico.sh`. Sincronizadas versiones en este documento: Linux diag v3.1.0 → **v3.0.0** (versión real), Android diag v3.1.0 → **v2.1.0** (versión real). Stack: PowerShell 7.0+ → **5.1 target / 7+ opt-in** (Win 10/11 ship con 5.1, sin fricción técnico). Sección 16 "Por qué PowerShell" reescrita: target 5.1 + excepción PS7 documentada + aviso sintaxis `#Requires` sin espacio. Sección 16 "Por qué Bash" actualizada: `set -uo pipefail` (no `-e`) + razón captura granular del JSON. |
 | 2026-05-11 | Versión MantisBT unificada en 2.28.1 (era 2.27 en arquitectura/demo/stack de este doc, en `docs/informe-tutor-estado-proyecto.md` y en `docs/so-especializado.md`). Scripts ISO `scripts/iso/linux/post-install.sh` y `scripts/iso/windows/setup.ps1`: bump `MANTIS_VER` 2.27.0 → 2.28.1 + fix URL de GitHub Releases (`download/release-${VER}/` → `download/${VER}/`, alineado con `scripts/bootstrap-mantis.sh` que funciona). El tag de release sin prefijo `release-` es el formato actual para MantisBT ≥ 2.28. |
+| 2026-05-12 | O5 completado: `diagnostico.ps1` migrado v3.2.0 → **v4.0.0** (major por cambio breaking): todos los campos de hardware (`cpu`, `memoria`, `discos`, `gpu`, `placa_base`, `bateria`, `smart`) movidos de raíz a sub-objeto `hardware {}`. Alinea schema Windows con Linux/Android. `docs/schema-diagnostico.md` reescrito: tabla unificada, ejemplos JSON actualizados para ambas plataformas, roadmap de items `[x]` completados. `defensa-tfg.md` O5 → ✅. Pendiente: actualizar template `reports/informe.html` para adaptarse a `hardware.*`. |
+| 2026-05-14 | Migración completa de referencias y dependencias de `npm` a `pnpm` debido a la vulnerabilidad CVE-2026-0775 (escalada de privilegios local en CLI) descubierta recientemente, además de ataques a la cadena de suministro. Documentado en la sección de Decisiones de Diseño de este documento. |

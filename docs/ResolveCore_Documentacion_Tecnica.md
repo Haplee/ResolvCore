@@ -652,7 +652,7 @@ Detecta y consulta automáticamente archivos de dependencias:
 | Archivo | Ecosistema |
 |---------|-----------|
 | `requirements.txt` | PyPI |
-| `package.json` | npm |
+| `package.json` | pnpm |
 | `pom.xml` / `build.gradle` | Maven |
 | `Gemfile` | RubyGems |
 | `go.sum` | Go |

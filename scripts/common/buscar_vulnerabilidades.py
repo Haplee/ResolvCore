@@ -72,7 +72,7 @@ PUERTOS_RIESGO = {
 
 DEPS_FILES = {
     "requirements.txt": "PyPI",
-    "package.json": "npm",
+    "package.json": "pnpm",
     "pom.xml": "Maven",
     "build.gradle": "Maven",
     "Gemfile": "RubyGems",

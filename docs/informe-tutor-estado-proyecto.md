@@ -1,7 +1,7 @@
 # ResolveCore — Informe de Estado para Tutor TFG ASIR
 **Alumno:** Francisco Vidal Mateo  
-**Fecha:** 6 de mayo de 2026  
-**Entrega TFG:** 5 de junio de 2026 (30 días restantes)  
+**Fecha:** 20 de mayo de 2026  
+**Entrega TFG:** 5 de junio de 2026 (16 días restantes)  
 **Repositorio:** https://github.com/Haplee/ResolveCore
 
 ---
@@ -78,9 +78,21 @@ Facturación: pago por servicio o suscripción mensual
 - `scripts/macos/optimizacion.sh` — brew cleanup, caché sistema
 - `scripts/android/optimizacion.sh` — limpieza vía ADB
 
+### 3.2 Escáner de vulnerabilidades y exposición (NVD / Shodan) ✅
+
+**Vulnerabilidades locales** (`scripts/common/buscar_vulnerabilidades.py`):
+- Motor Python unificado (stdlib) sin dependencias externas (`pip`).
+- Consulta APIs públicas (NVD, OSV, CISA KEV, EPSS).
+- Audita puertos, logs y configuración local de forma agnóstica al SO.
+- Salida JSON, HTML y texto plano.
+
+**Auditoría pública** (`scripts/common/shodan_lookup.py`):
+- Módulo en Python puro para interrogar la API REST de Shodan.
+- Descubre puertos abiertos y CVEs públicos asociados a la IP del cliente.
+
 **Informe HTML generado:** `scripts/informe.html` (prueba real sobre el equipo del alumno)
 
-### 3.2 Tema WordPress personalizado ✅
+### 3.3 Tema WordPress personalizado ✅
 
 Ubicación: `wordpress/resolvecore-theme/`
 
@@ -90,7 +102,7 @@ Ubicación: `wordpress/resolvecore-theme/`
 - Envío vía AJAX (sin recarga de página)
 - Responsive, animaciones CSS, tipografía monoespaciada
 
-### 3.3 Plugin WordPress: integración MantisBT ✅
+### 3.4 Plugin WordPress: integración MantisBT ✅
 
 Ubicación: `wordpress/plugins/rc-mantisbt/`
 
@@ -105,7 +117,7 @@ Ubicación: `wordpress/plugins/rc-mantisbt/`
 **Resultado visible al cliente tras enviar formulario:**
 > *"¡Mensaje enviado! Ticket #42 creado. Te responderemos pronto."*
 
-### 3.4 MantisBT: configuración completa ✅
+### 3.5 MantisBT: configuración completa ✅
 
 Ubicación: `mantisbt/`
 
@@ -116,7 +128,7 @@ Ubicación: `mantisbt/`
   - Campo personalizado "Plataforma" (Windows/Linux/macOS/Android/Otro)
   - Campo personalizado "AnyDesk ID" para registrar la sesión remota
 
-### 3.5 Plugins MantisBT instalados ✅
+### 3.6 Plugins MantisBT instalados ✅
 
 Script de instalación: `mantisbt/plugins/install.sh`
 
@@ -129,10 +141,13 @@ Script de instalación: `mantisbt/plugins/install.sh`
 | mailtemplate | Emails HTML con branding ResolveCore | Sí |
 | EventLog | Auditoría completa (login, tickets, config) | Sí (retención 365 días) |
 
-### 3.6 Documentación técnica ✅
+### 3.7 Documentación técnica y Justificaciones ✅
 
-- `docs/mantis-integration.md` — guía completa de integración WordPress ↔ MantisBT
-- `docs/stack-tecnologico.md` — justificación de cada tecnología vs alternativas
+- `docs/defensa-tfg.md` — documento maestro de defensa con FAQs del tribunal.
+- `docs/mantis-integration.md` — guía completa de integración WordPress ↔ MantisBT.
+- `docs/stack-tecnologico.md` — justificación técnica de WordPress Business, MantisBT, Shodan y servicios.
+- `docs/servicios-adicionales.md` — despliegue por imágenes, clonación y congelación justificados.
+- `docs/entornos.md` — separación de Dev (LocalWP) y Prod (WordPress.com + VPS) y políticas de Backup.
 
 ---
 
@@ -164,14 +179,9 @@ Ya existe `scripts/informe.html` como prueba de concepto del formato visual.
 
 **Pregunta para el tutor:** ¿Es suficiente DomPDF para la entrega o se valoraría mejor wkhtmltopdf que produce PDFs más fieles al HTML?
 
-### 4.3 Base de datos de vulnerabilidades 🟡
+### 4.3 Base de datos de vulnerabilidades ✅ (Re-enfocado a API real-time)
 
-**Pendiente de implementar:**
-- Tabla `rc_vulnerabilities` (CVE, gravedad, SO, descripción, fix)
-- Script de sincronización con NVD/NIST API
-- Consulta desde los scripts de diagnóstico para alertar al técnico
-
-**Pregunta para el tutor:** ¿Debe la base de datos estar poblada con datos reales de CVEs o es suficiente con el esquema y un seeder de datos de ejemplo?
+**Estado:** Se implementó `buscar_vulnerabilidades.py` que consume NVD y CISA KEV en tiempo real en lugar de almacenar una base de datos pesada localmente, cumpliendo con la política de mínimo impacto.
 
 ### 4.4 Sistema de facturación 🟠
 
@@ -243,16 +253,14 @@ ResolvCore/
 
 ---
 
-## 7. Timeline propuesto (30 días restantes)
+## 7. Timeline propuesto (16 días restantes)
 
 | Semana | Actividad |
 |--------|-----------|
-| 7–11 mayo | Despliegue en servidor (según indicación tutor) · MantisBT funcional |
-| 12–16 mayo | Plugin WP activo · Formulario → ticket funcionando end-to-end |
-| 17–23 mayo | Generación PDF automática · Base de datos vulnerabilidades |
-| 24–30 mayo | Facturación básica · Pulido general · Tests de flujo completo |
-| 31 mayo – 4 jun | Memoria TFG escrita · Presentación / demo |
-| 5 junio | **Entrega** |
+| 17–23 mayo | MantisBT funcional + Cierre de documentación + Generación PDF en proceso |
+| 24–30 mayo | Facturación básica · Pulido general · Tests de flujo completo y ensayos de defensa |
+| 31 mayo – 4 jun | Memoria TFG definitiva escrita · Presentación / demo preparada |
+| 5 junio | **Entrega final TFG** |
 
 ---
 
