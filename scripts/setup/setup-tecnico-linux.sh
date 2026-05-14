@@ -214,19 +214,29 @@ fi
 # ── 7. Scripts ResolveCore ────────────────────────────────────────────────────
 SCRIPTS_DIR="$HOME/.resolvecore"
 info "Instalando scripts ResolveCore en $SCRIPTS_DIR..."
-if git ls-remote "https://github.com/Haplee/ResolveCore.git" &>/dev/null 2>&1; then
+
+LOCAL_REPO=$(cd "$(dirname "$0")/../.." && pwd)
+
+if [[ -d "$LOCAL_REPO/scripts" ]] && [[ "$LOCAL_REPO" != "$SCRIPTS_DIR" ]]; then
+    mkdir -p "$SCRIPTS_DIR"
+    cp -r "$LOCAL_REPO/"* "$SCRIPTS_DIR/" 2>/dev/null || true
+    chmod +x "$SCRIPTS_DIR"/scripts/linux/*.sh \
+             "$SCRIPTS_DIR"/scripts/android/*.sh \
+             "$SCRIPTS_DIR"/scripts/common/*.py 2>/dev/null || true
+    ok "Scripts copiados automáticamente desde $LOCAL_REPO a $SCRIPTS_DIR"
+elif git ls-remote "https://github.com/Haplee/ResolveCore.git" &>/dev/null; then
     if [[ -d "$SCRIPTS_DIR/.git" ]]; then
         git -C "$SCRIPTS_DIR" pull --quiet
-        ok "Scripts actualizados"
+        ok "Scripts actualizados desde GitHub"
     else
         git clone --depth=1 --quiet "https://github.com/Haplee/ResolveCore.git" "$SCRIPTS_DIR"
         ok "Scripts clonados en $SCRIPTS_DIR"
     fi
     chmod +x "$SCRIPTS_DIR"/scripts/linux/*.sh \
              "$SCRIPTS_DIR"/scripts/android/*.sh \
-             "$SCRIPTS_DIR"/scripts/common/buscar_vulnerabilidades.py 2>/dev/null || true
+             "$SCRIPTS_DIR"/scripts/common/*.py 2>/dev/null || true
 else
-    warn "Sin acceso a GitHub. Copia los scripts manualmente en $SCRIPTS_DIR/"
+    warn "No se encontró copia local y no hay acceso a GitHub. Copia manualmente a $SCRIPTS_DIR/"
 fi
 
 # ── 8. Aliases en ~/.bashrc ───────────────────────────────────────────────────
