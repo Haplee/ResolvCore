@@ -23,7 +23,7 @@
 set -uo pipefail
 
 # ── Parseo de argumentos ────────────────────────────────────────────────────
-INSTALL_DEPS=false
+INSTALL_DEPS=true
 AUTO_INSTALL=false
 OUTPUT_DIR=""
 SILENT="false"
@@ -932,7 +932,7 @@ if [[ -f "$_tmpl" ]]; then
         # Abrir con navegador (prioriza $BROWSER, luego comunes; xdg-open como último recurso
         # porque el default del sistema puede ser Text Editor).
         _opener=""
-        for _b in "$BROWSER" sensible-browser firefox google-chrome chromium chromium-browser brave-browser; do
+        for _b in "${BROWSER:-}" sensible-browser firefox google-chrome chromium chromium-browser brave-browser; do
             [[ -n "$_b" ]] && command -v "$_b" &>/dev/null && { _opener="$_b"; break; }
         done
         if [[ -n "$_opener" ]]; then

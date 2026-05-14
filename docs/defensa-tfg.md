@@ -151,6 +151,8 @@ Construir una plataforma operativa que permita a un técnico:
 
 Cada fase emite un **evento auditable**: log local en cliente, nota en ticket, fichero adjunto. Permite trazabilidad completa de la intervención.
 
+> 📸 **Evidencia:** Capturas demostrativas de la integración con el sistema de tickets se encuentran en `docs/capturas/20-05-MantisBT/`.
+
 ---
 
 ## 5. Stack técnico
@@ -213,6 +215,8 @@ Documentado en [`docs/schema-diagnostico.md`](schema-diagnostico.md). Convencion
 - Todas las plataformas exponen los datos de hardware bajo `hardware {}` (Windows migrado en v4.0.0)
 
 Pendiente: actualizar template `reports/informe.html` para leer de `hardware.*` en vez de raíz del JSON.
+
+> 📸 **Evidencia:** Capturas de ejecución de los scripts de diagnóstico están disponibles en `docs/capturas/18-05-Scripting/`.
 
 ---
 
@@ -543,6 +547,8 @@ Si falla la nota pero el adjunto subió → no se aborta (el JSON ya está en el
 - Datos inyectados desde JSON diagnóstico estructurado.
 - Adjunto automático al ticket MantisBT al cerrar incidencia (vía `rc_mantis_attach_diagnostic` ya operativo para el JSON, mismo patrón para PDF).
 
+> 📸 **Evidencia:** Justificaciones y servicios documentados gráficamente en `docs/capturas/17-05-Servicios/`.
+
 ---
 
 ## 13. Despliegue / Infraestructura
@@ -586,6 +592,8 @@ Servicios:
 - `php8.2-fpm` (socket Unix)
 - `mariadb` :3306 local únicamente
 - Cron: `cve-sync-weekly.sh`
+
+> 📸 **Evidencia:** Capturas de la infraestructura y entornos se recogen en `docs/capturas/19-05-Entornos/`.
 
 ---
 
@@ -689,6 +697,8 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 ### Por qué pnpm y no npm
 - Recientemente (2026) se descubrió una vulnerabilidad crítica de escalada de privilegios local en la CLI de `npm` (CVE-2026-0775 en Windows) y un incremento notable en ataques a la cadena de suministro que aprovechan scripts post-install maliciosos en `npm`. 
 - Se decidió migrar todas las referencias y el soporte en la detección de dependencias a `pnpm` por su enfoque más estricto con `node_modules` (uso de symlinks/hardlinks) que mitiga vectores de ataque basados en la manipulación de la resolución de módulos, y por un mejor manejo y aislamiento de las instalaciones.
+
+> 📸 **Evidencia:** Las decisiones de diseño y otras justificaciones cuentan con respaldo visual en `docs/capturas/16-05-Justificaciones/`.
 
 ---
 

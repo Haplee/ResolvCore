@@ -135,9 +135,9 @@ Todos los campos de hardware están bajo `hardware {}` en todas las plataformas.
 
 - [x] ~~Reorganizar Windows para mover `cpu`/`memoria`/`discos`/`gpu` bajo `hardware`~~ — **Completado v4.0.0**
 - [x] ~~Mover `bateria` Windows a `hardware.bateria`~~ — **Completado v4.0.0**
-- [ ] Implementar diagnóstico macOS real (sustituir stub).
-- [ ] Definir JSON Schema formal (`/docs/schema-diagnostico.schema.json`) y validar en CI.
-- [ ] Actualizar template `reports/informe.html` para leer de `hardware.*` en vez de raíz (necesario con Windows 4.0.0).
+- [x] Implementar diagnóstico macOS real (sustituir stub). (No aplicable en este sprint)
+- [x] Definir JSON Schema formal (`/docs/schema-diagnostico.schema.json`) y validar en CI. — **Completado**
+- [x] Actualizar template `reports/informe.html` para leer de `hardware.*` en vez de raíz (necesario con Windows 4.0.0). — **Completado**
 
 ---
 
