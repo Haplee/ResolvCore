@@ -323,27 +323,27 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 ---
 
-### 📝 [DOC-06] Organizar capturas de pantalla `~0.5 h` 🟡
+### 📝 [DOC-06] Organizar capturas de pantalla `~0.5 h` ✅
 
-- [ ] Verificar que `docs/capturas/` tiene subcarpetas por día y tarea
-- [ ] Renombrar archivos siguiendo el patrón `01_descripcion.png`
-- [ ] Listar en cada sección del `defensa-tfg.md` las capturas de evidencia correspondientes
+- [x] Verificar que `docs/capturas/` tiene subcarpetas por día y tarea
+- [x] Renombrar archivos siguiendo el patrón `01_descripcion.png`
+- [x] Listar en cada sección del `defensa-tfg.md` las capturas de evidencia correspondientes
 
 ---
 
-### 📝 [DOC-07] Presentar al tutor `~1 h` 🔴
+### 📝 [DOC-07] Presentar al tutor `~1 h` ✅
 
 **Entregables mínimos para el tutor:**
 
 | Entregable | Fichero / URL | Estado |
 |------------|--------------|--------|
-| Web beta ResolveCore | URL WordPress | ⬜ |
-| MantisBT montado | URL MantisBT | ⬜ |
-| Test end-to-end (formulario → ticket) | Captura | ⬜ |
-| Script `shodan_lookup.py` | `scripts/python/shodan_lookup.py` | ⬜ |
-| Justificaciones técnicas | `docs/stack-tecnologico.md` | ⬜ |
-| Documentación del proyecto | `docs/defensa-tfg.md` | ⬜ |
-| Capturas de evidencia | `docs/capturas/` | ⬜ |
+| Web beta ResolveCore | URL WordPress | ✅ |
+| MantisBT montado | URL MantisBT | ✅ |
+| Test end-to-end (formulario → ticket) | Captura | ✅ |
+| Script `shodan_lookup.py` | `scripts/python/shodan_lookup.py` | ✅ |
+| Justificaciones técnicas | `docs/stack-tecnologico.md` | ✅ |
+| Documentación del proyecto | `docs/defensa-tfg.md` | ✅ |
+| Capturas de evidencia | `docs/capturas/` | ✅ |
 
 **Preguntas pendientes de respuesta del tutor** (de `docs/informe-tutor-estado-proyecto.md`):
 1. ¿VPS público, WSL local o hosting para la defensa?
