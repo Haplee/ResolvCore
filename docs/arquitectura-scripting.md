@@ -81,3 +81,80 @@ Es el equipo del usuario final que presenta la incidencia. Cumple con la políti
 - **Script responsable:** `scripts/windows/ResolveCore.ps1` (o su invocación directa a `diagnostico.ps1`).
 - **Qué instala:** Por defecto **NADA**. Solo extrae métricas usando comandos nativos (WMI, CIM, bash). 
 - **Modo Extendido:** Si el técnico requiere herramientas avanzadas para ese diagnóstico específico, lanza el script con el flag `-InstallDeps` (o `-AutoInstall`). Esto despliega utilidades de diagnóstico pasivo como `Nmap`, `LibreHardwareMonitor`, `smartmontools` y `speedtest` usando `winget` o `choco`.
+
+---
+
+## 6. Arquitectura interna Python — Hexagonal (Ports & Adapters)
+
+A partir de mayo 2026 los scripts Python aplican **Hexagonal Architecture** (Alistair Cockburn) para desacoplar la lógica de dominio (CVE scoring, correlación de vulnerabilidades, análisis de exposición) de las dependencias externas (Shodan, NVD, OSV, MantisBT).
+
+### Justificación para el TFG
+
+| Pregunta tribunal probable | Respuesta basada en hexagonal |
+|---------------------------|-------------------------------|
+| ¿Cómo testeas sin consumir créditos Shodan? | Inyecto un `FakeHostIntelSource` que cumple el Port. Dominio no sabe que es fake. |
+| ¿Qué pasa si Shodan cierra el free tier? | Implemento un nuevo Adapter `CensysAdapter` cumpliendo el mismo Port. Cero cambio en dominio. |
+| ¿Cómo evitas dependencias pip? | El dominio no importa nada. Solo los adapters tocan red, y siguen usando `urllib.request` (stdlib). |
+
+### Estructura de paquetes
+
+```
+scripts/common/
+├── __init__.py
+├── domain/                    # Entidades puras, sin IO ni red
+│   ├── __init__.py
+│   └── models.py              # Host, Service, Vulnerability (dataclasses)
+├── ports/                     # Interfaces abstractas (Protocols PEP 544)
+│   ├── __init__.py
+│   └── host_intel_source.py   # Port: HostIntelSource
+├── adapters/                  # Implementaciones sobre APIs externas
+│   ├── __init__.py
+│   └── shodan_rest.py         # Adapter: ShodanRestAdapter
+├── escaner_shodan.py          # CLI thin + compat retroactiva
+├── escaner_nmap.py            # (sin migrar — pendiente fase 2)
+└── buscar_vulnerabilidades.py # MONOLITO LEGACY — migración fase 2 (Strangler Fig)
+```
+
+### Regla de dependencias
+
+```
+cli ────────────────► adapters ────────────────► ports
+                         │                          ▲
+                         └──────────────────────────┘
+                                  cumple
+                         │
+                         ▼
+                       domain  ◄──── (no importa NADA hacia afuera)
+```
+
+- `domain/` no importa de `ports/`, `adapters/` ni `cli/`.
+- `ports/` solo importa de `domain/`.
+- `adapters/` importan de `ports/` y `domain/`.
+- `cli/` (entry points) cablean adapter → port → dominio.
+
+### Estado de migración (Strangler Fig)
+
+| Módulo | Estado |
+|--------|--------|
+| `escaner_shodan.py` | ✅ Migrado a hexagonal (mayo 2026). Mantiene API legacy `shodan_host_info()` / `format_shodan_report()` para compatibilidad. |
+| `escaner_nmap.py` | 🟡 Pendiente migración fase 2 |
+| `buscar_vulnerabilidades.py` | 🟡 Monolito 2709 líneas. Migración progresiva planificada por subdominios (CVE source → KEV → EPSS → MantisBT sink). |
+
+### Ejemplo de testabilidad
+
+```python
+# tests/test_dominio.py (sin red, sin pip)
+from common.domain import Host, Vulnerability
+from common.ports import HostIntelSource
+
+class FakeShodan:
+    def get_host_info(self, ip: str) -> Host:
+        return Host(ip=ip, ports=[22], vulnerabilities=[
+            Vulnerability(cve="CVE-2024-1234", cvss=9.8)
+        ])
+
+def test_critical_count():
+    source: HostIntelSource = FakeShodan()
+    host = source.get_host_info("1.2.3.4")
+    assert host.critical_count == 1
+```
