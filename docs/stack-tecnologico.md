@@ -490,7 +490,7 @@ En desarrollo. Las opciones evaluadas son:
 
 ### Tecnología elegida
 
-**Shodan API REST** (free tier) + módulo Python `shodan_lookup.py` (stdlib, sin `pip install shodan`).
+**Shodan API REST** (free tier) + módulo Python `escaner_shodan.py` (stdlib, sin `pip install shodan`).
 
 ### Por qué Shodan
 
@@ -505,14 +505,14 @@ En desarrollo. Las opciones evaluadas son:
 
 **Razón principal:** Shodan indexa puertos, banners de servicios y CVEs detectados pasivamente para cualquier IP pública. Permite a ResolveCore ofrecer un informe de exposición sin instalar nada en el equipo del cliente. El free tier (100 créditos/mes, 1 crédito por IP) es suficiente para el TFG.
 
-**Implementación:** `scripts/common/shodan_lookup.py` — Python 3.8+ stdlib, sin dependencias pip. Lee `SHODAN_API_KEY` desde variable de entorno o `.env` local.
+**Implementación:** `scripts/common/escaner_shodan.py` — Python 3.8+ stdlib, sin dependencias pip. Lee `SHODAN_API_KEY` desde variable de entorno o `.env` local.
 
 ```
-python shodan_lookup.py --ip 8.8.8.8
-python shodan_lookup.py --ip 1.1.1.1 --json
+python escaner_shodan.py --ip 8.8.8.8
+python escaner_shodan.py --ip 1.1.1.1 --json
 ```
 
-**Integración en el catálogo:** Auditoría de exposición Shodan → 30 €/IP/informe → `shodan_lookup.py` genera el JSON que `generar_informe.py` formatea en PDF.
+**Integración en el catálogo:** Auditoría de exposición Shodan → 30 €/IP/informe → `escaner_shodan.py` genera el JSON que `generar_informe.py` formatea en PDF.
 
 ---
 
