@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    ResolveCore — Setup del entorno del técnico (Windows)
+    ResolveCore - Setup del entorno del tecnico (Windows)
 
 .DESCRIPTION
     Instala todas las dependencias para ejecutar los scripts de diagnóstico,
@@ -30,7 +30,7 @@ param(
 if ($Help) {
     @"
 NAME
-    setup-tecnico-windows.ps1 — Setup del entorno del técnico ResolveCore
+    setup-tecnico-windows.ps1 - Setup del entorno del tecnico ResolveCore
 
 SYNOPSIS
     powershell -ExecutionPolicy Bypass -File setup-tecnico-windows.ps1 [-SkipOptional] [-Help]
@@ -63,10 +63,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
-function Write-Ok($msg)   { Write-Host "  [✓] $msg" -ForegroundColor Green }
-function Write-Info($msg) { Write-Host "  [→] $msg" -ForegroundColor Cyan }
-function Write-Warn($msg) { Write-Host "  [⚠] $msg" -ForegroundColor Yellow }
-function Write-Fail($msg) { Write-Host "  [✗] $msg" -ForegroundColor Red; exit 1 }
+function Write-Ok($msg)   { Write-Host "  [OK] $msg" -ForegroundColor Green }
+function Write-Info($msg) { Write-Host "  [->] $msg" -ForegroundColor Cyan }
+function Write-Warn($msg) { Write-Host "  [!] $msg" -ForegroundColor Yellow }
+function Write-Fail($msg) { Write-Host "  [X] $msg" -ForegroundColor Red; exit 1 }
 
 function Test-Admin {
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -78,10 +78,11 @@ function Install-ChocoPackage {
     Write-Info "Instalando $Label..."
     try {
         & choco install $Package -y --no-progress 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "choco exit code $LASTEXITCODE" }
         Write-Ok "$Label instalado"
     } catch {
         if ($Optional) { Write-Warn "$Label no disponible: $_" }
-        else           { Write-Fail "$Label falló: $_" }
+        else           { Write-Fail "$Label fallo: $_" }
     }
 }
 
@@ -99,25 +100,23 @@ function Install-WingetPackage {
 
 # ── Banner ───────────────────────────────────────────────────────────────────
 Clear-Host
-Write-Host @"
-
-  ____                 _       ____
- |  _ \ ___  ___  ___ | |_   / ___|___  _ __ ___
- | |_) / _ \/ __|/ _ \| \ \ / /  / _ \| '__/ _ \
- |  _ <  __/\__ \ (_) | |\ V /  | (_) | | |  __/
- |_| \_\___||___/\___/|_| \_/    \___/|_|  \___|
-
-  Setup del Técnico — Windows
-"@ -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  ____                 _       ____" -ForegroundColor Cyan
+Write-Host " |  _ \ ___  ___  ___ | |_   / ___|___  _ __ ___" -ForegroundColor Cyan
+Write-Host " | |_) / _ \/ __|/ _ \| \ \ / /  / _ \| '__/ _ \" -ForegroundColor Cyan
+Write-Host " |  _ <  __/\__ \ (_) | |\ V /  | (_) | | |  __/" -ForegroundColor Cyan
+Write-Host " |_| \_\___||___/\___/|_| \_/    \___/|_|  \___|" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Setup del Tecnico - Windows" -ForegroundColor Cyan
 
 Write-Host ""
 
 # ── Comprobaciones previas ───────────────────────────────────────────────────
 if (-not (Test-Admin)) {
-    Write-Fail "Ejecuta como Administrador: clic derecho → Ejecutar como administrador"
+    Write-Fail "Ejecuta como Administrador: clic derecho -> Ejecutar como administrador"
 }
 
-$confirm = Read-Host "  ¿Continuar con la instalación? [s/N]"
+$confirm = Read-Host "  Continuar con la instalacion? [S/N]"
 if ($confirm -notmatch '^[sS]$') { Write-Host "  Cancelado."; exit 0 }
 Write-Host ""
 
@@ -190,7 +189,7 @@ if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
     if ($userPath -notlike "*platform-tools*") {
         [System.Environment]::SetEnvironmentVariable('PATH', "$userPath;$adbDir", 'User')
         $env:PATH += ";$adbDir"
-        Write-Ok "ADB añadido al PATH del usuario"
+        Write-Ok "ADB anadido al PATH del usuario"
     }
 } else {
     Write-Ok "ADB ya presente"
@@ -222,7 +221,7 @@ if (-not $SkipOptional) {
     Write-Host ""
     Write-Host "  [Opcionales]" -ForegroundColor Gray
 
-    # LibreHardwareMonitor — temperaturas y voltajes en diagnostico.ps1
+    # LibreHardwareMonitor - temperaturas y voltajes en diagnostico.ps1
     if (-not (Get-Command LibreHardwareMonitor -ErrorAction SilentlyContinue)) {
         Install-ChocoPackage -Package "librehardwaremonitor" `
             -Label "LibreHardwareMonitor" -Optional
@@ -231,6 +230,7 @@ if (-not $SkipOptional) {
     # Nmap — escaneo de puertos
     if (-not (Get-Command nmap -ErrorAction SilentlyContinue)) {
         Install-ChocoPackage -Package "nmap" -Label "Nmap" -Optional
+        $env:PATH += ";${env:ProgramFiles(x86)}\Nmap"
     } else { Write-Ok "Nmap ya presente" }
 
     # Speedtest CLI
@@ -271,7 +271,7 @@ if (-not (Test-Path $shortcutPath) -and (Test-Path "$scriptsDir\scripts\windows\
         $sc.TargetPath       = "powershell.exe"
         $sc.Arguments        = "-ExecutionPolicy Bypass -File `"$scriptsDir\scripts\windows\ResolveCore.ps1`""
         $sc.WorkingDirectory = "$scriptsDir\scripts\windows"
-        $sc.Description      = "ResolveCore — Herramientas de soporte"
+        $sc.Description      = "ResolveCore - Herramientas de soporte"
         $sc.IconLocation     = "powershell.exe,0"
         $sc.Save()
         Write-Ok "Acceso directo creado en el escritorio"
@@ -282,9 +282,9 @@ if (-not (Test-Path $shortcutPath) -and (Test-Path "$scriptsDir\scripts\windows\
 
 # ── 10. Verificación final ────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  ══════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "    Verificación del entorno" -ForegroundColor Cyan
-Write-Host "  ══════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "  ==========================================" -ForegroundColor Cyan
+Write-Host "    Verificacion del entorno" -ForegroundColor Cyan
+Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host ""
 
 $ok = 0; $fail = 0
@@ -297,13 +297,13 @@ function Test-Tool {
             $ver = (& $cmd.Source $VersionArg 2>&1 | Select-String '\d+\.\d+' | Select-Object -First 1).Matches[0].Value
         } catch { $ver = "ok" }
         Write-Host "  " -NoNewline
-        Write-Host "[✓]" -ForegroundColor Green -NoNewline
+        Write-Host "[OK]" -ForegroundColor Green -NoNewline
         Write-Host " $Label ($ver)"
         $script:ok++
     } else {
         Write-Host "  " -NoNewline
-        Write-Host "[✗]" -ForegroundColor Red -NoNewline
-        Write-Host " $Label — NO ENCONTRADO"
+        Write-Host "[X]" -ForegroundColor Red -NoNewline
+        Write-Host " $Label - NO ENCONTRADO"
         $script:fail++
     }
 }
@@ -322,7 +322,7 @@ Write-Host "$fail fallo(s)" -ForegroundColor $(if ($fail -gt 0) { 'Red' } else {
 Write-Host ""
 
 if ($fail -eq 0) {
-    Write-Host "  [✓] Entorno listo." -ForegroundColor Green
+    Write-Host "  [OK] Entorno listo." -ForegroundColor Green
     Write-Host "  Ejecuta: " -NoNewline
     Write-Host "ResolveCore.ps1" -ForegroundColor Cyan
 } else {
