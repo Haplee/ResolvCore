@@ -91,7 +91,7 @@ Antes de defender un script individual, debes tener clara la defensa de las deci
 *   **Defensa (Tribunal):** *"Si el script no usa pip, ¿cómo haces las peticiones web de forma segura?"* -> "Usando `urllib.request` con validación estricta de TLS/SSL por defecto (`ssl.create_default_context()`). Se prefiere no forzar `requests` para cumplir la máxima de no depender de instalaciones de terceros, garantizando la ejecución inmediata."
 *   **Defensa avanzada**: *"¿Por qué añades EPSS y KEV además del CVSS?"* -> "CVSS mide gravedad estática. KEV mide si está siendo explotado hoy. EPSS mide la probabilidad futura de explotación. Priorizar solo por CVSS (NVD) es obsoleto y arroja demasiados falsos positivos en entornos corporativos."
 
-### 6.2 `shodan_lookup.py` (v1.0.0)
+### 6.2 `escaner_shodan.py` (v1.0.0)
 *   **Propósito**: Consultar la exposición pública (puertos, servicios, CVEs) de una IP usando la API de Shodan.
 *   **Arquitectura**: Consta de gestión de créditos (`--info`), conexión REST pura y normalización de la salida a formato consola o JSON.
 *   **Defensa (Tribunal):** *"¿Qué pasa si la respuesta de la API no es un JSON estándar o cambia el tipo de dato?"* -> "Está securizado en el script. Por ejemplo, en la fase de CVEs, capturamos el `cvss` crudo e intentamos convertirlo a `float` gestionando `ValueError` y `TypeError`, porque Shodan devuelve inconsistencias de tipos. Además controlamos el crédito del tier gratuito explícitamente y mostramos los créditos restantes con `api-info` antes de agotar la cuota."

@@ -86,7 +86,7 @@ Facturación: pago por servicio o suscripción mensual
 - Audita puertos, logs y configuración local de forma agnóstica al SO.
 - Salida JSON, HTML y texto plano.
 
-**Auditoría pública** (`scripts/common/shodan_lookup.py`):
+**Auditoría pública** (`scripts/common/escaner_shodan.py`):
 - Módulo en Python puro para interrogar la API REST de Shodan.
 - Descubre puertos abiertos y CVEs públicos asociados a la IP del cliente.
 
