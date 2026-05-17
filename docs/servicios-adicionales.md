@@ -307,7 +307,7 @@ WDS es el servicio de despliegue de Microsoft para entornos con Active Directory
 | Acceso remoto AnyDesk | Todas las intervenciones remotas | Incluido | AnyDesk (campo en MantisBT) |
 | Cifrado de disco | Portátiles, datos sensibles | 25-40 €/equipo | BitLocker / LUKS / VeraCrypt |
 | Gestor de contraseñas | Clientes sin gestión de credenciales | 0-10 €/usuario/año | Bitwarden |
-| Auditoría de exposición Shodan | Empresas con IP pública | 30 €/IP/informe | `shodan_lookup.py` |
+| Auditoría de exposición Shodan | Empresas con IP pública | 30 €/IP/informe | `escaner_shodan.py` |
 
 ---
 

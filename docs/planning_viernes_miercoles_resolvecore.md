@@ -52,10 +52,10 @@
 
 **Fichero destino:** `docs/stack-tecnologico.md` § 2 (Frontend / CMS)
 
-- [ ] Tabla comparativa: Gratuito / Personal / Business / VIP — columnas: precio, plugins, SSL, dominio propio, soporte
-- [ ] Por qué Business: plugins propios (`rc-mantisbt`), SSL incluido, dominio `resolvecore.com`
-- [ ] Alternativas descartadas: Joomla, Drupal, Laravel puro — razones (curva, comunidad, plugins)
-- [ ] Integración con el flujo ResolveCore: formulario → AJAX → plugin → MantisBT
+- [x] Tabla comparativa: Gratuito / Personal / Business / VIP — columnas: precio, plugins, SSL, dominio propio, soporte
+- [x] Por qué Business: plugins propios (`rc-mantisbt`), SSL incluido, dominio `resolvecore.com`
+- [x] Alternativas descartadas: Joomla, Drupal, Laravel puro — razones (curva, comunidad, plugins)
+- [x] Integración con el flujo ResolveCore: formulario → AJAX → plugin → MantisBT
 
 **Criterio de hecho:** sección escrita, tabla rellena, párrafo de justificación final.
 
@@ -65,11 +65,11 @@
 
 **Fichero destino:** `docs/stack-tecnologico.md` § 3 (Gestión de incidencias)
 
-- [ ] Historial de versiones: 1.3.x → 2.0 → 2.26.x LTS → 2.27 actual
-- [ ] Tabla comparativa vs GLPI / osTicket / OTRS / Zammad: columnas: licencia, REST API, personalización, complejidad
-- [ ] Por qué MantisBT: API REST nativa, campos personalizados ("Plataforma", "AnyDesk ID"), plugins `source-integration` + `SetDuedate` + `EventLog`
-- [ ] Enlace a `docs/mantis-integration.md` y `mantisbt/config/config_inc.php.template`
-- [ ] Mencionar uso previo / experiencia personal como factor de reducción de riesgo
+- [x] Historial de versiones: 1.3.x → 2.0 → 2.26.x LTS → 2.27 actual
+- [x] Tabla comparativa vs GLPI / osTicket / OTRS / Zammad: columnas: licencia, REST API, personalización, complejidad
+- [x] Por qué MantisBT: API REST nativa, campos personalizados ("Plataforma", "AnyDesk ID"), plugins `source-integration` + `SetDuedate` + `EventLog`
+- [x] Enlace a `docs/mantis-integration.md` y `mantisbt/config/config_inc.php.template`
+- [x] Mencionar uso previo / experiencia personal como factor de reducción de riesgo
 
 **Criterio de hecho:** sección escrita con comparativa y decisión justificada.
 
@@ -83,10 +83,10 @@
 
 **Fichero destino:** `docs/stack-tecnologico.md` § nuevo apartado "Clonado e imágenes de SO"
 
-- [ ] Herramientas: FOG Project (servidor PXE), Clonezilla (stand-alone), WDS (Windows Deployment Services)
-- [ ] Tabla comparativa: coste, red/local, SO soportados, curva de aprendizaje
-- [ ] Casos de uso: despliegue masivo en aulas, restauración post-incidente, imagen base pre-optimizada
-- [ ] Relación con ResolveCore: servicio de "imagen de referencia" para clientes con flotas de equipos
+- [x] Herramientas: FOG Project (servidor PXE), Clonezilla (stand-alone), WDS (Windows Deployment Services)
+- [x] Tabla comparativa: coste, red/local, SO soportados, curva de aprendizaje
+- [x] Casos de uso: despliegue masivo en aulas, restauración post-incidente, imagen base pre-optimizada
+- [x] Relación con ResolveCore: servicio de "imagen de referencia" para clientes con flotas de equipos
 
 **Criterio de hecho:** comparativa escrita + caso de uso concreto relacionado con el servicio.
 
@@ -96,10 +96,10 @@
 
 **Fichero destino:** `docs/stack-tecnologico.md` § nuevo apartado "Seguridad en cliente"
 
-- [ ] Cifrado de disco: BitLocker (Windows Pro/Ent), LUKS (Linux), VeraCrypt (cross-platform) — tabla: precio, TPM, OS, recuperación
-- [ ] Gestores: Bitwarden (open-source, cloud/self-hosted) vs KeePass (local, sin sync nativo) — tabla: precio, 2FA, compartir, auditoría
-- [ ] Criterios de elección para cliente doméstico vs empresa
-- [ ] Mención a cómo ResolveCore lo implementa/recomienda en el informe PDF
+- [x] Cifrado de disco: BitLocker (Windows Pro/Ent), LUKS (Linux), VeraCrypt (cross-platform) — tabla: precio, TPM, OS, recuperación
+- [x] Gestores: Bitwarden (open-source, cloud/self-hosted) vs KeePass (local, sin sync nativo) — tabla: precio, 2FA, compartir, auditoría
+- [x] Criterios de elección para cliente doméstico vs empresa
+- [x] Mención a cómo ResolveCore lo implementa/recomienda en el informe PDF
 
 **Criterio de hecho:** ambas comparativas escritas con criterio de elección para cliente tipo ResolveCore.
 
@@ -110,10 +110,10 @@
 **Fichero destino:** `docs/stack-tecnologico.md` § nuevo apartado "Congelación de sistemas"  
 o nuevo fichero `docs/servicios-adicionales.md`
 
-- [ ] Windows: Deep Freeze (Faronics), Reboot Restore Rx (Horizons) — precio, uso en aulas/quioscos
-- [ ] Linux: fsprotect (overlay), BTRFS snapshots + rollback automático
-- [ ] Caso de uso: aulas de informática, quioscos de atención al público, equipos compartidos
-- [ ] Posición en el catálogo de servicios ResolveCore (cuándo se ofrece)
+- [x] Windows: Deep Freeze (Faronics), Reboot Restore Rx (Horizons) — precio, uso en aulas/quioscos
+- [x] Linux: fsprotect (overlay), BTRFS snapshots + rollback automático
+- [x] Caso de uso: aulas de informática, quioscos de atención al público, equipos compartidos
+- [x] Posición en el catálogo de servicios ResolveCore (cuándo se ofrece)
 
 **Criterio de hecho:** redacción completa + caso de uso real.
 
@@ -127,10 +127,10 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Fichero destino:** `docs/servicios-adicionales.md`
 
-- [ ] Herramientas: Clonezilla Live, FOG Project, Acronis Cyber Backup
-- [ ] Procedimiento estándar: disco origen → imagen comprimida → disco destino
-- [ ] Casos empresariales: incorporación de empleados, restauración post-ransomware, migración HDD→SSD
-- [ ] Incluir en el catálogo de servicios de la web WordPress
+- [x] Herramientas: Clonezilla Live, FOG Project, Acronis Cyber Backup
+- [x] Procedimiento estándar: disco origen → imagen comprimida → disco destino
+- [x] Casos empresariales: incorporación de empleados, restauración post-ransomware, migración HDD→SSD
+- [x] Incluir en el catálogo de servicios de la web WordPress
 
 **Criterio de hecho:** procedimiento documentado, herramientas justificadas.
 
@@ -140,11 +140,11 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Fichero destino:** `docs/servicios-adicionales.md`
 
-- [ ] AnyDesk: versión gratuita vs Professional — diferencias de SLA, sesiones simultáneas, grabación
-- [ ] RustDesk: alternativa open-source, self-hosted, GDPR compliant
-- [ ] SSH: acceso Linux sin GUI, túneles, uso con `-L` para servicios internos
-- [ ] Kit de implantación en cliente: AnyDesk ID registrado en campo personalizado MantisBT + procedimiento de primera sesión
-- [ ] Enlace a `docs/mantis-integration.md` (campo "AnyDesk ID")
+- [x] AnyDesk: versión gratuita vs Professional — diferencias de SLA, sesiones simultáneas, grabación
+- [x] RustDesk: alternativa open-source, self-hosted, GDPR compliant
+- [x] SSH: acceso Linux sin GUI, túneles, uso con `-L` para servicios internos
+- [x] Kit de implantación en cliente: AnyDesk ID registrado en campo personalizado MantisBT + procedimiento de primera sesión
+- [x] Enlace a `docs/mantis-integration.md` (campo "AnyDesk ID")
 
 **Criterio de hecho:** comparativa escrita + procedimiento de primera conexión documentado.
 
@@ -154,28 +154,28 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Fichero destino:** `docs/schema-diagnostico.md` § arquitectura OR nuevo `docs/arquitectura-scripting.md`
 
-- [ ] Diagrama de módulos: `diagnostico.ps1` / `diagnostico.sh` → JSON → `informe.html` → PDF
-- [ ] Tabla de módulos Python previstos: `buscar_vulnerabilidades.py`, `shodan_lookup.py`, `generar_informe.py`
-- [ ] Flujo de datos: JSON diagnóstico → consulta NVD/Shodan → enriquecer JSON → plantilla HTML → PDF
-- [ ] Variables de entorno necesarias: `SHODAN_API_KEY`, `NVD_API_KEY` (opcional)
+- [x] Diagrama de módulos: `diagnostico.ps1` / `diagnostico.sh` → JSON → `informe.html` → PDF
+- [x] Tabla de módulos Python previstos: `buscar_vulnerabilidades.py`, `escaner_shodan.py`, `generar_informe.py`
+- [x] Flujo de datos: JSON diagnóstico → consulta NVD/Shodan → enriquecer JSON → plantilla HTML → PDF
+- [x] Variables de entorno necesarias: `SHODAN_API_KEY`, `NVD_API_KEY` (opcional)
 
 **Criterio de hecho:** diagrama de módulos claro, flujo de datos escrito.
 
 ---
 
-### ⚙️ [SCRIPT-02] Módulo `shodan_lookup.py` `~2 h` 🟡
+### ⚙️ [SCRIPT-02] Módulo `escaner_shodan.py` `~2 h` 🟡
 
-**Fichero destino:** `scripts/python/shodan_lookup.py`  
+**Fichero destino:** `scripts/common/escaner_shodan.py`  
 **Dependencia:** [SCRIPT-01] completado
 
-- [ ] Instalar librería: `pip install shodan` — anotar en `requirements.txt`
-- [ ] Variable de entorno: `SHODAN_API_KEY` leída con `os.environ.get()`
-- [ ] Función `shodan_host_info(ip: str) -> dict`: puertos abiertos, CVEs detectados, organización, país, servicios, última actualización
-- [ ] Manejo de errores: IP no encontrada (404), sin créditos, API key inválida
-- [ ] Función `format_shodan_report(data: dict) -> str`: salida legible para CLI
-- [ ] Compatible con menú de `buscar_vulnerabilidades.py` si existe
-- [ ] Test manual con IP pública conocida (ej. 8.8.8.8)
-- [ ] Captura de pantalla de la salida
+- [x] Utilizar módulo estándar de Python (sin `pip install shodan`)
+- [x] Variable de entorno: `SHODAN_API_KEY` leída con `os.environ.get()`
+- [x] Función `shodan_host_info(ip: str) -> dict`: puertos abiertos, CVEs detectados, organización, país, servicios, última actualización
+- [x] Manejo de errores: IP no encontrada (404), sin créditos, API key inválida
+- [x] Función `format_shodan_report(data: dict) -> str`: salida legible para CLI
+- [x] Compatible con menú de `buscar_vulnerabilidades.py` si existe
+- [x] Test manual con IP pública conocida (ej. 8.8.8.8)
+- [x] Captura de pantalla de la salida
 
 **Criterio de hecho:** script ejecutable, función `shodan_host_info()` devuelve dict estructurado, errores manejados, test pasado.
 
@@ -201,11 +201,11 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Fichero destino:** `docs/entornos.md` (crear si no existe)
 
-- [ ] Opción elegida (documentar cuál): LocalWP / DevKinsta / subdominio `dev.resolvecore.com` / WSL
-- [ ] Pasos de instalación reproducibles (para que el tutor pueda replicar)
-- [ ] Variables de entorno dev vs prod (sin credenciales reales — usar `.env.example`)
-- [ ] URL de acceso local + credenciales de prueba
-- [ ] Captura: panel de admin WordPress en entorno dev
+- [x] Opción elegida (documentar cuál): LocalWP / DevKinsta / subdominio `dev.resolvecore.com` / WSL
+- [x] Pasos de instalación reproducibles (para que el tutor pueda replicar)
+- [x] Variables de entorno dev vs prod (sin credenciales reales — usar `.env.example`)
+- [x] URL de acceso local + credenciales de prueba
+- [x] Captura: panel de admin WordPress en entorno dev
 
 **Criterio de hecho:** entorno dev arranca con `wp server` o equivalente, URL documentada.
 
@@ -215,10 +215,10 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Fichero destino:** `docs/entornos.md`
 
-- [ ] Documentar WordPress.com actual como prod: URL, plan, plugins activos
-- [ ] Variables y accesos: estructura de `.env.production.example` (sin valores reales)
-- [ ] Estado de MantisBT en prod: ¿montado? ¿pendiente? — ser explícito
-- [ ] Decidir y documentar la opción de servidor (Oracle Cloud Free Tier / hosting / WSL) según respuesta del tutor
+- [x] Documentar WordPress.com actual como prod: URL, plan, plugins activos
+- [x] Variables y accesos: estructura de `.env.production.example` (sin valores reales)
+- [x] Estado de MantisBT en prod: ¿montado? ¿pendiente? — ser explícito
+- [x] Decidir y documentar la opción de servidor (Oracle Cloud Free Tier / hosting / WSL) según respuesta del tutor
 
 **Criterio de hecho:** `docs/entornos.md` describe ambos entornos con diferencias claras.
 
@@ -228,11 +228,11 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Pendiente arrastrado de semanas anteriores**
 
-- [ ] Instalar y configurar UpdraftPlus en WordPress dev/prod
-- [ ] Primera ejecución de backup manual — verificar que genera los archivos
-- [ ] Exportación manual adicional: `wp db export backup.sql` + zip de `wp-content/`
-- [ ] Guardar backup en ruta local y/o cloud (Google Drive, Dropbox)
-- [ ] Documentar en `docs/entornos.md` § Backup: frecuencia, destino, restauración
+- [x] Instalar y configurar UpdraftPlus en WordPress dev/prod
+- [x] Primera ejecución de backup manual — verificar que genera los archivos
+- [x] Exportación manual adicional: `wp db export backup.sql` + zip de `wp-content/`
+- [x] Guardar backup en ruta local y/o cloud (Google Drive, Dropbox)
+- [x] Documentar en `docs/entornos.md` § Backup: frecuencia, destino, restauración
 
 **Criterio de hecho:** backup generado y verificado, procedimiento documentado, captura de UpdraftPlus.
 
@@ -247,16 +247,16 @@ o nuevo fichero `docs/servicios-adicionales.md`
 **Pendiente arrastrado — es el módulo central del flujo**  
 **Fichero ref:** `mantisbt/config/config_inc.php.template`, `mantisbt/sql/resolvecore-setup.sql`
 
-- [ ] Elegir destino: hosting/VPS (preferible) o LocalWP local
-- [ ] Descargar MantisBT 2.27 LTS
-- [ ] Ejecutar wizard de instalación — BD + admin
-- [ ] Aplicar `mantisbt/sql/resolvecore-setup.sql`: categorías, campos "Plataforma" y "AnyDesk ID"
-- [ ] Copiar `config_inc.php.template` → `config_inc.php` y rellenar valores reales
-- [ ] Instalar plugins: ejecutar `mantisbt/plugins/install.sh` o copiar manualmente
-- [ ] Crear API Token para el plugin WordPress
-- [ ] Configurar campo `URL MantisBT` + token en el plugin `rc-mantisbt` de WordPress
-- [ ] Test end-to-end: formulario web → ticket creado en MantisBT
-- [ ] Captura: ticket creado con número visible + campos "Plataforma" y "AnyDesk ID"
+- [x] Elegir destino: hosting/VPS (preferible) o LocalWP local
+- [x] Descargar MantisBT 2.27 LTS
+- [x] Ejecutar wizard de instalación — BD + admin
+- [x] Aplicar `mantisbt/sql/resolvecore-setup.sql`: categorías, campos "Plataforma" y "AnyDesk ID"
+- [x] Copiar `config_inc.php.template` → `config_inc.php` y rellenar valores reales
+- [x] Instalar plugins: ejecutar `mantisbt/plugins/install.sh` o copiar manualmente
+- [x] Crear API Token para el plugin WordPress
+- [x] Configurar campo `URL MantisBT` + token en el plugin `rc-mantisbt` de WordPress
+- [x] Test end-to-end: formulario web → ticket creado en MantisBT
+- [x] Captura: ticket creado con número visible + campos "Plataforma" y "AnyDesk ID"
 
 **Criterio de hecho:** formulario WordPress crea ticket en MantisBT con todos los campos — flujo end-to-end funcional.
 
@@ -266,12 +266,12 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Ficheros destino:** `docs/defensa-tfg.md` + `docs/ResolveCore_Documentacion_Tecnica.md`
 
-- [ ] Revisar `docs/defensa-tfg.md`: ¿todas las secciones del índice están rellenas?
-- [ ] Sección "Decisiones de diseño justificadas" — añadir las de esta semana (WordPress, MantisBT, Shodan)
-- [ ] Sección "Errores cometidos y aprendizajes" — añadir pendientes arrastrados y cómo se resolvieron
-- [ ] Actualizar § Despliegue / Infraestructura con lo implementado en Lun-Mar
-- [ ] Verificar que `docs/schema-diagnostico.md` refleja el JSON actual de los scripts
-- [ ] Actualizar `docs/informe-tutor-estado-proyecto.md` con estado real al 20 mayo
+- [x] Revisar `docs/defensa-tfg.md`: ¿todas las secciones del índice están rellenas?
+- [x] Sección "Decisiones de diseño justificadas" — añadir las de esta semana (WordPress, MantisBT, Shodan)
+- [x] Sección "Errores cometidos y aprendizajes" — añadir pendientes arrastrados y cómo se resolvieron
+- [x] Actualizar § Despliegue / Infraestructura con lo implementado en Lun-Mar
+- [x] Verificar que `docs/schema-diagnostico.md` refleja el JSON actual de los scripts
+- [x] Actualizar `docs/informe-tutor-estado-proyecto.md` con estado real al 20 mayo
 
 **Criterio de hecho:** `defensa-tfg.md` sin secciones `[PENDIENTE]` vacías, coherente con el estado real del proyecto.
 
@@ -281,11 +281,11 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 **Fichero ref:** `wordpress/resolvecore-theme/`
 
-- [ ] Revisar UX: secciones de servicios refleja clonación, congelación, acceso remoto (nuevos servicios de esta semana)
-- [ ] Añadir enlace al sistema de tickets (MantisBT) desde la web principal
-- [ ] Catálogo de servicios: precios actualizados, descripciones coherentes con la documentación
-- [ ] Test responsive en móvil (DevTools)
-- [ ] Captura: homepage completa + formulario de contacto
+- [x] Revisar UX: secciones de servicios refleja clonación, congelación, acceso remoto (nuevos servicios de esta semana)
+- [x] Añadir enlace al sistema de tickets (MantisBT) desde la web principal
+- [x] Catálogo de servicios: precios actualizados, descripciones coherentes con la documentación
+- [x] Test responsive en móvil (DevTools)
+- [x] Captura: homepage completa + formulario de contacto
 
 **Criterio de hecho:** web muestra servicios actuales + enlace funcional a MantisBT.
 
@@ -305,7 +305,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 - [x] SERV-02 Clonación — ✅
 - [x] SERV-03 Acceso remoto — ✅
 - [x] SCRIPT-01 Arquitectura scripting — ✅
-- [x] SCRIPT-02 `shodan_lookup.py` — ✅
+- [x] SCRIPT-02 `escaner_shodan.py` — ✅
 - [x] INFRA-01 Entorno dev — ✅
 - [x] INFRA-02 Entorno prod — ✅
 - [x] INFRA-03 Backup — ✅
@@ -340,7 +340,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 | Web beta ResolveCore | URL WordPress | ✅ |
 | MantisBT montado | URL MantisBT | ✅ |
 | Test end-to-end (formulario → ticket) | Captura | ✅ |
-| Script `shodan_lookup.py` | `scripts/python/shodan_lookup.py` | ✅ |
+| Script `escaner_shodan.py` | `scripts/common/escaner_shodan.py` | ✅ |
 | Justificaciones técnicas | `docs/stack-tecnologico.md` | ✅ |
 | Documentación del proyecto | `docs/defensa-tfg.md` | ✅ |
 | Capturas de evidencia | `docs/capturas/` | ✅ |
@@ -363,7 +363,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 | Pendientes arrastrados | 3 (backup, MantisBT, documentación) |
 | Nuevas justificaciones | 4 (WordPress, MantisBT, SO imágenes, cifrado) |
 | Nuevos servicios documentados | 3 (clonación, congelación, acceso remoto) |
-| Nuevo código | 1 módulo (`shodan_lookup.py`) |
+| Nuevo código | 1 módulo (`escaner_shodan.py`) |
 | Deadline | **Miércoles 21 — entrega al tutor** |
 | Siguiente hito | 5 junio — entrega final TFG |
 
@@ -376,7 +376,7 @@ INFRA-04 (MantisBT) ──► WEB-01 (enlace desde web)
                     ──► DOC-05 (documentar flujo completo)
                     ──► DOC-07 (entregable tutor)
 
-SCRIPT-01 (diseño) ──► SCRIPT-02 (shodan_lookup.py)
+SCRIPT-01 (diseño) ──► SCRIPT-02 (escaner_shodan.py)
 
 INFRA-01 (dev) ──► INFRA-02 (prod)
                ──► INFRA-03 (backup)
@@ -390,7 +390,7 @@ DOC-01..04 ──► DOC-05 (documentación cerrada)
 ## Recursos
 
 - [Shodan.io](https://www.shodan.io) — búsqueda de dispositivos conectados e inventario de exposición
-- [shodan-python](https://github.com/achillean/shodan-python) — librería oficial. Free tier: 100 créditos/mes. `pip install shodan`
+- [shodan-python](https://github.com/achillean/shodan-python) — librería oficial. Free tier: 100 créditos/mes. Implementado vía API REST sin dependencias externas.
 - [account.shodan.io](https://account.shodan.io) — registro gratuito para API key
 - `docs/stack-tecnologico.md` — destino de todas las justificaciones
 - `docs/defensa-tfg.md` — documento maestro de la defensa
