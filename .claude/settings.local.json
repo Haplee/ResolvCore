@@ -33,7 +33,17 @@
       "Bash(git reset *)",
       "Bash(git commit *)",
       "Bash(git mv *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(python -c \"from adapters.shodan_rest import ShodanRestAdapter; from domain import Host, Service, Vulnerability; print\\('imports OK'\\); a = ShodanRestAdapter\\(api_key='fake'\\); h = a.get_host_info\\('192.168.1.1'\\); print\\('private IP returns error:', h.error\\); print\\('Vulnerability dataclass:', Vulnerability\\(cve='CVE-2024-1', cvss=9.8\\).is_critical\\)\")",
+      "Bash(python -c \"from common.adapters.shodan_rest import ShodanRestAdapter; from common.domain import Host, Service, Vulnerability; print\\('imports OK'\\); a = ShodanRestAdapter\\(api_key='fake'\\); h = a.get_host_info\\('192.168.1.1'\\); print\\('private IP error:', h.error\\); print\\('critical CVE:', Vulnerability\\(cve='CVE-2024-1', cvss=9.8\\).is_critical\\); print\\('Service str:', Service\\(port=443, product='nginx', version='1.25'\\)\\)\")",
+      "Bash(python escaner_shodan.py)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(python escaner_shodan.py --ip 10.0.0.1 --no-color)",
+      "Bash(python scripts/common/escaner_shodan.py)",
+      "Bash(python scripts/common/escaner_shodan.py --ip 10.0.0.1 --no-color)",
+      "Bash(python C:/Users/franc/proyecto/ResolvCore/scripts/common/escaner_shodan.py)",
+      "Bash(python C:/Users/franc/proyecto/ResolvCore/scripts/common/escaner_shodan.py --ip 10.0.0.1 --no-color)",
+      "Bash(python -c ' *)"
     ]
   }
 }
