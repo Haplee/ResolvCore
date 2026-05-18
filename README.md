@@ -343,6 +343,7 @@ Todos los scripts de diagnóstico producen JSON conforme al esquema documentado 
 | [`docs/stack-tecnologico.md`](docs/stack-tecnologico.md) | Justificación del stack y decisiones arquitectónicas. |
 | [`docs/schema-diagnostico.md`](docs/schema-diagnostico.md) | Esquema JSON producido por los scripts de diagnóstico. |
 | [`docs/mantis-integration.md`](docs/mantis-integration.md) | Integración con MantisBT (endpoints, payloads). |
+| [`docs/tutorial-wordpress-manual.md`](docs/tutorial-wordpress-manual.md) | Tutorial paso a paso para montar la web a mano (7 módulos, LocalWP → producción). |
 | [`docs/so-especializado.md`](docs/so-especializado.md) | Notas específicas por sistema operativo. |
 | [`docs/anotaciones-tutor.md`](docs/anotaciones-tutor.md) | Feedback del tutor académico. |
 
