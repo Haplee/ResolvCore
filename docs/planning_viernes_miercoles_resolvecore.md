@@ -125,6 +125,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 ### 📦 [SERV-02] Servicio de clonación de sistemas `~1 h` 🟢
 
+
 **Fichero destino:** `docs/servicios-adicionales.md`
 
 - [x] Herramientas: Clonezilla Live, FOG Project, Acronis Cyber Backup
@@ -155,7 +156,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 **Fichero destino:** `docs/schema-diagnostico.md` § arquitectura OR nuevo `docs/arquitectura-scripting.md`
 
 - [x] Diagrama de módulos: `diagnostico.ps1` / `diagnostico.sh` → JSON → `informe.html` → PDF
-- [x] Tabla de módulos Python previstos: `buscar_vulnerabilidades.py`, `escaner_shodan.py`, `generar_informe.py`
+- [x] Tabla de módulos Python previstos: `buscar_vulnerabilidades.py`, `shodan_lookup.py`, `generar_informe.py`
 - [x] Flujo de datos: JSON diagnóstico → consulta NVD/Shodan → enriquecer JSON → plantilla HTML → PDF
 - [x] Variables de entorno necesarias: `SHODAN_API_KEY`, `NVD_API_KEY` (opcional)
 
@@ -163,9 +164,9 @@ o nuevo fichero `docs/servicios-adicionales.md`
 
 ---
 
-### ⚙️ [SCRIPT-02] Módulo `escaner_shodan.py` `~2 h` 🟡
+### ⚙️ [SCRIPT-02] Módulo `shodan_lookup.py` `~2 h` 🟡
 
-**Fichero destino:** `scripts/common/escaner_shodan.py`  
+**Fichero destino:** `scripts/python/shodan_lookup.py`  
 **Dependencia:** [SCRIPT-01] completado
 
 - [x] Utilizar módulo estándar de Python (sin `pip install shodan`)
@@ -305,7 +306,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 - [x] SERV-02 Clonación — ✅
 - [x] SERV-03 Acceso remoto — ✅
 - [x] SCRIPT-01 Arquitectura scripting — ✅
-- [x] SCRIPT-02 `escaner_shodan.py` — ✅
+- [x] SCRIPT-02 `shodan_lookup.py` — ✅
 - [x] INFRA-01 Entorno dev — ✅
 - [x] INFRA-02 Entorno prod — ✅
 - [x] INFRA-03 Backup — ✅
@@ -340,7 +341,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 | Web beta ResolveCore | URL WordPress | ✅ |
 | MantisBT montado | URL MantisBT | ✅ |
 | Test end-to-end (formulario → ticket) | Captura | ✅ |
-| Script `escaner_shodan.py` | `scripts/common/escaner_shodan.py` | ✅ |
+| Script `shodan_lookup.py` | `scripts/python/shodan_lookup.py` | ✅ |
 | Justificaciones técnicas | `docs/stack-tecnologico.md` | ✅ |
 | Documentación del proyecto | `docs/defensa-tfg.md` | ✅ |
 | Capturas de evidencia | `docs/capturas/` | ✅ |
@@ -363,7 +364,7 @@ o nuevo fichero `docs/servicios-adicionales.md`
 | Pendientes arrastrados | 3 (backup, MantisBT, documentación) |
 | Nuevas justificaciones | 4 (WordPress, MantisBT, SO imágenes, cifrado) |
 | Nuevos servicios documentados | 3 (clonación, congelación, acceso remoto) |
-| Nuevo código | 1 módulo (`escaner_shodan.py`) |
+| Nuevo código | 1 módulo (`shodan_lookup.py`) |
 | Deadline | **Miércoles 21 — entrega al tutor** |
 | Siguiente hito | 5 junio — entrega final TFG |
 
@@ -376,7 +377,7 @@ INFRA-04 (MantisBT) ──► WEB-01 (enlace desde web)
                     ──► DOC-05 (documentar flujo completo)
                     ──► DOC-07 (entregable tutor)
 
-SCRIPT-01 (diseño) ──► SCRIPT-02 (escaner_shodan.py)
+SCRIPT-01 (diseño) ──► SCRIPT-02 (shodan_lookup.py)
 
 INFRA-01 (dev) ──► INFRA-02 (prod)
                ──► INFRA-03 (backup)
