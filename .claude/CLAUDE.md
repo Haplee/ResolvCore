@@ -164,7 +164,7 @@ resolvecore/
 
 ## Reglas de comportamiento para Claude Code
 
-- Cuando modifiques un script de diagnóstico, SIEMPRE actualiza el esquema JSON de salida en `docs/schema-diagnostico.md`.
+- Cuando modifiques un script de diagnóstico, SIEMPRE actualiza el esquema JSON de salida en `docs/scripting/schema-diagnostico.md`.
 - Antes de crear una nueva tabla SQL, comprueba si ya existe en `vulnerabilities/migrations/`.
 - Los scripts destructivos (limpiar disco, desinstalar, eliminar) requieren flag `--confirm` explícito.
 - No generes datos de prueba con IPs, MACs o emails reales. Usa fixtures ficticios.
@@ -194,7 +194,8 @@ resolvecore/
 
 ## Referencias útiles
 
-- Diagrama del sistema: `docs/flujo-sistema.md`
-- Esquema JSON de diagnóstico: `docs/schema-diagnostico.md`
-- Estructura de tickets MantisBT: `docs/mantis-integration.md`
+- Diagrama del sistema: `docs/tecnica/flujo-sistema.md`
+- Esquema JSON de diagnóstico: `docs/scripting/schema-diagnostico.md`
+- Estructura de tickets MantisBT: `docs/tecnica/mantis-integration.md`
+- Índice completo de documentación: `docs/INDEX.md`
 - Ver `@README.md` para instrucciones de instalación del entorno local.
