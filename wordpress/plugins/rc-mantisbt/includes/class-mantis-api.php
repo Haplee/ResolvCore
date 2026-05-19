@@ -159,7 +159,7 @@ class RC_Mantis_API {
         $response = wp_remote_post( $this->base_url . "/api/rest/issues/{$issue_id}/files", [
             'timeout' => 30,
             'headers' => [
-                'Authorization' => 'Token ' . $this->token,
+                'Authorization' => $this->token,
                 'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
             ],
             'body' => $body,
@@ -208,7 +208,7 @@ class RC_Mantis_API {
             'method'  => $method,
             'timeout' => 15,
             'headers' => [
-                'Authorization' => 'Token ' . $this->token,
+                'Authorization' => $this->token,
                 'Content-Type'  => 'application/json; charset=utf-8',
                 'Accept'        => 'application/json',
             ],
