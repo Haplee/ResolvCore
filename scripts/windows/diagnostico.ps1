@@ -105,7 +105,7 @@ function Invoke-Safe {
 function Write-Header {
     Write-Host ''
     Write-Host '  +---------------------------------------------------------------+' -ForegroundColor DarkCyan
-    Write-Host '  |   ResolveCore - Diagnostico Completo - v4.0.0                |' -ForegroundColor Cyan
+    Write-Host '  |   ResolveCore - Diagnostico Completo - v4.1.0                |' -ForegroundColor Cyan
     Write-Host "  |   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')                                       |" -ForegroundColor DarkGray
     Write-Host '  +---------------------------------------------------------------+' -ForegroundColor DarkCyan
     Write-Host ''
@@ -657,13 +657,16 @@ $report['servicios'] = [ordered]@{
 
 Write-Section 'Software Instalado'
 
-$apps = @(
+# Inventario completo (sin capear) para contar; lista exportada capeada a 50 por tamaño JSON.
+$allApps = @(
     Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue
     Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue
     Get-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue
-) | Where-Object { $_.DisplayName } | Sort-Object DisplayName | Get-Unique -AsString | Select-Object -First 50
+) | Where-Object { $_.DisplayName } | Sort-Object DisplayName -Unique
 
-Write-Host "    Aplicaciones: $($apps.Count)" -ForegroundColor Gray
+$apps = $allApps | Select-Object -First 50
+
+Write-Host "    Aplicaciones: $($allApps.Count) (exportando primeras 50)" -ForegroundColor Gray
 foreach ($a in $apps | Select-Object -First 15) {
     Write-Host "    - $($a.DisplayName) v$($a.DisplayVersion)" -ForegroundColor Gray
 }
@@ -677,7 +680,8 @@ $appList = @($apps | ForEach-Object {
 })
 
 $report['software'] = [ordered]@{
-    cantidad = $apps.Count
+    cantidad = $allApps.Count
+    exportadas = $apps.Count
     lista = $appList
 }
 
@@ -726,7 +730,8 @@ try {
 
 try {
     $fw = Get-NetFirewallProfile
-    Write-Host "    Firewall: $($fw.Enabled.Count) perfiles activos" -ForegroundColor Gray
+    $fwActivos = @($fw | Where-Object { $_.Enabled }).Count
+    Write-Host "    Firewall: $fwActivos/$($fw.Count) perfiles activos" -ForegroundColor Gray
     foreach ($f in $fw) { Write-Host "    - $($f.Name): $(if($f.Enabled){'ACTIVO'}else{'inactivo'})" -ForegroundColor Gray }
     $fwList = @($fw | ForEach-Object { [ordered]@{ nombre = $_.Name; activo = [bool]$_.Enabled } })
 } catch { $fwList = @() }
@@ -771,7 +776,7 @@ $report['usuarios'] = @($users | ForEach-Object { [ordered]@{ nombre = $_.Name; 
 $report['hardware'] = $hardware
 
 $report['_meta'] = [ordered]@{
-    version = '4.0.0'
+    version = '4.1.0'
     plataforma = 'windows'
     hostname = $env:COMPUTERNAME
     usuario = $env:USERNAME
@@ -802,13 +807,19 @@ try {
     exit 1
 }
 
-# Informe HTML (best-effort: el JSON es la fuente autoritativa)
+# Informe HTML (best-effort: el JSON es la fuente autoritativa).
+# Inyección segura: el JSON va dentro de <script type="application/json"> en
+# el template. Se usa .Replace (String) en vez de -replace (regex) para que
+# secuencias como $1 en el JSON no se interpreten como backreference. Se
+# escapa "</" -> "<\/" para que un valor con "</script>" no cierre el tag.
 $templatePath = Join-Path $PSScriptRoot '../../reports/informe.html'
 $htmlFile = $outFile -replace '\.json$', '.html'
 if (Test-Path $templatePath) {
     try {
-        $jsonContent = Get-Content $outFile -Raw -Encoding UTF8
-        $html = (Get-Content $templatePath -Raw -Encoding UTF8) -replace '__JSON_DATA__', $jsonContent
+        $jsonRaw = Get-Content $outFile -Raw -Encoding UTF8
+        $jsonEscaped = $jsonRaw -replace '</', '<\/'
+        $tmpl = Get-Content $templatePath -Raw -Encoding UTF8
+        $html = $tmpl.Replace('__JSON_DATA__', $jsonEscaped)
         $html | Out-File -FilePath $htmlFile -Encoding UTF8 -ErrorAction Stop
         if (-not $Silent) { Start-Process $htmlFile }
     } catch {

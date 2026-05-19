@@ -17,7 +17,12 @@
 #   pciutils     (apt install pciutils)       — detección GPU
 #
 # Autor:   FranVi / ResolveCore
-# Versión: 3.0.0
+# Versión: 3.2.0
+#
+# Cambios 3.2.0 (S4):
+#   - Inyección HTML segura: JSON va dentro de <script type="application/json">
+#     en el template y se parsea con JSON.parse(). Antes el JSON se inyectaba
+#     como JS literal y un valor con </script> rompía el HTML.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
@@ -849,7 +854,7 @@ hostname_str=$(hostname 2>/dev/null || echo "unknown")
 timestamp=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')
 
 meta_json="{
-    \"version\": \"3.1.0\",
+    \"version\": \"3.2.0\",
     \"plataforma\": \"linux\",
     \"hostname\": \"$(json_escape "$hostname_str")\",
     \"generado_en\": \"$timestamp\",
@@ -915,20 +920,19 @@ if ! jq -n \
 fi
 rm -f /tmp/diagnostico_jq_err.$$
 
-# Generar informe HTML
+# Generar informe HTML.
+# Inyección segura: template tiene <script type="application/json" id="rc-data">
+# __JSON_DATA__</script>. Se sustituye el marker con el JSON crudo previo
+# escape de "</" -> "<\/" para que un valor con "</script>" no cierre el tag.
+# Bash ${var//pattern/repl} no interpreta &, \ ni regex.
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _tmpl="${_script_dir}/../../reports/informe.html"
 _html_file="${out_file%.json}.html"
 if [[ -f "$_tmpl" ]]; then
-    _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
-    if [[ -n "$_split" ]]; then
-        {
-            head -n "$((_split - 1))" "$_tmpl"
-            printf 'const RAW = '
-            cat "$out_file"
-            printf ';\n'
-            tail -n +"$((_split + 1))" "$_tmpl"
-        } > "$_html_file"
+    if grep -q '__JSON_DATA__' "$_tmpl"; then
+        _json_escaped=$(sed 's|</|<\\/|g' "$out_file")
+        _tmpl_content=$(<"$_tmpl")
+        printf '%s\n' "${_tmpl_content//__JSON_DATA__/$_json_escaped}" > "$_html_file"
         # Abrir con navegador (prioriza $BROWSER, luego comunes; xdg-open como último recurso
         # porque el default del sistema puede ser Text Editor).
         _opener=""

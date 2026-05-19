@@ -175,15 +175,39 @@ else
     fi
 fi
 
-# Regla udev para ADB sin root
+# Reglas udev para ADB sin root
+# `ATTR{idVendor}=="*"` es sintaxis inválida en udev (los patrones glob solo
+# funcionan en KERNEL=, NAME=, SYMLINK=, no en ATTR{}). Se usa la lista oficial
+# de vendor IDs Android publicada por Google.
 if [[ -d /etc/udev/rules.d ]] && [[ ! -f /etc/udev/rules.d/51-android.rules ]]; then
     info "Configurando reglas udev para ADB..."
-    cat <<'UDEV' | sudo tee /etc/udev/rules.d/51-android.rules >/dev/null
-SUBSYSTEM=="usb", ATTR{idVendor}=="*", MODE="0666", GROUP="plugdev"
-UDEV
+    # Vendor IDs Android (lista no exhaustiva — los más comunes).
+    # Fuente: https://developer.android.com/studio/run/device#VendorIds
+    _android_vendors=(
+        "0bb4"  # HTC / Google Pixel
+        "18d1"  # Google
+        "04e8"  # Samsung
+        "22b8"  # Motorola
+        "12d1"  # Huawei
+        "2717"  # Xiaomi
+        "05c6"  # Qualcomm (genérico, OnePlus / muchos chinos)
+        "0fce"  # Sony
+        "1004"  # LG
+        "2a70"  # OnePlus
+        "2b4c"  # Realme
+        "19d2"  # ZTE
+        "0e8d"  # MediaTek (genérico)
+    )
+    {
+        echo '# ResolveCore — reglas ADB Android (generadas por setup-tecnico-linux.sh)'
+        for vid in "${_android_vendors[@]}"; do
+            printf 'SUBSYSTEM=="usb", ATTR{idVendor}=="%s", MODE="0666", GROUP="plugdev"\n' "$vid"
+        done
+    } | sudo tee /etc/udev/rules.d/51-android.rules >/dev/null
     sudo udevadm control --reload-rules 2>/dev/null || true
+    sudo udevadm trigger 2>/dev/null || true
     sudo usermod -aG plugdev "$USER" 2>/dev/null || true
-    ok "Reglas udev ADB configuradas (reinicia sesión para aplicar)"
+    ok "Reglas udev ADB configuradas (${#_android_vendors[@]} vendors — reinicia sesión)"
 fi
 
 # ── 6. AnyDesk ───────────────────────────────────────────────────────────────

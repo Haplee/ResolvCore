@@ -69,8 +69,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 </head>
 <body>
 <div id="app"><div style="text-align:center;padding:4rem;font-family:var(--mono);color:var(--muted)">Cargando informe...</div></div>
+<script type="application/json" id="rc-data">__JSON_DATA__</script>
 <script>
-const RAW = __JSON_DATA__;
+// Carga segura: el JSON vive en un <script type="application/json"> y se
+// parsea aquí. Evita romper el HTML si el JSON contiene "</script>" (ya
+// pre-escapado a "<\/script>" por el generador) o caracteres como $1 que
+// PowerShell -replace interpretaría como backreference de regex.
+const RAW = JSON.parse(document.getElementById('rc-data').textContent);
 
 /* ── Normalizar: Windows vs Linux/macOS/Android ── */
 function norm(d){
