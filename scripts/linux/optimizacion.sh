@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
 # ResolveCore - Optimizacion de sistema Linux
-# Version: 3.1.0
+# Version: 3.2.0
+#
+# Cambios 3.2.0:
+#   - FIX CRÍTICO: --dry-run ahora respeta TODAS las fases (antes cambiaba
+#     el sistema en cache drop, log truncate, sysctl backup/set y thermald
+#     aunque dijeras --dry-run).
 #
 # Cambios 3.1.0:
 #   - Parseo real de --dry-run y --undo (antes ignorados).
@@ -12,7 +17,7 @@
 
 set -uo pipefail
 
-SCRIPT_VERSION="3.1.0"
+SCRIPT_VERSION="3.2.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="/var/tmp/resolvecore_optimizacion"
 LOG_FILE="${BACKUP_DIR}/optimizacion.log"
@@ -167,14 +172,23 @@ echo ""
 echo -e "  ${CYAN}> Limpieza del sistema${NC}"
 
 # Limpiar cache
-sync
-echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
-echo -e "    ${GREEN}[OK] Cache del sistema limpiada${NC}"
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo -e "    ${YELLOW}[DryRun]${NC} sync + drop_caches=3"
+else
+    sync
+    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
+    echo -e "    ${GREEN}[OK] Cache del sistema limpiada${NC}"
+fi
 
 # Limpiar logs antiguos
-find /var/log -type f -name "*.gz" -mtime +30 -delete 2>/dev/null
-find /var/log -type f -name "*.log" -mtime +7 -exec truncate -s 0 {} \; 2>/dev/null
-echo -e "    ${GREEN}[OK] Logs antiguos eliminados${NC}"
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo -e "    ${YELLOW}[DryRun]${NC} find /var/log -name '*.gz' -mtime +30 -delete"
+    echo -e "    ${YELLOW}[DryRun]${NC} find /var/log -name '*.log' -mtime +7 -exec truncate -s 0"
+else
+    find /var/log -type f -name "*.gz" -mtime +30 -delete 2>/dev/null
+    find /var/log -type f -name "*.log" -mtime +7 -exec truncate -s 0 {} \; 2>/dev/null
+    echo -e "    ${GREEN}[OK] Logs antiguos eliminados${NC}"
+fi
 
 # Servicios
 echo ""
@@ -197,9 +211,13 @@ echo ""
 echo -e "  ${CYAN}> Plan de energia${NC}"
 
 if command -v systemctl &>/dev/null && systemctl list-unit-files thermald.service &>/dev/null; then
-    systemctl start thermald 2>/dev/null
-    systemctl enable thermald 2>/dev/null
-    echo -e "    ${GREEN}[OK] Gestion termica activada${NC}"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "    ${YELLOW}[DryRun]${NC} systemctl start/enable thermald"
+    else
+        systemctl start thermald 2>/dev/null
+        systemctl enable thermald 2>/dev/null
+        echo -e "    ${GREEN}[OK] Gestion termica activada${NC}"
+    fi
 fi
 
 # Sysctl optimizaciones
@@ -207,10 +225,18 @@ echo ""
 echo -e "  ${CYAN}> Parametros del kernel${NC}"
 
 # Backup (solo si no existe ya)
-[[ ! -f "$SYSCTL_BACKUP" ]] && cp /etc/sysctl.conf "$SYSCTL_BACKUP" 2>/dev/null
+if [[ "$DRY_RUN" == "true" ]]; then
+    [[ ! -f "$SYSCTL_BACKUP" ]] && echo -e "    ${YELLOW}[DryRun]${NC} cp /etc/sysctl.conf $SYSCTL_BACKUP"
+else
+    [[ ! -f "$SYSCTL_BACKUP" ]] && cp /etc/sysctl.conf "$SYSCTL_BACKUP" 2>/dev/null
+fi
 
 sysctl_set() {
     local key="$1" val="$2"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "    ${YELLOW}[DryRun]${NC} sysctl_set ${key}=${val}"
+        return 0
+    fi
     if grep -qE "^${key}\s*=" /etc/sysctl.conf 2>/dev/null; then
         sed -i "s|^${key}\s*=.*|${key}=${val}|" /etc/sysctl.conf
     else
