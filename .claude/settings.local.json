@@ -43,7 +43,8 @@
       "Bash(python scripts/common/escaner_shodan.py --ip 10.0.0.1 --no-color)",
       "Bash(python C:/Users/franc/proyecto/ResolvCore/scripts/common/escaner_shodan.py)",
       "Bash(python C:/Users/franc/proyecto/ResolvCore/scripts/common/escaner_shodan.py --ip 10.0.0.1 --no-color)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(git *)"
     ]
   }
 }

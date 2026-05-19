@@ -20,15 +20,17 @@ de informes PDF.
 ## Stack técnico
 
 - **CMS / Frontend:** WordPress (PHP)
-- **Tickets:** MantisBT
+- **Tickets:** MantisBT (Docker local + VPS)
 - **Acceso remoto:** AnyDesk
-- **Scripts diagnóstico:** PowerShell (Windows), Bash (Linux / macOS)
-- **Generación de informes:** PDF automatizado
+- **Scripts diagnóstico:** PowerShell (Windows), Bash (Linux / macOS / Android)
+- **Scripts de reconocimiento:** Python 3 — Nmap, Shodan, CVE (Hexagonal Architecture)
+- **Generación de informes:** HTML → PDF (wkhtmltopdf / DomPDF)
 - **Base de datos de vulnerabilidades:** MySQL / MariaDB
 - **Android (futuro):** Kotlin + Jetpack Compose + Material 3
 
 Para la parte web usa PHP moderno. No mezcles jQuery con vanilla JS sin motivo.
-Para los scripts, usa PowerShell 7+ en Windows y Bash compatible con sh en Linux.
+Para los scripts, usa PowerShell 5.1+ en Windows y Bash compatible con sh en Linux.
+Para los scripts Python (`scripts/common/`), sigue la arquitectura Hexagonal: domain → ports → adapters.
 
 ---
 
@@ -38,17 +40,33 @@ Para los scripts, usa PowerShell 7+ en Windows y Bash compatible con sh en Linux
 # WordPress local (si usas DevKinsta / wp-cli)
 wp server --host=0.0.0.0 --port=8080
 
+# MantisBT local (Docker)
+docker compose -f mantisbt/docker-compose.yml up -d
+
 # Ejecutar script de diagnóstico Windows (PowerShell)
 pwsh ./scripts/windows/diagnostico.ps1
 
 # Ejecutar script de diagnóstico Linux
 bash ./scripts/linux/diagnostico.sh
 
+# Ejecutar script de diagnóstico macOS
+bash ./scripts/macos/diagnostico.sh
+
+# Escaneo Nmap / Shodan (Python — requiere .env en scripts/common/)
+python scripts/common/escaner_nmap.py
+python scripts/common/escaner_shodan.py
+
+# Buscar vulnerabilidades
+python scripts/common/buscar_vulnerabilidades.py
+
+# Setup servidor VPS (Linux)
+bash ./scripts/server/linux/post-install.sh
+
+# Setup entorno técnico (Windows)
+pwsh ./scripts/setup/setup-tecnico-windows.ps1
+
 # Generar informe PDF (cuando esté implementado)
 php artisan resolvecore:report --ticket=ID
-
-# Tests (cuando existan)
-composer test
 ```
 
 ---
@@ -57,16 +75,33 @@ composer test
 
 ```
 resolvecore/
-├── wordpress/          # Tema + plugins personalizados
-│   ├── theme/          # Tema ResolveCore (PHP + CSS)
-│   └── plugins/        # Plugin de integración MantisBT
+├── wordpress/                       # WordPress frontend
+│   ├── resolvecore-theme/           # Tema (PHP + CSS + JS vanilla)
+│   │   ├── assets/js/               # main.js
+│   │   └── assets/logo/             # Logos y SVGs
+│   └── plugins/rc-mantisbt/         # Plugin integración MantisBT
+├── mantisbt/                        # Despliegue y configuración MantisBT
+│   ├── config/                      # config_inc.php (+ .template)
+│   ├── plugins/                     # EventLog, Kanban, Reminder, etc.
+│   ├── sql/                         # mantisbt-db.sql + resolvecore-setup.sql
+│   └── docker-compose.yml
 ├── scripts/
-│   ├── windows/        # Scripts PowerShell de diagnóstico
-│   └── linux/          # Scripts Bash de diagnóstico
-├── reports/            # Plantillas y generación de informes PDF
-├── vulnerabilities/    # Base de datos de vulnerabilidades (SQL + seeders)
-├── android/            # App nativa (Kotlin, fase futura)
-└── docs/               # Documentación técnica
+│   ├── windows/                     # PowerShell: diagnóstico + optimización
+│   ├── linux/                       # Bash: diagnóstico + optimización
+│   ├── macos/                       # Bash: diagnóstico + optimización macOS
+│   ├── android/                     # Bash: diagnóstico Android (ADB)
+│   ├── common/                      # Python (Hexagonal Architecture)
+│   │   ├── domain/                  # Modelos (Host, Vulnerability…)
+│   │   ├── ports/                   # Interfaces (HostIntelSource)
+│   │   └── adapters/                # Implementaciones (shodan_rest.py)
+│   ├── server/                      # Setup VPS (bootstrap-mantis.sh, post-install.sh)
+│   ├── setup/                       # Setup entorno técnico (Linux + Windows)
+│   └── diagnosticos/                # Salida de ejecuciones (JSON + HTML)
+├── reports/                         # Plantilla HTML → PDF
+├── vulnerabilities/
+│   └── migrations/                  # SQL migraciones idempotentes (0001_init.sql)
+├── assets/                          # Logos globales del proyecto
+└── docs/                            # Documentación técnica
 ```
 
 ---
@@ -90,7 +125,7 @@ resolvecore/
 ### Bash
 - `#!/usr/bin/env bash` en todos los scripts (nunca `#!/bin/bash` — rompe portabilidad en macOS y BSD).
 - **`set -uo pipefail` por defecto** en scripts de diagnóstico/optimización. Se omite `-e` deliberadamente: estos scripts capturan fallos comando a comando (`|| echo ...`, `|| true`, validaciones regex) y `-e` los aborta antes de poder rellenar el JSON. Si añades `-e` a un script existente, rompes la captura granular y vuelves al bug del 2026-05-09 con `apt-get -s upgrade | grep -c '^Inst'`.
-- Para scripts auxiliares cortos sin captura granular sí se usa `set -euo pipefail` (p.ej. `scripts/bootstrap-mantis.sh`).
+- Para scripts auxiliares cortos sin captura granular sí se usa `set -euo pipefail` (p.ej. `scripts/server/bootstrap-mantis.sh`).
 - Variables en UPPER_CASE. Funciones en snake_case.
 - Comprueba dependencias al inicio con `command -v <tool> || exit 1`.
 
@@ -105,7 +140,10 @@ resolvecore/
 ### 1. Diagnóstico multiplataforma
 - Windows: rendimiento (CPU/RAM/disco), servicios críticos, logs de eventos, Windows Update.
 - Linux: top/htop, journalctl, df, apt/dnf, cron, puertos abiertos.
-- Salida estructurada JSON para alimentar el generador de informes.
+- macOS: equivalente Linux via `scripts/macos/`.
+- Android: diagnóstico básico via ADB en `scripts/android/`.
+- Reconocimiento de red: Nmap + Shodan via Python (`scripts/common/`) con arquitectura Hexagonal.
+- Salida estructurada JSON (+ HTML) en `scripts/diagnosticos/`.
 
 ### 2. Base de datos de vulnerabilidades
 - Tabla `rc_vulnerabilities`: CVE, gravedad, SO afectado, descripción, fix.

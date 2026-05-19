@@ -1,9 +1,9 @@
-# Tutorial — Montaje manual de la web ResolveCore en WordPress
+# Tutorial — Montaje manual de la web ResolveCore en WordPress (Linux/Ubuntu)
 
-> Guía paso a paso para construir la web pública de ResolveCore **a mano**, módulo a módulo, sin builders ni automatismos. Sirve como manual de despliegue y como evidencia técnica para el TFG.
+> Guía paso a paso para construir la web pública de ResolveCore **a mano**, módulo a módulo, sin builders ni automatismos. Sirve como manual de despliegue en Ubuntu/Debian y como evidencia técnica para el TFG.
 >
 > **Autor:** Francisco Vidal Mateo · TFG ASIR 2025/26
-> **Última actualización:** 2026-05-17
+> **Última actualización:** 2026-05-18
 > **Tiempo estimado total:** 4–6 h (primera vez), ~1 h (re-instalación)
 
 ---
@@ -11,15 +11,15 @@
 ## Índice
 
 1. [Antes de empezar — requisitos y materiales](#1-antes-de-empezar)
-2. [Módulo 1 — Entorno local (LocalWP)](#módulo-1--entorno-local-localwp)
-3. [Módulo 2 — Instalación y activación del tema `resolvecore-theme`](#módulo-2--tema-resolvecore-theme)
-4. [Módulo 3 — Páginas y menús (Home, Docs, Changelog, Contacto)](#módulo-3--páginas-y-menús)
-5. [Módulo 4 — Plugin `rc-mantisbt` (integración con MantisBT)](#módulo-4--plugin-rc-mantisbt)
-6. [Módulo 5 — Configuración segura de credenciales en `wp-config.php`](#módulo-5--credenciales-en-wp-configphp)
-7. [Módulo 6 — Formulario de contacto AJAX y pruebas end-to-end](#módulo-6--formulario-de-contacto-ajax)
+2. [Módulo 1 — Entorno local (LocalWP en Linux)](#módulo-1--entorno-local-localwp)
+3. [Módulo 2 — Tema `resolvecore-theme`](#módulo-2--tema-resolvecore-theme)
+4. [Módulo 3 — Páginas y menús con WP-CLI](#módulo-3--páginas-y-menús)
+5. [Módulo 4 — Integración y despliegue de MantisBT](#módulo-4--integración-con-mantisbt)
+6. [Módulo 5 — Plugin `rc-mantisbt` y credenciales seguras](#módulo-5--plugin-rc-mantisbt)
+7. [Módulo 6 — Formulario de contacto AJAX y seguridad](#módulo-6--formulario-de-contacto-ajax)
 8. [Módulo 7 — Backup y despliegue a producción](#módulo-7--backup-y-despliegue)
 9. [Checklist final + capturas obligatorias](#checklist-final)
-10. [Troubleshooting](#troubleshooting)
+10. [Troubleshooting de sistemas](#troubleshooting)
 
 ---
 
@@ -29,34 +29,28 @@
 
 | Recurso | Descripción | Dónde se obtiene |
 |---------|-------------|------------------|
-| LocalWP | Stack WordPress local (NGINX + PHP 8.2 + MariaDB) | <https://localwp.com> |
-| MantisBT 2.27 LTS | Bug tracker — se instala aparte (ver `mantisbt/`) | Repo del proyecto |
-| Repositorio ResolvCore | Tema + plugin | `C:\Users\franc\proyecto\ResolvCore` |
-| Editor | VS Code / Antigravity / similar | — |
+| **LocalWP Linux** | Stack WordPress local (NGINX + PHP 8.2 + MySQL/MariaDB) | <https://localwp.com> |
+| **MantisBT 2.27** | Bug tracker de control de tickets | Imagen Docker oficial |
+| **Repositorio ResolvCore** | Código fuente del tema, plugins y scripts | `~/Escritorio/ResolvCore` |
+| **Entorno OS** | Sistema operativo Linux (Ubuntu 22.04+ / Debian) | Entorno de desarrollo ASIR |
 
 ### Estructura que debes obtener al final
 
 ```
-LocalWP site/wp-content/
-├── themes/
-│   └── resolvecore-theme/       ← Módulo 2
-└── plugins/
-    └── rc-mantisbt/             ← Módulo 4
+/home/usuario/Local Sites/resolvecore/app/public/
+├── wp-content/
+│   ├── themes/
+│   │   └── resolvecore-theme/       ← Módulo 2 (Tema custom)
+│   └── plugins/
+│       └── rc-mantisbt/             ← Módulo 5 (Plugin integración)
 ```
 
 ### Carpeta de capturas
 
-Crea ya el directorio donde guardarás las evidencias:
+Crea la estructura de directorios en tu documentación para almacenar las evidencias de la instalación:
 
-```
-docs/capturas/tutorial-wordpress/
-├── 01-localwp/
-├── 02-tema/
-├── 03-paginas/
-├── 04-plugin/
-├── 05-config/
-├── 06-formulario/
-└── 07-backup/
+```bash
+mkdir -p docs/capturas/tutorial-wordpress/{01-localwp,02-tema,03-paginas,04-mantis,05-config,06-formulario,07-backup}
 ```
 
 > **Norma del proyecto** (`CLAUDE.md`): cada paso documentado debe ir acompañado de una captura PNG en `docs/capturas/`. Nombrado: `NN_descripcion.png`.
@@ -65,402 +59,345 @@ docs/capturas/tutorial-wordpress/
 
 ## Módulo 1 — Entorno local (LocalWP)
 
-> **Objetivo:** WordPress arrancando en `https://resolvecore-dev.local` con admin accesible.
+> **Objetivo:** WordPress levantado de forma nativa en Ubuntu utilizando LocalWP, y WP-CLI configurado con socket directo de MySQL.
 
-### Paso 1.1 — Instalar LocalWP
+### Paso 1.1 — Instalar LocalWP en Ubuntu
 
-1. Descarga LocalWP desde <https://localwp.com> (versión Windows).
-2. Ejecuta el instalador como administrador. Acepta los valores por defecto.
-3. La primera vez te pedirá crear una cuenta gratuita — sáltalo con "Skip".
+1. Descarga el paquete `.deb` de LocalWP para Linux desde la web oficial.
+2. Abre la terminal e instala el paquete resolviendo dependencias rotas:
+   ```bash
+   sudo dpkg -i ~/Descargas/local-*.deb
+   sudo apt --fix-broken install -y
+   ```
+3. Inicia la aplicación. Si surgen problemas de librerías faltantes al provisionar motores de bases de datos, instala el paquete completo de dependencias de MySQL/LocalWP:
+   ```bash
+   sudo apt install libaio1 libncurses5 libtinfo5 libtidy5deb1 \
+     libavif13 libonig5 libzip4 libsodium23 libargon2-1 curl -y
+   ```
 
 📸 **Captura 1.1** → `docs/capturas/tutorial-wordpress/01-localwp/01_localwp_instalado.png`
 
-### Paso 1.2 — Crear el sitio
+### Paso 1.2 — Crear el sitio en LocalWP
 
-1. Pulsa **Create a new site** → **Create a new site** (no "Add Existing").
-2. Rellena:
-   - **Site name:** `ResolveCore Dev`
-   - **Local site domain:** `resolvecore-dev.local`
-3. Pulsa **Custom** (no "Preferred") y define:
-   - **PHP:** 8.2.x
-   - **Web Server:** NGINX
-   - **Database:** MariaDB 10.6+
-4. Credenciales de WordPress:
-   - **Username:** `admin`
-   - **Password:** `resolvecore-dev` *(efímera, solo dev)*
-   - **Email:** el del proyecto.
-5. Pulsa **Add Site**. Tarda 1–2 minutos en provisionarse.
+Crea el sitio en la interfaz gráfica con los siguientes parámetros:
+
+| Parámetro | Valor |
+|-----------|-------|
+| **Nombre** | `ResolveCore` |
+| **PHP** | `8.2.29` |
+| **Servidor web** | `NGINX 1.26.1` |
+| **Base de datos** | `MySQL 8.4.0` |
+| **Usuario WordPress** | `admin` |
+| **Email de administración** | `fvidalmateo@gmail.com` |
 
 📸 **Captura 1.2** → `02_localwp_sitio_creado.png`
 
-### Paso 1.3 — Verificar acceso
+### Paso 1.3 — Instalación y configuración de WP-CLI
 
-1. En LocalWP, con el sitio seleccionado, pulsa **Open site** (frontend) y **WP Admin** (backend).
-2. El admin debería abrirse en `https://resolvecore-dev.local/wp-admin`.
-3. Verifica versión de WordPress: **Escritorio → Acerca de WordPress** → debe ser ≥ 6.4.
+WP-CLI nos permite automatizar la administración del sitio. Lo instalamos manualmente y lo vinculamos al binario PHP interno que usa LocalWP:
+
+1. Descarga e instala el binario de WP-CLI:
+   ```bash
+   curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+   chmod +x wp-cli.phar
+   sudo mv wp-cli.phar /usr/local/bin/wp
+   ```
+2. Añade un alias en tu archivo de configuración de shell (`~/.bashrc` o `~/.zshrc`) para que WP-CLI utilice el motor PHP de LocalWP:
+   ```bash
+   alias wp='/home/usuario/.config/Local/lightning-services/php-8.2.29+0/bin/linux/bin/php /usr/local/bin/wp'
+   ```
+3. Carga los cambios de la terminal:
+   ```bash
+   source ~/.bashrc
+   ```
+4. Configura el host de base de datos en WP-CLI apuntando directamente al socket Unix generado por LocalWP en lugar del localhost TCP (evita problemas de resolución):
+   ```bash
+   wp config set DB_HOST 'localhost:<ruta_socket>/mysqld.sock'
+   ```
 
 📸 **Captura 1.3** → `03_localwp_wp_admin.png`
-
-### Paso 1.4 — Localizar la carpeta del sitio
-
-Pulsa **Go to site folder** en LocalWP. Apunta esta ruta — la usarás todo el tutorial.
-
-```
-<LocalSites>/resolvecore-dev/app/public/
-```
-
-> **Criterio de hecho:** al abrir `https://resolvecore-dev.local` ves la home de WordPress por defecto.
 
 ---
 
 ## Módulo 2 — Tema `resolvecore-theme`
 
-> **Objetivo:** la home pasa de "Hello world" al landing oscuro de ResolveCore.
+> **Objetivo:** Copiar y activar el diseño personalizado del frontend bajo los estándares WCAG 2.1 AA.
 
-### Paso 2.1 — Copiar el tema
+### Paso 2.1 — Despliegue del tema
 
-Tienes dos opciones; usa **B** si planeas iterar sobre el código.
+El tema reside en el repositorio y se copia directamente al directorio de desarrollo de WordPress:
 
-**Opción A — Copia simple:**
-
-```powershell
-Copy-Item -Recurse `
-  "C:\Users\franc\proyecto\ResolvCore\wordpress\resolvecore-theme" `
-  "<LocalSites>\resolvecore-dev\app\public\wp-content\themes\resolvecore-theme"
+```bash
+cp -r ~/Escritorio/ResolvCore/wordpress/resolvecore-theme/ \
+  "/home/usuario/Local Sites/resolvecore/app/public/wp-content/themes/"
 ```
 
-**Opción B — Enlace simbólico (recomendado para desarrollo):**
+*Nota: Alternativamente, puedes usar un enlace simbólico (`ln -s`) para desarrollo activo.*
 
-```powershell
-New-Item -ItemType SymbolicLink `
-  -Path "<LocalSites>\resolvecore-dev\app\public\wp-content\themes\resolvecore-theme" `
-  -Target "C:\Users\franc\proyecto\ResolvCore\wordpress\resolvecore-theme"
+### Paso 2.2 — Estructura interna del tema
+
+Valida que el directorio contiene los archivos esenciales:
+
+| Archivo / Carpeta | Función |
+|-------------------|---------|
+| `style.css` | Hoja de estilos v3.0.0. Contiene variables CSS del proyecto. |
+| `functions.php` | Configuración del tema (hooks), enqueues y handler AJAX. |
+| `front-page.php` | Estructura del landing: sección hero, servicios, pricing y contacto. |
+| `page-docs.php` | Template de Documentación con barra lateral fija de navegación. |
+| `page-changelog.php` | Template de registro de cambios con un diseño de timeline de versiones. |
+| `page-contacto.php` | Template para el formulario dedicado de contacto técnico. |
+| `header.php` / `footer.php` | Cabecera y pie semánticos compartidos. |
+
+#### Variables CSS Principales (`style.css`):
+```css
+:root {
+  --rc-bg: #0a0c10;       /* Fondo oscuro profundo */
+  --rc-accent: #00e5a0;   /* Verde aguamarina de realce */
+  --rc-text: #e8eaf0;     /* Texto claro */
+}
 ```
 
-> Para crear symlinks en Windows necesitas PowerShell como administrador o tener activado el "Modo desarrollador".
+### Paso 2.3 — Activación del tema
 
-### Paso 2.2 — Activar el tema
+Activa el tema utilizando WP-CLI para comprobar el correcto estado del entorno:
 
-1. WP Admin → **Apariencia → Temas**.
-2. Busca **ResolveCore** en la lista. Pasa el ratón → **Activar**.
-3. Visita la home (`https://resolvecore-dev.local`): debería mostrarse el landing oscuro con el hero "Solución a tus problemas informáticos".
+```bash
+wp theme activate resolvecore-theme
+```
 
 📸 **Captura 2.1** → `02-tema/01_tema_activado.png`
 📸 **Captura 2.2** → `02-tema/02_home_landing.png`
-
-### Paso 2.3 — Validar componentes del tema
-
-El tema expone tres plantillas. Comprueba cada una:
-
-| Archivo | URL esperada | Qué debes ver |
-|---------|--------------|---------------|
-| `front-page.php` | `/` | Hero + pricing + formulario |
-| `page-docs.php` | `/docs/` (tras crear la página) | Layout con sidebar |
-| `page-changelog.php` | `/changelog/` (tras crear la página) | Timeline de versiones |
-
-Las dos últimas requieren crear la página primero — lo haces en el Módulo 3.
-
-> **Criterio de hecho:** la home pública usa el tema ResolveCore con colores oscuros (`--rc-bg: #0a0c10`).
 
 ---
 
 ## Módulo 3 — Páginas y menús
 
-> **Objetivo:** estructura navegable: Home, Docs, Changelog, Contacto.
+> **Objetivo:** Generar la estructura de páginas y menús estáticos con WP-CLI aplicando las plantillas del tema.
 
-### Paso 3.1 — Crear la página Documentación
+### Paso 3.1 — Creación de páginas
 
-1. WP Admin → **Páginas → Añadir nueva**.
-2. **Título:** `Documentación`
-3. En el panel derecho, **Plantilla** → selecciona `Docs`. *(Si no aparece, asegúrate de que `page-docs.php` está en el tema activo.)*
-4. **Permalink:** `docs`.
-5. Publica.
+Ejecuta los siguientes comandos para crear las páginas en WordPress asignándoles sus respectivas plantillas de página personalizadas:
+
+```bash
+# Crear página de Documentación
+wp post create --post_type=page --post_title='Documentación' --post_status=publish \
+  --post_name='docs' --page_template='page-docs.php'
+
+# Crear página de Changelog
+wp post create --post_type=page --post_title='Changelog' --post_status=publish \
+  --post_name='changelog' --page_template='page-changelog.php'
+
+# Crear página de Contacto
+wp post create --post_type=page --post_title='Contacto' --post_status=publish \
+  --post_name='contacto' --page_template='page-contacto.php'
+```
 
 📸 **Captura 3.1** → `03-paginas/01_pagina_docs.png`
 
-### Paso 3.2 — Crear la página Changelog
+### Paso 3.2 — Configurar menús de navegación
 
-1. **Páginas → Añadir nueva**.
-2. **Título:** `Changelog`
-3. **Plantilla:** `Changelog`.
-4. **Permalink:** `changelog`.
-5. Publica.
+Configuramos el menú principal del header y el menú secundario de soporte en el pie de página usando WP-CLI:
 
-### Paso 3.3 — Crear la página Contacto
+```bash
+# Crear y asignar menú Principal en el header
+wp menu create 'Principal'
+wp menu location assign principal primary
 
-1. **Páginas → Añadir nueva**.
-2. **Título:** `Contacto`
-3. Plantilla: **Por defecto** (el formulario lo inyecta el shortcode del plugin en el Módulo 4).
-4. **Permalink:** `contacto`.
-5. Publica vacía por ahora — la rellenas en el Módulo 6.
+# Crear y asignar menú en el Footer
+wp menu create 'Footer'
+wp menu location assign footer footer
 
-### Paso 3.4 — Configurar la página principal
-
-1. **Ajustes → Lectura**.
-2. **Tu portada muestra:** "Una página estática" → selecciona la página que use `front-page.php` (o deja "Tu última entrada" si ya se está renderizando el landing; depende de tu instalación).
-3. Guarda.
-
-### Paso 3.5 — Crear el menú principal
-
-1. **Apariencia → Menús → Crear un menú nuevo**.
-2. **Nombre del menú:** `Principal`
-3. Marca dos casillas en "Ubicación del tema":
-   - ✅ Menú principal
-   - ❌ Menú pie de página *(crearás otro)*
-4. Añade las páginas: Inicio, Documentación, Changelog, Contacto.
-5. Guarda.
-
-### Paso 3.6 — Crear el menú del footer
-
-1. **Apariencia → Menús → Crear un menú nuevo**.
-2. **Nombre:** `Footer`
-3. **Ubicación:** ✅ Menú pie de página.
-4. Añade: Documentación, Changelog, Contacto, enlace externo a `https://github.com/Haplee/ResolvCore`.
-5. Guarda.
+# Añadir enlace externo a GitHub en el menú del Footer
+wp menu item add-custom footer 'GitHub' 'https://github.com/Haplee/ResolvCore'
+```
 
 📸 **Captura 3.2** → `03-paginas/02_menus_configurados.png`
 
-> **Criterio de hecho:** el header del landing muestra los cuatro enlaces y todos resuelven a la página correcta.
+---
+
+## Módulo 4 — Integración con MantisBT
+
+> **Objetivo:** Desplegar de forma aislada MantisBT usando contenedores y habilitar su API REST para recepción de incidencias.
+
+### Paso 4.1 — Despliegue con Docker Compose
+
+1. Instala el motor de contenedores en tu sistema Ubuntu:
+   ```bash
+   sudo apt install docker.io docker-compose -y
+   sudo usermod -aG docker $USER && newgrp docker
+   ```
+2. Crea un archivo `docker-compose.yml` en la ruta de tu infraestructura con la siguiente estructura:
+   ```yaml
+   version: '3.8'
+   services:
+     db:
+       image: mysql:5.7
+       volumes:
+         - db_data:/var/lib/mysql
+       environment:
+         MYSQL_ROOT_PASSWORD: root
+         MYSQL_DATABASE: bugtracker
+         MYSQL_USER: mantisbt
+         MYSQL_PASSWORD: mantisbt_password
+     mantisbt:
+       image: mantisbt/mantisbt:2.27.0
+       ports:
+         - "8989:80"
+       depends_on:
+         - db
+       environment:
+         MANTIS_DB_HOST: db
+         MANTIS_DB_USER: mantisbt
+         MANTIS_DB_PASSWORD: mantisbt_password
+         MANTIS_DB_NAME: bugtracker
+   volumes:
+     db_data:
+   ```
+3. Levanta la infraestructura de soporte técnico:
+   ```bash
+   docker-compose up -d
+   ```
+
+### Paso 4.2 — Habilitar API REST y crear Token
+
+1. Inserta la directiva que habilita la API REST en el archivo de configuración de MantisBT dentro del contenedor en ejecución:
+   ```bash
+   docker exec mantisbt_mantisbt_1 bash -c \
+     "echo '\$g_webservice_rest_enabled = ON;' >> /var/www/html/config/config_inc.php"
+   ```
+2. Entra en MantisBT a través de `http://localhost:8989`, loguéate, dirígete a **Mi cuenta → API Tokens** y genera un nuevo token de acceso. Guárdalo temporalmente en un archivo local seguro.
+
+### Paso 4.3 — Pruebas de integración del API con cURL
+
+Verifica la conectividad directa y la creación de componentes a través de peticiones HTTP:
+
+```bash
+# 1. Crear proyecto principal en MantisBT
+curl -s -X POST -H 'Authorization: <TOKEN_API>' -H 'Content-Type: application/json' \
+  -d '{"name":"ResolveCore"}' http://localhost:8989/api/rest/projects
+
+# 2. Generar incidencia de prueba
+curl -s -X POST -H 'Authorization: <TOKEN_API>' -H 'Content-Type: application/json' \
+  -d '{"summary":"Test ticket manual","project":{"id":1},"category":{"name":"General"}}' \
+  http://localhost:8989/api/rest/issues
+```
+
+📸 **Captura 4.1** → `04-mantis/01_mantis_token_creado.png`
 
 ---
 
-## Módulo 4 — Plugin `rc-mantisbt`
+## Módulo 5 — Plugin `rc-mantisbt`
 
-> **Objetivo:** crear un ticket en MantisBT cada vez que se envía el formulario de contacto.
+> **Objetivo:** Instalar el plugin corporativo de ResolveCore para automatizar el volcado de solicitudes e implementar un almacenamiento seguro de credenciales.
 
-### Pre-requisito — MantisBT operativo
+### Paso 5.1 — Copiar y activar el plugin
 
-Debes tener MantisBT 2.27 instalado y accesible con un token API. Si no es el caso, sigue antes [`docs/mantis-integration.md`](mantis-integration.md) y la sección "INFRA-04" del planning del sprint anterior.
+1. Copia el plugin de integración desde el repositorio local al directorio de plugins de WordPress:
+   ```bash
+   cp -r ~/Escritorio/ResolvCore/wordpress/plugins/rc-mantisbt \
+     "/home/usuario/Local Sites/resolvecore/app/public/wp-content/plugins/"
+   ```
+2. Activa el plugin mediante WP-CLI:
+   ```bash
+   wp plugin activate rc-mantisbt
+   ```
 
-Necesitas tener a mano:
+📸 **Captura 5.1** → `04-plugin/02_plugin_activado.png`
 
-- URL base de MantisBT (ej. `https://mantis.resolvecore.com` o `http://localhost:8989`).
-- API Token (MantisBT → **Mi cuenta → API Tokens → Crear token**).
-- ID numérico del proyecto en MantisBT (visible en la URL al editar el proyecto: `manage_proj_edit_page.php?project_id=1`).
+### Paso 5.2 — Configuración segura con `wp-config.php`
 
-📸 **Captura 4.1** → `04-plugin/01_mantis_token_creado.png`
+Siguiendo las directrices de endurecimiento del TFG, los tokens del API no se almacenarán en la base de datos MySQL (`wp_options`) para mitigar ataques de inyección SQL o robo de credenciales. Los definiremos directamente como constantes de entorno seguras en el archivo de configuración del sistema.
 
-### Paso 4.1 — Copiar el plugin
+Utilizando WP-CLI, añadimos las directivas directamente a `wp-config.php`:
 
-```powershell
-Copy-Item -Recurse `
-  "C:\Users\franc\proyecto\ResolvCore\wordpress\plugins\rc-mantisbt" `
-  "<LocalSites>\resolvecore-dev\app\public\wp-content\plugins\rc-mantisbt"
+```bash
+wp config set RC_MANTIS_URL 'http://localhost:8989' --type=constant
+wp config set RC_MANTIS_TOKEN '<TOKEN_MANTIS>' --type=constant
+wp config set RC_MANTIS_PROJECT_ID '1' --type=constant
 ```
 
-*(O symlink como en 2.1, opción B.)*
-
-### Paso 4.2 — Activar el plugin
-
-1. WP Admin → **Plugins**.
-2. Busca **ResolveCore — MantisBT Integration**.
-3. **Activar**.
-
-📸 **Captura 4.2** → `04-plugin/02_plugin_activado.png`
-
-### Paso 4.3 — Configuración inicial vía panel
-
-> Esto es solo para validar conectividad. Las credenciales **finales** las moverás a `wp-config.php` en el Módulo 5.
-
-1. **Ajustes → MantisBT** (aparece tras activar el plugin).
-2. Rellena:
-   - **Activar integración:** ✅
-   - **URL de MantisBT:** `https://mantis.resolvecore.com`
-   - **API Token:** *(pega el token)*
-   - **ID del Proyecto:** `1` *(o el que toque)*
-3. Guarda.
-4. Pulsa **Verificar conexión con MantisBT**. Debe responder `Conexión OK. Proyectos disponibles: N`.
-
-📸 **Captura 4.3** → `04-plugin/03_test_conexion_ok.png`
-
-> **Criterio de hecho:** el botón "Verificar conexión" devuelve OK con el número correcto de proyectos.
-
----
-
-## Módulo 5 — Credenciales en `wp-config.php`
-
-> **Objetivo:** sacar el token API de la base de datos (`wp_options`) y meterlo en `wp-config.php`. Es un requisito de seguridad de `CLAUDE.md` ("nunca almacenar tokens sin cifrar en opciones de WordPress").
-
-### Paso 5.1 — Editar `wp-config.php`
-
-Abre `<LocalSites>\resolvecore-dev\app\public\wp-config.php`. Justo **antes** de la línea:
-
+Esto inyectará de forma automática en tu `wp-config.php` el bloque de constantes correspondiente:
 ```php
-/* That's all, stop editing! Happy publishing. */
+define( 'RC_MANTIS_URL', 'http://localhost:8989' );
+define( 'RC_MANTIS_TOKEN', 'tu_token_api_aqui' );
+define( 'RC_MANTIS_PROJECT_ID', '1' );
 ```
 
-añade el bloque:
-
-```php
-// ── ResolveCore · Integración MantisBT ────────────────────────────────────────
-define( 'RC_MANTIS_URL',   'https://mantis.resolvecore.com' );
-define( 'RC_MANTIS_TOKEN', 'pega-aqui-el-token-real' );
-```
-
-Guarda.
-
-### Paso 5.2 — Limpiar el token de la BBDD
-
-1. Vuelve a **Ajustes → MantisBT** en WP Admin.
-2. Verás un aviso: *"Token duplicado. RC_MANTIS_TOKEN está definida en wp-config.php..."*.
-3. **Vacía** el campo "API Token" en el formulario y guarda. Ahora ya no queda copia en claro en la BBDD.
-
-📸 **Captura 5.1** → `05-config/01_wp_config_constantes.png` *(sin mostrar el token real — usa `••••`)*.
-📸 **Captura 5.2** → `05-config/02_aviso_token_duplicado.png`
-
-### Paso 5.3 — Re-verificar conexión
-
-Pulsa **Verificar conexión con MantisBT** otra vez. Debe seguir respondiendo OK, ahora usando la constante en lugar del valor de la BBDD.
-
-> **Criterio de hecho:** el plugin sigue funcionando aunque el campo del formulario esté vacío, porque las constantes tienen prioridad (`rc_mantis_get_token()` en `wp-config.php` > `wp_options`).
+📸 **Captura 5.2** → `05-config/01_wp_config_constantes.png`
 
 ---
 
 ## Módulo 6 — Formulario de contacto AJAX
 
-> **Objetivo:** un visitante envía el formulario en `/contacto` y se crea un ticket en MantisBT con sus datos.
+> **Objetivo:** Gestionar el envío asíncrono de tickets técnicos de forma segura aplicando técnicas de sanitización y rate-limiting en base a transitorios de WordPress.
 
-### Paso 6.1 — Insertar el formulario en la página
+El formulario de contacto integrado en el template de la landing (`page-contacto.php`) utiliza la API AJAX de WordPress para canalizar las solicitudes al handler seguro de `functions.php`.
 
-El tema ya inyecta el formulario en `front-page.php`. Para la página `/contacto` tienes dos opciones:
+### Esquema de Seguridad del Envío de Tickets
 
-**Opción A — Página dedicada:** edita la página **Contacto** y pega en el editor de bloques (modo HTML) el snippet siguiente:
-
-```html
-<form id="rc-contact-form" method="post" class="rc-form">
-  <label>Nombre <input type="text" name="name" required></label>
-  <label>Email <input type="email" name="email" required></label>
-  <label>Tipo
-    <select name="type">
-      <option value="soporte">Soporte técnico</option>
-      <option value="bug">Reporte de bug</option>
-      <option value="colaboracion">Colaboración</option>
-      <option value="licencia">Licencia</option>
-      <option value="otro">Otro</option>
-    </select>
-  </label>
-  <label>Mensaje <textarea name="message" required></textarea></label>
-  <input type="hidden" name="action" value="rc_contact_submit">
-  <?php wp_nonce_field( 'rc_contact', '_rc_nonce' ); ?>
-  <button type="submit">Enviar</button>
-</form>
-```
-
-**Opción B — Usar el del landing:** si el formulario del `front-page.php` te basta, deja `/contacto` con un enlace anchor a `/#contacto`.
-
-### Paso 6.2 — Verificar el handler AJAX
-
-El `functions.php` del tema ya registra el handler `rc_contact_submit`. Confírmalo:
-
-```powershell
-Select-String -Path "<LocalSites>\resolvecore-dev\app\public\wp-content\themes\resolvecore-theme\functions.php" `
-  -Pattern "rc_contact_submit"
-```
-
-Debes ver al menos dos coincidencias: `add_action( 'wp_ajax_nopriv_rc_contact_submit', ... )` y `function rc_contact_submit_handler()`.
-
-### Paso 6.3 — Test end-to-end manual
-
-1. Visita `https://resolvecore-dev.local/contacto` *(o `/#contacto` si usas Opción B)*.
-2. Rellena el formulario con datos ficticios:
-   - **Nombre:** `Test Manual`
-   - **Email:** `test@example.org`
-   - **Tipo:** `soporte`
-   - **Mensaje:** `Prueba de tutorial — ignorar.`
-3. Envía. Debe mostrarse el mensaje de éxito del tema.
-4. Abre MantisBT → **Ver incidencias**. El ticket nuevo debe aparecer con:
-   - **Resumen:** `[ResolveCore] Soporte — Test Manual`
-   - **Categoría:** `Soporte técnico`
-   - **Prioridad:** `high`
-   - **Descripción:** el cuerpo formateado con Markdown.
+| Protección | Implementación Técnica | Respuesta del Servidor |
+|------------|------------------------|-------------------------|
+| **CSRF** | Inyección de token nonce (`wp_nonce_field`) y validación rigurosa con `check_ajax_referer`. | Retorna HTTP `403 Forbidden` en caso de fallo de firma. |
+| **Rate Limiting** | Monitorización de dirección IP utilizando `Transients` de WordPress. Máximo de 5 envíos por hora por IP. | Retorna HTTP `429 Too Many Requests` si excede el umbral. |
+| **Inyección SQL / XSS** | Desinfección completa con `sanitize_text_field` e `is_email` para campos de texto, y `sanitize_textarea_field` para el cuerpo del mensaje. | Almacena y procesa solo datos limpios. |
 
 📸 **Captura 6.1** → `06-formulario/01_formulario_enviado.png`
 📸 **Captura 6.2** → `06-formulario/02_ticket_creado_mantis.png`
-
-### Paso 6.4 — Comprobar rate limiting y validación
-
-El tema implementa rate limiting (ver `functions.php`). Envía 6 mensajes seguidos: el 6º debe rechazarse con HTTP 429. Documenta esa captura — el tribunal valora especialmente las protecciones de seguridad.
-
 📸 **Captura 6.3** → `06-formulario/03_rate_limit_429.png`
-
-> **Criterio de hecho:** un envío válido genera ticket, un exceso de envíos devuelve 429, un envío sin nonce devuelve 403.
 
 ---
 
 ## Módulo 7 — Backup y despliegue
 
-> **Objetivo:** copia de seguridad reproducible y procedimiento de subida a producción (WordPress.com Business o VPS).
+> **Objetivo:** Respaldar la plataforma y definir los mecanismos de migración de datos hacia el entorno de producción real.
 
-### Paso 7.1 — Backup local con UpdraftPlus
+### Paso 7.1 — Backup automatizado en caliente (WP-CLI)
 
-1. **Plugins → Añadir nuevo** → busca `UpdraftPlus`. Instala y activa.
-2. **Ajustes → UpdraftPlus → Realizar copia de seguridad ahora**.
-3. Marca **Incluir base de datos** + **Incluir archivos**. Pulsa **Comenzar**.
-4. Cuando termine, descarga los 5 archivos (`db.gz`, `plugins.zip`, `themes.zip`, `uploads.zip`, `others.zip`) a `docs/capturas/tutorial-wordpress/07-backup/`.
+Ejecuta las tareas periódicas de respaldo directamente desde terminal, exportando la base de datos estructural y empaquetando el contenido cargado por los usuarios de forma nativa:
+
+```bash
+# Exportar base de datos estructural de WordPress con fecha
+wp db export backup-$(date +%F).sql
+
+# Empaquetar el directorio wp-content al completo
+tar -czvf wp-content-$(date +%F).tar.gz wp-content/
+```
 
 📸 **Captura 7.1** → `07-backup/01_updraft_backup_ok.png`
 
-### Paso 7.2 — Backup manual (independiente del plugin)
+### Paso 7.2 — Despliegue en VPS de Producción con Nginx y Let's Encrypt
 
-Desde la carpeta del sitio:
+Para el entorno real en un VPS Ubuntu, copiamos los archivos a través de canales seguros y configuramos el backend web:
 
-```powershell
-# Exportar BBDD (LocalWP incluye wp-cli)
-wp db export backup-$(Get-Date -Format yyyy-MM-dd).sql
-
-# Comprimir wp-content
-Compress-Archive -Path "wp-content" `
-  -DestinationPath "wp-content-$(Get-Date -Format yyyy-MM-dd).zip"
-```
-
-Sube ambos archivos a Google Drive del proyecto (o equivalente).
-
-### Paso 7.3 — Despliegue a producción
-
-Hay dos rutas según lo que decidas con el tutor (ver `docs/informe-tutor-estado-proyecto.md` § preguntas pendientes):
-
-**Ruta A — WordPress.com Business:**
-
-1. Login en wordpress.com con la cuenta del proyecto.
-2. **My site → Plugins → Upload plugin** → sube `rc-mantisbt.zip`.
-3. **Appearance → Themes → Upload theme** → sube `resolvecore-theme.zip`.
-4. Configura las constantes `RC_MANTIS_*` desde **My site → Hosting → Configuration**.
-5. Repite los pasos del Módulo 3 (páginas y menús).
-
-**Ruta B — VPS Linux (nginx + PHP-FPM + MariaDB):**
-
-1. Instala WordPress según `docs/entornos.md`.
-2. Copia tema y plugin vía SFTP:
+1. Transfiere el tema y el plugin al servidor web de destino:
    ```bash
    scp -r wordpress/resolvecore-theme usuario@vps:/var/www/resolvecore/wp-content/themes/
    scp -r wordpress/plugins/rc-mantisbt usuario@vps:/var/www/resolvecore/wp-content/plugins/
    ```
-3. Edita `/var/www/resolvecore/wp-config.php` y añade las constantes del Módulo 5.
-4. Activa tema y plugin desde el admin.
-5. Configura SSL con `certbot --nginx`.
+2. Configura los hosts virtuales en Nginx (`/etc/nginx/sites-available/resolvecore`) y asegura el tráfico habilitando certificados SSL/TLS gratuitos mediante `certbot`:
+   ```bash
+   sudo certbot --nginx -d resolvecore.com -d www.resolvecore.com
+   ```
 
 📸 **Captura 7.2** → `07-backup/02_produccion_home.png`
-
-> **Criterio de hecho:** la web está accesible públicamente y el formulario crea tickets en el MantisBT de producción.
 
 ---
 
 ## Checklist final
 
-Marca cada casilla con captura PNG asociada:
+Marca cada casilla del checklist de defensa antes de la presentación:
 
-- [ ] LocalWP funcionando — `01-localwp/03_localwp_wp_admin.png`
-- [ ] Tema activado — `02-tema/01_tema_activado.png`
-- [ ] Home con landing oscuro — `02-tema/02_home_landing.png`
-- [ ] Cuatro páginas creadas — `03-paginas/01_pagina_docs.png`
-- [ ] Menús principal + footer — `03-paginas/02_menus_configurados.png`
-- [ ] Plugin activo y conectado — `04-plugin/03_test_conexion_ok.png`
-- [ ] Token movido a `wp-config.php` — `05-config/01_wp_config_constantes.png`
-- [ ] Aviso de token duplicado mostrado — `05-config/02_aviso_token_duplicado.png`
-- [ ] Ticket creado desde formulario — `06-formulario/02_ticket_creado_mantis.png`
-- [ ] Rate limit 429 disparado — `06-formulario/03_rate_limit_429.png`
-- [ ] Backup UpdraftPlus generado — `07-backup/01_updraft_backup_ok.png`
-- [ ] Home pública accesible — `07-backup/02_produccion_home.png`
+- [ ] Entorno local WordPress levantado e instalado.
+- [ ] Tema `resolvecore-theme` activado en el CMS.
+- [ ] Landing page cargando correctamente.
+- [ ] Enrutamiento y creación de páginas (`docs`, `changelog`, `contacto`) comprobado.
+- [ ] Menús y asignación de ubicaciones de menús en el tema correctos.
+- [ ] Contenedores de MantisBT activos y con el API REST habilitado.
+- [ ] Constantes del token y URL movidas exitosamente a `wp-config.php`.
+- [ ] Validación de la persistencia: base de datos sin rastros del token de MantisBT.
+- [ ] Incidencias creadas con éxito tras envíos correctos del formulario AJAX.
+- [ ] Protección contra spam y rate limit (HTTP 429) verificado y funcionando.
+- [ ] Respaldos creados y verificados en formato tarball.
 
 ---
 
@@ -468,20 +405,22 @@ Marca cada casilla con captura PNG asociada:
 
 | Síntoma | Causa probable | Solución |
 |---------|----------------|----------|
-| "Plantilla Docs no aparece" en el desplegable | Tema inactivo o cache de WordPress | Apariencia → Temas → reactivar; vaciar caches |
-| Verificar conexión devuelve `403` | Token mal copiado o expirado | Regenerar token en MantisBT y volver a pegar |
-| Verificar conexión devuelve `404` | URL incorrecta (falta `/api/rest/`) | El plugin añade `/api/rest/` solo; usa la URL base **sin** ese sufijo |
-| Verificar conexión devuelve `cURL error 6` | DNS / VPS apagado / firewall | `ping mantis.resolvecore.com`; abrir puerto 443 |
-| Formulario devuelve `400 invalid nonce` | Página cacheada con nonce viejo | Limpiar cache (WP Super Cache, LiteSpeed); recargar con Ctrl+F5 |
-| Formulario devuelve `429` justo en el primer envío | Rate limit demasiado estricto | Revisar `RC_RATE_LIMIT` en `functions.php` (default: 5/hora/IP) |
-| Ticket creado pero sin descripción | Caracteres no UTF-8 en el textarea | El plugin fuerza UTF-8 a partir de v1.0.0; actualizar plugin |
+| `libaio.so.1 not found` | Falta la biblioteca asíncrona de E/S del sistema. | Instalar la librería mediante `sudo apt install libaio1`. |
+| `libncurses.so.5 not found` | Falta la librería heredada de terminal. | Instalar la versión mediante `sudo apt install libncurses5`. |
+| `GLIBC_2.3x not found` | Ubuntu o Debian desactualizados para el binario MySQL. | Actualizar el sistema a Ubuntu 22.04 LTS o superior. |
+| `wp: orden no encontrada` | WP-CLI no está instalado en el PATH global o el alias está mal configurado. | Instalar `wp-cli.phar` y registrar el alias correspondiente en `~/.bashrc`. |
+| `Error establishing DB` | Socket incorrecto o puerto cerrado en LocalWP. | Buscar la ruta del socket de Local y reconfigurar DB_HOST: `wp config set DB_HOST 'localhost:<ruta>/mysqld.sock'`. |
+| `MantisBT API 403` | Petición REST rechazada por deshabilitar la directiva REST. | Habilitar la directiva añadiendo `$g_webservice_rest_enabled = ON;` al archivo `config_inc.php`. |
+| `API token not found` | Token API no válido, caducado o mal referenciado. | Regenerar el token en el panel de MantisBT y actualizar la constante en `wp-config.php`. |
+| `Charset unknown` | Incompatibilidad de set de caracteres con MySQL 8.0 en Mantis. | Utilizar contenedores con motor MySQL 5.7 o MariaDB 10.6. |
+| `DNS resolution failed` | El contenedor de docker carece de resolución de red externa. | Añadir directivas de red explícitas (`networks`) en el `docker-compose.yml`. |
 
 ---
 
 ## Referencias
 
-- Stack tecnológico justificado: [`docs/stack-tecnologico.md`](stack-tecnologico.md)
-- Integración detallada con MantisBT: [`docs/mantis-integration.md`](mantis-integration.md)
-- Esquema de datos del diagnóstico: [`docs/schema-diagnostico.md`](schema-diagnostico.md)
-- Entornos dev / prod / backup: [`docs/entornos.md`](entornos.md)
-- Defensa TFG (índice maestro): [`docs/defensa-tfg.md`](defensa-tfg.md)
+* **Stack tecnológico justificado:** [`docs/stack-tecnologico.md`](stack-tecnologico.md)
+* **Integración detallada con MantisBT:** [`docs/mantis-integration.md`](mantis-integration.md)
+* **Esquema de datos de diagnóstico:** [`docs/schema-diagnostico.md`](schema-diagnostico.md)
+* **Entornos dev / prod / backup:** [`docs/entornos.md`](entornos.md)
+* **Defensa TFG (índice maestro):** [`docs/defensa-tfg.md`](defensa-tfg.md)

@@ -1,0 +1,27 @@
+version: '3'
+services:
+  mantisbt:
+    image: vimagick/mantisbt
+    ports:
+      - "8989:80"
+    depends_on:
+      - db
+    networks:
+      - mantis_net
+    restart: unless-stopped
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mantis
+      MYSQL_USER: mantis
+      MYSQL_PASSWORD: mantis
+    volumes:
+      - mantis_db:/var/lib/mysql
+    networks:
+      - mantis_net
+    restart: unless-stopped
+networks:
+  mantis_net:
+volumes:
+  mantis_db:
