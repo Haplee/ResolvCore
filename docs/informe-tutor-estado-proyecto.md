@@ -145,28 +145,39 @@ Script de instalación: `mantisbt/plugins/install.sh`
 
 - `docs/defensa-tfg.md` — documento maestro de defensa con FAQs del tribunal.
 - `docs/mantis-integration.md` — guía completa de integración WordPress ↔ MantisBT.
-- `docs/stack-tecnologico.md` — justificación técnica de WordPress Business, MantisBT, Shodan y servicios.
+- `docs/stack-tecnologico.md` — justificación técnica de WordPress Business, MantisBT, Shodan y servicios (ampliada semana 16-20 mayo).
 - `docs/servicios-adicionales.md` — despliegue por imágenes, clonación y congelación justificados.
 - `docs/entornos.md` — separación de Dev (LocalWP) y Prod (WordPress.com + VPS) y políticas de Backup.
+- `docs/arquitectura-scripting.md` — diagrama de módulos: diagnóstico → JSON → informe HTML → PDF.
+
+### 3.8 Mejoras semana 16–20 mayo ✅
+
+**Scripts (seguridad y corrección):**
+- Fix S4: inyección JSON segura en informes HTML. El JSON ya no se inyecta como JS literal (`const RAW = ...`) sino dentro de `<script type="application/json">` y se parsea con `JSON.parse()`. Evita rotura del HTML si el JSON contiene `</script>`.
+- `optimizacion.sh` v3.2.0: fix crítico — `--dry-run` ahora respeta todas las fases (cache drop, log truncate, sysctl, thermald). Antes ejecutaba cambios reales aunque se pasase `--dry-run`.
+- `setup-tecnico-linux.sh`: reglas udev ADB corregidas — `ATTR{idVendor}=="*"` es sintaxis inválida en udev; sustituido por lista de 13 vendor IDs Android oficiales de Google.
+- `diagnostico.ps1` v4.1.0: conteo real de apps instaladas sin capar a 50 (se exportan 50 pero `cantidad` refleja el total real). Firewall muestra perfiles activos/total correctamente.
+
+**WordPress:**
+- Nuevas páginas: contacto, docs, changelog con layout responsive completo.
+- CSS: header sticky, nav, footer, layout docs/changelog corregido para no salirse del sidebar.
 
 ---
 
 ## 4. Lo que falta implementar
 
-### 4.1 Despliegue en servidor (BLOQUEANTE) 🔴
+### 4.1 Despliegue en servidor 🟡 (parcialmente resuelto)
 
-**Problema:** Todo el código está desarrollado localmente en Windows 11. Para que el sistema funcione de extremo a extremo (formulario web → ticket MantisBT), necesito un servidor Linux con:
-- Nginx + PHP-FPM 8.2
-- MariaDB
-- WordPress instalado
-- MantisBT instalado en el mismo dominio
+**MantisBT local operativo vía Docker:**
+- `mantisbt/docker-compose.yml` levanta MantisBT 2.27 LTS + MariaDB en un solo comando.
+- `mantisbt/config/config_inc.php` configurado con BD local, SMTP y API token.
+- Accesible en `http://localhost:8989` durante la demo local.
 
-**Opciones que estoy evaluando:**
-1. **Oracle Cloud Free Tier** — VM con 4 OCPU + 24 GB RAM, gratis indefinidamente
-2. **WSL (Windows Subsystem for Linux)** — local, sin IP pública, no accesible para el tribunal
-3. **Hosting compartido** — limitado, sin acceso SSH completo
+**Pendiente para producción:**
+- WordPress en producción: WordPress.com (plan Business) — URL pública ya operativa.
+- MantisBT en producción: requiere VPS o subdominio propio (`mantis.resolvecore.com`).
 
-**Pregunta para el tutor:** ¿Qué opción recomienda para el TFG? ¿Es suficiente con una demo local en WSL o es necesario que el tribunal pueda acceder a una URL pública?
+**Pregunta para el tutor:** ¿Es suficiente MantisBT local Docker para la demo de defensa o se requiere URL pública accesible por el tribunal?
 
 ### 4.2 Generación automática de informes PDF 🟡
 
@@ -253,15 +264,15 @@ ResolvCore/
 
 ---
 
-## 7. Timeline propuesto (16 días restantes)
+## 7. Timeline (16 días hasta entrega)
 
-| Semana | Actividad |
-|--------|-----------|
-| 17–23 mayo | MantisBT funcional + Cierre de documentación + Generación PDF en proceso |
-| 24–30 mayo | Facturación básica · Pulido general · Tests de flujo completo y ensayos de defensa |
-| 31 mayo – 4 jun | Memoria TFG definitiva escrita · Presentación / demo preparada |
-| 5 junio | **Entrega final TFG** |
+| Período | Actividad | Estado |
+|---------|-----------|--------|
+| 16–21 mayo | MantisBT Docker · Documentación sprint · Web actualizada · Justificaciones técnicas | ✅ Completado |
+| 22–28 mayo | Generación PDF (DomPDF/wkhtmltopdf) · Tests flujo completo · Pulido general | 🔄 Próximo |
+| 29 mayo – 4 jun | Memoria TFG definitiva · Ensayos de defensa · Demo preparada | ⏳ Pendiente |
+| 5 junio | **Entrega final TFG** | — |
 
 ---
 
-*Documento generado automáticamente el 06/05/2026 para revisión del tutor.*
+*Última actualización: 20/05/2026 — sprint cierre semana viernes 16 → miércoles 21 mayo.*
