@@ -179,3 +179,66 @@ a:hover { text-decoration: underline; }
   .rc-docs-sidebar, .rc-cl-sidebar { display: none; }
   .rc-docs-main, .rc-cl-main { margin-left: 0; padding: 1.5rem; }
 }
+
+/* ── Fixes globales ───── */
+.rc-header { width:100%; display:block; position:sticky; top:0; z-index:200; background:rgba(10,12,16,.95); border-bottom:1px solid var(--rc-border); }
+.rc-nav { display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; }
+.rc-nav__links { display:flex; gap:1.5rem; list-style:none; }
+.rc-nav__links li::marker { display:none; }
+
+.rc-docs-main,
+.rc-cl-main {
+  margin-left: 240px !important;
+  max-width: calc(100vw - 280px) !important;
+  width: calc(100vw - 280px) !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+.rc-code-block { overflow-x: auto !important; max-width: 100% !important; }
+.rc-docs-p, .rc-cl-subtitle, .rc-timeline { max-width: 100% !important; }
+
+/* ── Footer ───── */
+.rc-footer {
+  border-top: 1px solid var(--rc-border);
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-size: .85rem;
+  color: var(--rc-muted);
+}
+.rc-footer-links { list-style: none; display: flex; gap: 1.5rem; }
+.rc-footer-links li::marker { display: none; }
+.rc-footer-links a { color: var(--rc-accent); font-size: .85rem; }
+
+/* ── Centrar contenido front-page ───── */
+.rc-hero {
+  justify-content: center !important;
+}
+.rc-hero-content {
+  margin: 0 auto !important;
+  text-align: center !important;
+}
+.rc-hero-actions {
+  justify-content: center !important;
+}
+.rc-hero-stats {
+  justify-content: center !important;
+}
+section[style] > div,
+.rc-plat-inner,
+.rc-services-grid,
+.rc-demo-layout,
+.rc-contact-layout {
+  max-width: 1100px;
+  margin: 0 auto !important;
+}
+
+/* ── Centrar barra plataformas ───── */
+.rc-plat-inner {
+  justify-content: center !important;
+  padding: 0 2rem !important;
+}
