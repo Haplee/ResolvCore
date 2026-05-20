@@ -30,6 +30,8 @@
 | [entornos.md](tecnica/entornos.md) | Entornos dev (LocalWP) y prod (WordPress.com + VPS) + política de backup |
 | [flujo-sistema.md](tecnica/flujo-sistema.md) | Diagrama del flujo completo: formulario → ticket → diagnóstico → informe |
 | [mantis-integration.md](tecnica/mantis-integration.md) | Integración WordPress ↔ MantisBT vía REST API |
+| [manual-usuario-mantis.md](tecnica/manual-usuario-mantis.md) | Manual técnico de configuración, BD, workflow y permisos de MantisBT |
+| [despliegue-ionos.md](tecnica/despliegue-ionos.md) | Despliegue producción en VPS Ionos Linux S: WP + Mantis + Let's Encrypt en mismo VPS (2,50 €/mes) |
 | [servicios-adicionales.md](tecnica/servicios-adicionales.md) | Clonación, congelación, acceso remoto, cifrado, despliegue por imágenes |
 | [tutorial-wordpress-manual.md](tecnica/tutorial-wordpress-manual.md) | Tutorial de instalación y configuración manual de WordPress |
 | [so-especializado.md](tecnica/so-especializado.md) | Sistemas operativos especializados y su relación con ResolveCore |
