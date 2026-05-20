@@ -183,8 +183,9 @@
     ============================================================ */
     .rc-hero {
       position: relative; min-height: 100vh;
-      display: flex; align-items: center;
+      display: flex; align-items: center; justify-content: center;
       padding: 80px 2.5rem 0; overflow: hidden;
+      text-align: center;
     }
     .rc-hero-grid {
       position: absolute; inset: 0;
@@ -226,8 +227,13 @@
       100% { transform: translateY(-10vh) translateX(30px); opacity: 0; }
     }
     .rc-hero-content {
-      position: relative; max-width: 750px; z-index: 2;
+      position: relative; max-width: 850px; z-index: 2;
+      margin: 0 auto; text-align: center;
     }
+    .rc-hero-sub { margin-left: auto; margin-right: auto; }
+    .rc-hero-actions { justify-content: center; }
+    .rc-hero-stats { justify-content: center; }
+    .rc-badge { margin-left: auto; margin-right: auto; }
     .rc-badge {
       display: inline-flex; align-items: center; gap: 8px;
       font-family: var(--rc-mono); font-size: 11px; color: var(--rc-accent);
@@ -276,9 +282,18 @@
     }
     .rc-btn-outline:hover { border-color: var(--rc-accent); color: var(--rc-accent); }
     .rc-hero-stats {
-      margin-top: 4rem; display: flex; gap: 3rem;
+      margin-top: 3rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem 2.5rem;
       padding-top: 2rem; border-top: 1px solid var(--rc-border);
       animation: rcFadeUp .8s .4s ease both;
+    }
+    @media (max-width: 768px) {
+      .rc-hero-stats { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+    }
+    @media (max-width: 380px) {
+      .rc-hero-stats { grid-template-columns: 1fr; gap: 1rem; }
     }
     .rc-stat-num {
       font-family: var(--rc-mono); font-size: 1.9rem;
@@ -286,18 +301,34 @@
     }
     .rc-stat-label { font-size: 12px; color: var(--rc-muted); margin-top: 3px; }
     .rc-hero-scroll {
-      position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      font-family: var(--rc-mono); font-size: 10px; color: var(--rc-muted);
-      letter-spacing: .1em; animation: rcFadeUp .8s .6s ease both;
+      position: absolute; bottom: 2.5rem; left: 2rem;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-family: var(--rc-mono); font-size: 9px; color: var(--rc-muted);
+      letter-spacing: .14em; animation: rcFadeUp .8s .6s ease both;
+      writing-mode: vertical-rl; transform: rotate(180deg);
     }
-    .rc-hero-scroll-line {
-      width: 1px; height: 40px; background: linear-gradient(to bottom, var(--rc-accent), transparent);
-      animation: rcScrollLine 2s ease-in-out infinite;
+    .rc-hero-scroll-mouse {
+      width: 22px; height: 36px; border: 1.5px solid var(--rc-muted);
+      border-radius: 12px; display: flex; justify-content: center;
+      padding-top: 6px; box-sizing: border-box; writing-mode: horizontal-tb;
+      transform: rotate(180deg);
+      transition: border-color .25s;
     }
-    @keyframes rcScrollLine {
-      0%, 100% { transform: scaleY(1); opacity: 1; }
-      50% { transform: scaleY(0.5); opacity: 0.4; }
+    .rc-hero-scroll:hover .rc-hero-scroll-mouse { border-color: var(--rc-accent); }
+    .rc-hero-scroll-wheel {
+      width: 2px; height: 6px; background: var(--rc-accent); border-radius: 2px;
+      animation: rcMouseWheel 1.8s ease-in-out infinite;
+    }
+    @keyframes rcMouseWheel {
+      0%   { transform: translateY(0);   opacity: 1;  }
+      50%  { transform: translateY(8px); opacity: .35; }
+      100% { transform: translateY(0);   opacity: 1;  }
+    }
+    @media (max-width: 768px) {
+      .rc-hero-scroll { left: 1rem; bottom: 1.5rem; font-size: 8px; }
+    }
+    @media (max-width: 480px) {
+      .rc-hero-scroll { display: none; }
     }
 
     /* ============================================================
@@ -491,6 +522,12 @@
     .price-period { font-size: 12px; color: var(--rc-muted); }
     .rc-pricing-divider { height: 1px; background: var(--rc-border); margin: 1.25rem 0; }
     .rc-pricing-feature { font-size: 13px; color: var(--rc-muted); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+    .rc-beta-tag {
+      display: inline-block; padding: 1px 6px; margin-left: 4px;
+      font-family: var(--rc-mono); font-size: 9px; letter-spacing: .1em;
+      background: rgba(0,153,255,.18); color: var(--rc-accent2);
+      border: 1px solid rgba(0,153,255,.35); border-radius: 2px;
+    }
     .pf-check { color: var(--rc-accent); } .pf-none { color: var(--rc-border2); }
 
     /* ============================================================
@@ -614,7 +651,6 @@
 
     @media (max-width: 768px) {
       .rc-demo-layout, .rc-contact-layout { grid-template-columns: 1fr; }
-      .rc-hero-stats { gap: 1.5rem; flex-wrap: wrap; }
       .rc-nav-links { display: none; }
       .rc-nav-cta { display: none; }
       .rc-hamburger { display: flex; }
@@ -623,6 +659,38 @@
       .rc-flow { justify-content: center; gap: .25rem; }
       .rc-flow-step { min-width: 90px; flex: 0 0 calc(33% - .5rem); }
       .rc-flow-arrow { display: none; }
+      .rc-section { padding: 4rem 1.5rem; }
+      .rc-nav { padding: 0 1.25rem; }
+      .rc-hero { padding: 80px 1.5rem 2rem; }
+      .rc-hero h1 { font-size: clamp(2rem, 8vw, 3rem); }
+      .rc-hero-sub { font-size: 1rem; }
+      .rc-hero-actions { flex-direction: column; align-items: stretch; gap: .75rem; }
+      .rc-hero-actions a { text-align: center; width: 100%; padding: 14px; }
+      .rc-services-grid { grid-template-columns: 1fr; }
+      .rc-pricing-grid { grid-template-columns: 1fr; }
+      .rc-vuln-row { flex-wrap: wrap; }
+      .rc-vuln-name { flex: 1 0 100%; order: 2; margin: 4px 0; }
+      .rc-quick-channels { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .rc-section { padding: 3rem 1rem; }
+      .rc-hero { padding: 72px 1rem 1.5rem; }
+      .rc-hero h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); line-height: 1.15; }
+      .rc-badge { font-size: 10px; padding: 4px 10px; }
+      .rc-section-title { font-size: 1.5rem; }
+      .rc-platforms { padding: 1rem; }
+      .rc-plat-items { gap: 1rem; }
+      .rc-service-card { padding: 1.5rem 1.25rem; }
+      .rc-terminal { font-size: 11px; padding: 1rem; min-height: 240px; }
+      .rc-faq-q { font-size: 13px; padding: 1rem; }
+      .rc-form-input, .rc-form-select, .rc-form-textarea { font-size: 16px; } /* iOS no zoom on focus */
+    }
+    /* Touch tap targets ≥ 44px (WCAG) */
+    @media (hover: none) {
+      .rc-btn-primary, .rc-btn-outline, .rc-nav-cta, .rc-form-submit {
+        min-height: 44px;
+      }
+      .rc-nav-links a, .rc-footer-col a { padding: 8px 0; display: inline-block; }
     }
   </style>
 </head>
@@ -652,6 +720,7 @@
     <li><a href="#servicios">Servicios</a></li>
     <li><a href="#como-funciona">Proceso</a></li>
     <li><a href="#precios">Precios</a></li>
+    <li><a href="#faq">FAQ</a></li>
     <li><a href="#contacto">Contacto</a></li>
     <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Docs</a></li>
   </ul>
@@ -667,6 +736,7 @@
   <a href="#servicios">Servicios</a>
   <a href="#como-funciona">Proceso</a>
   <a href="#precios">Precios</a>
+  <a href="#faq">FAQ</a>
   <a href="#contacto">Contacto</a>
   <a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Docs</a>
 </div>
@@ -692,14 +762,15 @@
       <a href="#servicios" class="rc-btn-outline">VER SERVICIOS</a>
     </div>
     <div class="rc-hero-stats">
-      <div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Tiempo de respuesta</div></div>
-      <div><div class="rc-stat-num" data-count="500">0</div><div class="rc-stat-label">CVEs en base de datos</div></div>
-      <div><div class="rc-stat-num">Windows · Linux · Android</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+      <div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
+      <div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+      <div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
+      <div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
     </div>
   </div>
-  <div class="rc-hero-scroll">
+  <div class="rc-hero-scroll" aria-hidden="true">
+    <div class="rc-hero-scroll-mouse"><div class="rc-hero-scroll-wheel"></div></div>
     <span>SCROLL</span>
-    <div class="rc-hero-scroll-line"></div>
   </div>
 </section>
 
@@ -729,7 +800,7 @@
       ['◈','02','Proyección de vida útil del hardware','Algoritmos predictivos que analizan el estado actual de tus componentes y estiman cuándo podrían fallar, con antelación.',['Temperatura y desgaste de disco (S.M.A.R.T)','Historial de uso de batería','Alertas preventivas configurables']],
       ['⬡','03','Análisis de vulnerabilidades del SO','Escanea el sistema operativo contra una base de datos de CVEs actualizada, detecta parches pendientes y aplica reparaciones automáticas.',['Base de datos de vulnerabilidades propia','Reparación con un clic','Compatible con políticas empresariales']],
       ['◇','04','Optimización del sistema','Limpieza profunda, desfragmentación inteligente, gestión de servicios de inicio y liberación de espacio en disco de forma segura.',['Limpieza de archivos temporales y caché','Gestión de programas de inicio','Modo seguro de limpieza']],
-      ['⬡','05','Panel multiplataforma','Gestiona Windows, Linux y Android desde una única interfaz con historial de análisis y seguimiento continuo del estado del equipo.',['Panel unificado multi-dispositivo','Histórico de diagnósticos','Exportación de reportes']],
+      ['⬡','05','Panel multiplataforma (Beta)','Dashboard centralizado en wp-admin que recibe el JSON de diagnóstico de cada agente (Win/Linux/Android) vía REST autenticado, calcula un score 0-100 de salud y agrupa los hosts por cliente y SO.',['Endpoint REST <code>/wp-json/rc/v1/fleet</code>','Score salud + filtros por SO','Listado ordenable y exportable']],
       ['◈','06','Actualizaciones automáticas','Mantén todos tus sistemas al día con actualizaciones silenciosas y programadas con control total y rollback instantáneo.',['Actualizaciones programadas en silencio','Rollback instantáneo ante fallos','Compatible con entornos sin conexión']],
     ];
     foreach ($services as $s): ?>
@@ -867,38 +938,6 @@
   </div>
 </section>
 
-<hr class="rc-section-divider">
-
-<!-- ==================== CTA ==================== -->
-<section class="rc-section" id="soporte" aria-label="Empezar">
-  <div class="rc-cta-band rc-reveal">
-    <div>
-      <div class="rc-section-label">// EMPEZAR</div>
-      <h2 class="rc-section-title" style="margin-bottom:.75rem">¿Tienes un problema con tu equipo?</h2>
-      <p style="color:var(--rc-muted);max-width:480px;margin-bottom:2rem;line-height:1.7">
-        Cuéntanos qué ocurre. Un técnico analizará tu sistema en remoto, aplicará la solución y te entregará un informe técnico completo.
-      </p>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap">
-        <a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
-        <a href="#precios" class="rc-btn-outline">VER PLANES</a>
-      </div>
-    </div>
-    <div class="rc-cta-band-stats">
-      <div class="rc-cta-stat">
-        <div class="rc-stat-num">&lt;2h</div>
-        <div class="rc-stat-label">Tiempo de respuesta</div>
-      </div>
-      <div class="rc-cta-stat">
-        <div class="rc-stat-num">500+</div>
-        <div class="rc-stat-label">CVEs analizados</div>
-      </div>
-      <div class="rc-cta-stat">
-        <div class="rc-stat-num">3</div>
-        <div class="rc-stat-label">Plataformas</div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <hr class="rc-section-divider">
 
@@ -920,7 +959,7 @@
       <div class="rc-pricing-feature"><span class="pf-none">─</span> Análisis de vulnerabilidades</div>
       <div class="rc-pricing-feature"><span class="pf-none">─</span> Proyección de hardware</div>
       <div class="rc-pricing-feature"><span class="pf-none">─</span> Panel multiplataforma</div>
-      <div style="margin-top:1.5rem"><a href="#descargar" class="rc-btn-outline" style="width:100%;justify-content:center;font-size:11px;padding:10px">DESCARGAR GRATIS</a></div>
+      <div style="margin-top:1.5rem"><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer" class="rc-btn-outline" style="width:100%;justify-content:center;font-size:11px;padding:10px">DESCARGAR EN GITHUB →</a></div>
     </div>
     <div class="rc-pricing-card featured">
       <div class="rc-pricing-label">PLAN</div>
@@ -944,10 +983,98 @@
       <div class="rc-pricing-feature"><span class="pf-check">■</span> Dispositivos ilimitados</div>
       <div class="rc-pricing-feature"><span class="pf-check">■</span> Win + Linux + Android</div>
       <div class="rc-pricing-feature"><span class="pf-check">■</span> BD de vulnerabilidades offline</div>
-      <div class="rc-pricing-feature"><span class="pf-check">■</span> Panel multiplataforma</div>
+      <div class="rc-pricing-feature"><span class="pf-check">■</span> Panel multiplataforma <span class="rc-beta-tag">BETA</span></div>
       <div style="margin-top:1.5rem"><a href="#contacto" class="rc-btn-outline" style="width:100%;justify-content:center;font-size:11px;padding:10px;display:flex">CONTACTAR</a></div>
     </div>
   </div>
+</section>
+
+<hr class="rc-section-divider">
+
+<!-- ==================== FAQ ==================== -->
+<section class="rc-section" id="faq" aria-label="Preguntas frecuentes">
+  <div class="rc-reveal">
+    <div class="rc-section-label">// FAQ</div>
+    <h2 class="rc-section-title">Preguntas frecuentes</h2>
+    <p class="rc-section-desc">Lo que la gente suele preguntar antes de contratar el servicio.</p>
+  </div>
+  <div class="rc-faq rc-reveal" itemscope itemtype="https://schema.org/FAQPage">
+    <?php
+    $faqs = [
+      [
+        '¿Cómo accedéis a mi equipo?',
+        'Via AnyDesk, herramienta de acceso remoto cifrado. Tú aceptas la conexión cada sesión y puedes cortarla cuando quieras. Nunca dejamos acceso permanente.',
+      ],
+      [
+        '¿En qué sistemas operativos funciona?',
+        'Windows 10/11, Linux (Ubuntu, Debian, Arch y derivadas) y Android 10+. macOS está en roadmap.',
+      ],
+      [
+        '¿Cuánto tarda un diagnóstico?',
+        'El escaneo automatizado tarda 3–5 minutos. La sesión completa (diagnóstico + resolución + informe) ronda 30–90 min según incidencia.',
+      ],
+      [
+        '¿Qué incluye el informe PDF?',
+        'Resumen ejecutivo, incidencias detectadas, problemas solucionados, estado actual del equipo, recomendaciones y proyección de vida útil del hardware.',
+      ],
+      [
+        '¿Mis datos están seguros?',
+        'Sí. Conexión cifrada AnyDesk, scripts open-source auditables en GitHub, base de datos local en tu equipo. No subimos información personal a servidores externos.',
+      ],
+      [
+        '¿Hay garantía o devolución?',
+        'Si la incidencia no se resuelve, no se factura. Pago por servicio sin compromiso. Suscripciones cancelables en cualquier momento.',
+      ],
+      [
+        '¿Puedo ver los scripts antes de ejecutarlos?',
+        'Sí. Todo el código está en github.com/Haplee/ResolveCore bajo GPL v2. Auditable, modificable y libre.',
+      ],
+    ];
+    foreach ( $faqs as $i => $f ) :
+      $open = $i === 0 ? ' open' : '';
+    ?>
+    <details class="rc-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question"<?php echo $open; ?>>
+      <summary class="rc-faq-q" itemprop="name">
+        <span><?php echo esc_html( $f[0] ); ?></span>
+        <span class="rc-faq-icon" aria-hidden="true">+</span>
+      </summary>
+      <div class="rc-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+        <p itemprop="text"><?php echo esc_html( $f[1] ); ?></p>
+      </div>
+    </details>
+    <?php endforeach; ?>
+  </div>
+  <style>
+    .rc-faq { display: flex; flex-direction: column; gap: .5rem; max-width: 820px; margin: 0 auto; }
+    .rc-faq-item {
+      background: var(--rc-surface); border: 1px solid var(--rc-border);
+      transition: border-color .2s, background .2s;
+    }
+    .rc-faq-item[open] { border-color: rgba(0,229,160,.25); background: var(--rc-surface2); }
+    .rc-faq-q {
+      cursor: pointer; list-style: none;
+      padding: 1.1rem 1.3rem;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 1rem;
+      font-family: var(--rc-mono); font-size: 14px; font-weight: 700;
+      color: var(--rc-text);
+      transition: color .2s;
+    }
+    .rc-faq-q::-webkit-details-marker { display: none; }
+    .rc-faq-q:hover { color: var(--rc-accent); }
+    .rc-faq-icon {
+      font-family: var(--rc-mono); font-size: 18px;
+      color: var(--rc-accent); flex-shrink: 0;
+      transition: transform .25s;
+      width: 18px; text-align: center;
+    }
+    .rc-faq-item[open] .rc-faq-icon { transform: rotate(45deg); }
+    .rc-faq-a {
+      padding: 0 1.3rem 1.2rem;
+      color: var(--rc-muted); font-size: 14px; line-height: 1.7;
+    }
+    .rc-faq-a p { margin: 0; }
+  </style>
 </section>
 
 <hr class="rc-section-divider">
@@ -959,6 +1086,60 @@
     <h2 class="rc-section-title">Escríbenos</h2>
     <p class="rc-section-desc">¿Necesitas soporte técnico? Cuéntanos el problema y te respondemos en menos de 2 horas.</p>
   </div>
+
+  <!-- Canales rápidos -->
+  <div class="rc-quick-channels rc-reveal">
+    <a class="rc-channel" href="mailto:fvidalmateo@gmail.com" aria-label="Enviar email">
+      <div class="rc-channel-icon">✉</div>
+      <div class="rc-channel-body">
+        <div class="rc-channel-label">EMAIL DIRECTO</div>
+        <div class="rc-channel-val">fvidalmateo@gmail.com</div>
+      </div>
+    </a>
+    <a class="rc-channel" href="https://github.com/Haplee/ResolveCore/issues/new" target="_blank" rel="noopener noreferrer" aria-label="Abrir issue en GitHub">
+      <div class="rc-channel-icon">◈</div>
+      <div class="rc-channel-body">
+        <div class="rc-channel-label">REPORTE TÉCNICO</div>
+        <div class="rc-channel-val">GitHub Issues →</div>
+      </div>
+    </a>
+    <a class="rc-channel" href="<?php echo esc_url( home_url( '/docs/' ) ); ?>" aria-label="Consultar documentación">
+      <div class="rc-channel-icon">⬡</div>
+      <div class="rc-channel-body">
+        <div class="rc-channel-label">AUTOSERVICIO</div>
+        <div class="rc-channel-val">Docs &amp; guías →</div>
+      </div>
+    </a>
+  </div>
+  <style>
+    .rc-quick-channels {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem; margin-bottom: 2.5rem;
+    }
+    .rc-channel {
+      display: flex; align-items: center; gap: 1rem;
+      background: var(--rc-surface); border: 1px solid var(--rc-border);
+      padding: 1.1rem 1.25rem; text-decoration: none;
+      transition: border-color .2s, transform .2s, background .2s;
+    }
+    .rc-channel:hover {
+      border-color: rgba(0,229,160,.35);
+      background: var(--rc-surface2);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+    .rc-channel-icon {
+      width: 38px; height: 38px; flex-shrink: 0;
+      border: 1px solid var(--rc-border2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--rc-accent); font-size: 16px;
+    }
+    .rc-channel-label {
+      font-family: var(--rc-mono); font-size: 10px; letter-spacing: .08em;
+      color: var(--rc-muted); margin-bottom: 3px;
+    }
+    .rc-channel-val { font-size: 13px; color: var(--rc-text); font-weight: 500; }
+  </style>
   <div class="rc-contact-layout rc-reveal">
     <div class="rc-contact-info">
       <div class="rc-contact-item">
@@ -1034,30 +1215,95 @@
 
 <!-- ==================== FOOTER ==================== -->
 <div class="rc-footer-outer">
-  <footer class="rc-footer" role="contentinfo">
-    <div>
-      <div class="rc-footer-logo">
-        <picture>
-          <source srcset="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg' ); ?>" type="image/svg+xml">
-          <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png' ); ?>"
-               alt=""
-               class="rc-footer-logo-img" width="160" height="40"
-               loading="lazy" decoding="async">
-        </picture>
+  <footer class="rc-footer-pro" role="contentinfo">
+    <div class="rc-footer-grid">
+      <div class="rc-footer-brand">
+        <div class="rc-footer-logo">
+          <picture>
+            <source srcset="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg' ); ?>" type="image/svg+xml">
+            <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png' ); ?>"
+                 alt="ResolveCore"
+                 class="rc-footer-logo-img" width="160" height="40"
+                 loading="lazy" decoding="async">
+          </picture>
+        </div>
+        <p class="rc-footer-slogan">Solución a tus problemas informáticos.</p>
+        <p class="rc-footer-copy">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG ASIR</p>
       </div>
-      <div class="rc-footer-copy">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG ASIR</div>
+
+      <nav class="rc-footer-col" aria-label="Producto">
+        <div class="rc-footer-col-title">Producto</div>
+        <ul>
+          <li><a href="#servicios">Servicios</a></li>
+          <li><a href="#como-funciona">Proceso</a></li>
+          <li><a href="#precios">Precios</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <nav class="rc-footer-col" aria-label="Recursos">
+        <div class="rc-footer-col-title">Recursos</div>
+        <ul>
+          <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a></li>
+          <li><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+      </nav>
+
+      <nav class="rc-footer-col" aria-label="Legal">
+        <div class="rc-footer-col-title">Legal</div>
+        <ul>
+          <li><a href="<?php echo esc_url( home_url( '/aviso-legal/' ) ); ?>">Aviso legal</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/privacidad/' ) ); ?>">Privacidad (RGPD)</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/cookies/' ) ); ?>">Cookies</a></li>
+        </ul>
+      </nav>
     </div>
-    <nav aria-label="Enlaces de pie de página">
-      <ul class="rc-footer-links">
-        <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Docs</a></li>
-        <li><a href="#servicios">Servicios</a></li>
-        <li><a href="#precios">Precios</a></li>
-        <li><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer" aria-label="ResolveCore en GitHub (abre en pestaña nueva)">GitHub</a></li>
-        <li><a href="#contacto">Contacto</a></li>
-      </ul>
-    </nav>
-    <div class="rc-footer-slogan">Solución a tus problemas informáticos.</div>
+
+    <div class="rc-footer-bottom">
+      <span>GPL-3.0-or-later · Open Source</span>
+      <span class="rc-footer-bottom-divider" aria-hidden="true">·</span>
+      <span>Hecho en España</span>
+    </div>
   </footer>
+  <style>
+    .rc-footer-pro {
+      max-width: 1200px; margin: 0 auto;
+      padding: 3rem 2.5rem 2rem;
+      color: var(--rc-text); font-family: var(--rc-sans);
+    }
+    .rc-footer-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+      gap: 2.5rem;
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--rc-border);
+    }
+    .rc-footer-brand .rc-footer-logo-img { width: 160px; height: 40px; object-fit: contain; object-position: left center; }
+    .rc-footer-slogan { color: var(--rc-muted); font-size: 13px; margin: 1rem 0 .5rem; line-height: 1.6; max-width: 260px; }
+    .rc-footer-copy { color: var(--rc-muted); font-size: 12px; }
+    .rc-footer-col-title {
+      font-family: var(--rc-mono); font-size: 11px; letter-spacing: .12em;
+      color: var(--rc-accent); margin-bottom: 1rem; text-transform: uppercase;
+    }
+    .rc-footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    .rc-footer-col a { font-size: 13px; color: var(--rc-muted); text-decoration: none; transition: color .2s; }
+    .rc-footer-col a:hover { color: var(--rc-accent); }
+    .rc-footer-bottom {
+      padding-top: 1.5rem;
+      display: flex; gap: .75rem; flex-wrap: wrap;
+      font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted);
+      letter-spacing: .04em;
+    }
+    @media (max-width: 768px) {
+      .rc-footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+      .rc-footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      .rc-footer-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+    }
+  </style>
 </div>
 
 <!-- ==================== JAVASCRIPT ==================== -->
@@ -1320,7 +1566,9 @@ function submitForm(e) {
         if (res.data.ticket_id) {
           const link = document.createElement('a');
           link.href = '#';
-          link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;';
+          link.className = 'rc-ticket-link';
+          link.dataset.ticket = res.data.ticket_id;
+          link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;cursor:pointer;text-decoration:underline;';
           link.textContent = '[VER TICKET #' + res.data.ticket_id + ']';
           msg.appendChild(link);
         }
@@ -1342,6 +1590,356 @@ function submitForm(e) {
       btn.textContent = 'ENVIAR MENSAJE →';
     });
 }
+</script>
+
+<!-- ==================== MODAL TRACKING TICKET ==================== -->
+<div class="rc-ticket-modal" id="rc-ticket-modal" role="dialog" aria-modal="true" aria-labelledby="rc-ticket-modal-title" aria-hidden="true">
+  <div class="rc-ticket-modal-overlay" data-rc-close></div>
+  <div class="rc-ticket-modal-box">
+    <button class="rc-ticket-modal-close" aria-label="Cerrar" data-rc-close>&times;</button>
+    <div class="rc-ticket-modal-head">
+      <div class="rc-ticket-modal-label">// SEGUIMIENTO DEL TICKET</div>
+      <div class="rc-ticket-modal-title" id="rc-ticket-modal-title">Cargando…</div>
+    </div>
+    <div class="rc-ticket-modal-body" id="rc-ticket-modal-body">
+      <div class="rc-ticket-loading">
+        <div class="rc-ticket-spin"></div>
+        <span>Consultando estado en MantisBT…</span>
+      </div>
+    </div>
+    <div class="rc-ticket-modal-foot">
+      <button type="button" class="rc-ticket-refresh" id="rc-ticket-refresh">↻ Actualizar</button>
+      <span class="rc-ticket-foot-note">Estado en tiempo real desde MantisBT.</span>
+    </div>
+  </div>
+</div>
+<style>
+.rc-ticket-modal {
+  position: fixed; inset: 0; z-index: 10000;
+  display: none; align-items: center; justify-content: center;
+  padding: 1.5rem; box-sizing: border-box;
+}
+.rc-ticket-modal.open { display: flex; animation: rcFadeUp .25s ease both; }
+.rc-ticket-modal-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,.78);
+  backdrop-filter: blur(6px);
+}
+.rc-ticket-modal-box {
+  position: relative; max-width: 560px; width: 100%;
+  background: var(--rc-surface); border: 1px solid var(--rc-border2);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  max-height: 90vh; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.rc-ticket-modal-close {
+  position: absolute; top: 10px; right: 10px;
+  width: 32px; height: 32px; background: transparent;
+  border: 1px solid var(--rc-border); color: var(--rc-muted);
+  cursor: pointer; font-size: 18px; line-height: 1;
+  transition: all .2s; font-family: var(--rc-mono);
+}
+.rc-ticket-modal-close:hover { color: var(--rc-warn); border-color: var(--rc-warn); }
+.rc-ticket-modal-head {
+  padding: 1.5rem 1.75rem 1rem;
+  border-bottom: 1px solid var(--rc-border);
+}
+.rc-ticket-modal-label {
+  font-family: var(--rc-mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--rc-accent); margin-bottom: .5rem;
+}
+.rc-ticket-modal-title {
+  font-family: var(--rc-mono); font-size: 1.3rem; font-weight: 700;
+  color: var(--rc-text);
+}
+.rc-ticket-modal-body {
+  padding: 1.5rem 1.75rem; overflow-y: auto; flex: 1 1 auto;
+}
+.rc-ticket-modal-foot {
+  padding: .9rem 1.75rem; border-top: 1px solid var(--rc-border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.rc-ticket-refresh {
+  font-family: var(--rc-mono); font-size: 11px; letter-spacing: .06em;
+  background: transparent; border: 1px solid var(--rc-border2);
+  color: var(--rc-accent); padding: 6px 12px; cursor: pointer;
+  transition: all .2s;
+}
+.rc-ticket-refresh:hover { border-color: var(--rc-accent); background: rgba(0,229,160,.06); }
+.rc-ticket-foot-note {
+  font-family: var(--rc-mono); font-size: 10px; color: var(--rc-muted);
+  letter-spacing: .04em;
+}
+
+.rc-ticket-loading {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  padding: 2rem 0; color: var(--rc-muted);
+  font-family: var(--rc-mono); font-size: 12px;
+}
+.rc-ticket-spin {
+  width: 32px; height: 32px;
+  border: 2px solid var(--rc-border2); border-top-color: var(--rc-accent);
+  border-radius: 50%; animation: rcSpin 0.9s linear infinite;
+}
+@keyframes rcSpin { to { transform: rotate(360deg); } }
+
+.rc-ticket-error {
+  padding: 1rem; border: 1px solid var(--rc-warn);
+  background: rgba(255,107,53,.06); color: var(--rc-warn);
+  font-family: var(--rc-mono); font-size: 12px;
+}
+
+.rc-ticket-status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--rc-mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+  background: rgba(0,229,160,.1); color: var(--rc-accent);
+  border: 1px solid rgba(0,229,160,.3);
+}
+.rc-ticket-status-pill::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rc-accent); animation: rcPulse 1.6s ease-in-out infinite;
+}
+@keyframes rcPulse { 50% { opacity: .35; } }
+
+/* Timeline tracking — package-style */
+.rc-track {
+  position: relative; padding-left: 0; margin: 1.5rem 0 0;
+  list-style: none;
+}
+.rc-track-step {
+  position: relative; display: flex; gap: 14px;
+  padding-bottom: 1.5rem;
+}
+.rc-track-step:last-child { padding-bottom: 0; }
+.rc-track-step::before {
+  content: ''; position: absolute; left: 9px; top: 22px;
+  width: 2px; height: calc(100% - 16px);
+  background: var(--rc-border2);
+}
+.rc-track-step:last-child::before { display: none; }
+.rc-track-step.done::before { background: var(--rc-accent); }
+.rc-track-dot {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border-radius: 50%; border: 2px solid var(--rc-border2);
+  background: var(--rc-surface); margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: transparent; font-weight: 700;
+}
+.rc-track-step.done .rc-track-dot {
+  background: var(--rc-accent); border-color: var(--rc-accent); color: #000;
+}
+.rc-track-step.done .rc-track-dot::after { content: '✓'; }
+.rc-track-step.active .rc-track-dot {
+  background: var(--rc-surface); border-color: var(--rc-accent);
+  box-shadow: 0 0 0 4px rgba(0,229,160,.18);
+  animation: rcDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes rcDotPulse {
+  50% { box-shadow: 0 0 0 8px rgba(0,229,160,.05); }
+}
+.rc-track-info { flex: 1; min-width: 0; }
+.rc-track-label {
+  font-family: var(--rc-mono); font-size: 13px; font-weight: 700;
+  color: var(--rc-muted); margin-bottom: 2px;
+}
+.rc-track-step.done    .rc-track-label { color: var(--rc-text); }
+.rc-track-step.active  .rc-track-label { color: var(--rc-accent); }
+.rc-track-desc {
+  font-size: 12px; color: var(--rc-muted); line-height: 1.5;
+}
+
+.rc-ticket-meta-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1rem;
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px dashed var(--rc-border);
+  font-family: var(--rc-mono); font-size: 11px;
+}
+.rc-ticket-meta-grid dt {
+  color: var(--rc-muted); letter-spacing: .06em; text-transform: uppercase;
+  font-size: 10px;
+}
+.rc-ticket-meta-grid dd {
+  color: var(--rc-text); margin: 0;
+}
+@media (max-width: 480px) {
+  .rc-ticket-modal-box  { max-height: 95vh; }
+  .rc-ticket-modal-head { padding: 1.25rem 1.25rem .75rem; }
+  .rc-ticket-modal-body { padding: 1.25rem; }
+  .rc-ticket-modal-foot { padding: .75rem 1.25rem; }
+  .rc-ticket-meta-grid  { grid-template-columns: 1fr; }
+}
+</style>
+<script>
+(function() {
+  const modal    = document.getElementById('rc-ticket-modal');
+  const titleEl  = document.getElementById('rc-ticket-modal-title');
+  const bodyEl   = document.getElementById('rc-ticket-modal-body');
+  const refresh  = document.getElementById('rc-ticket-refresh');
+  let currentId  = null;
+
+  function openModal() {
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    currentId = null;
+  }
+
+  modal.addEventListener('click', e => {
+    if (e.target.matches('[data-rc-close]')) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[c]);
+  }
+
+  function renderLoading() {
+    bodyEl.innerHTML = `
+      <div class="rc-ticket-loading">
+        <div class="rc-ticket-spin"></div>
+        <span>Consultando estado en MantisBT…</span>
+      </div>`;
+  }
+
+  function renderError(msg) {
+    bodyEl.innerHTML = `<div class="rc-ticket-error">${escapeHtml(msg || 'Error desconocido.')}</div>`;
+  }
+
+  function formatDate(s) {
+    if (!s) return '—';
+    try {
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return s;
+      return d.toLocaleString('es-ES', {
+        day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      });
+    } catch { return s; }
+  }
+
+  function renderTicket(data) {
+    titleEl.textContent = 'Ticket #' + data.ticket_id;
+    const steps = (data.events || []).map(ev => {
+      let cls = 'pending';
+      if (ev.phase <  data.phase) cls = 'done';
+      if (ev.phase === data.phase) cls = 'active';
+      return `
+        <li class="rc-track-step ${cls}">
+          <div class="rc-track-dot"></div>
+          <div class="rc-track-info">
+            <div class="rc-track-label">${escapeHtml(ev.label)}</div>
+            <div class="rc-track-desc">${escapeHtml(ev.desc)}</div>
+          </div>
+        </li>`;
+    }).join('');
+
+    bodyEl.innerHTML = `
+      <span class="rc-ticket-status-pill">${escapeHtml((data.status || '').toUpperCase())}</span>
+      <ul class="rc-track">${steps}</ul>
+      <dl class="rc-ticket-meta-grid">
+        <dt>Creado</dt>     <dd>${escapeHtml(formatDate(data.created_at))}</dd>
+        <dt>Actualizado</dt><dd>${escapeHtml(formatDate(data.updated_at))}</dd>
+      </dl>`;
+  }
+
+  function fetchStatus(id) {
+    currentId = id;
+    renderLoading();
+    openModal();
+
+    const fd = new FormData();
+    fd.append('action', 'resolvecore_ticket_status');
+    fd.append('nonce', document.querySelector('[name="rc_nonce"]').value);
+    fd.append('ticket_id', id);
+
+    fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) renderTicket(res.data);
+        else renderError(res.data && res.data.msg);
+      })
+      .catch(() => renderError('Error de red. Inténtalo de nuevo.'));
+  }
+
+  // Delegación: cualquier .rc-ticket-link en la página
+  document.addEventListener('click', e => {
+    const link = e.target.closest('.rc-ticket-link');
+    if (!link) return;
+    e.preventDefault();
+    const id = link.dataset.ticket;
+    if (id) fetchStatus(id);
+  });
+
+  refresh.addEventListener('click', () => { if (currentId) fetchStatus(currentId); });
+})();
+</script>
+
+<!-- ==================== FAB CONTACTO ==================== -->
+<a class="rc-fab-contact" href="#contacto" aria-label="Contacta con nosotros">
+  <span class="rc-fab-icon" aria-hidden="true">✉</span>
+  <span class="rc-fab-text">Contacta</span>
+</a>
+<style>
+.rc-fab-contact {
+  position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 9000;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--rc-accent); color: #000;
+  font-family: var(--rc-mono); font-size: 13px; font-weight: 700;
+  letter-spacing: .04em; padding: 12px 20px;
+  border-radius: 999px; text-decoration: none;
+  box-shadow: 0 8px 28px rgba(0,229,160,.28), 0 2px 6px rgba(0,0,0,.25);
+  transition: transform .25s, box-shadow .25s, background .25s;
+}
+.rc-fab-contact:hover {
+  background: #00ffb3; transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,229,160,.4), 0 4px 10px rgba(0,0,0,.3);
+}
+.rc-fab-contact:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.rc-fab-icon { font-size: 16px; line-height: 1; }
+.rc-fab-contact::after {
+  content: ''; position: absolute; inset: 0; border-radius: 999px;
+  box-shadow: 0 0 0 0 rgba(0,229,160,.55);
+  animation: rcFabPulse 2.4s ease-out infinite; pointer-events: none;
+}
+@keyframes rcFabPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(0,229,160,.45); }
+  70%  { box-shadow: 0 0 0 14px rgba(0,229,160,0);   }
+  100% { box-shadow: 0 0 0 0   rgba(0,229,160,0);   }
+}
+@media (max-width: 480px) {
+  .rc-fab-text { display: none; }
+  .rc-fab-contact { padding: 14px; }
+  .rc-fab-icon { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-fab-contact::after { animation: none; }
+  .rc-fab-contact:hover { transform: none; }
+}
+/* Ocultar FAB cuando la sección #contacto está visible */
+body.rc-at-contact .rc-fab-contact { opacity: 0; pointer-events: none; transform: translateY(20px); }
+.rc-fab-contact { transition: opacity .3s, transform .3s, box-shadow .25s, background .25s; }
+</style>
+<script>
+(function() {
+  var section = document.getElementById('contacto');
+  if (!section) return;
+  var io = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      document.body.classList.toggle('rc-at-contact', e.isIntersecting);
+    });
+  }, { threshold: 0.25 });
+  io.observe(section);
+})();
 </script>
 
 <?php wp_footer(); ?>

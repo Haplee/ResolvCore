@@ -141,38 +141,130 @@ function resolvecore_handle_contact() {
         wp_send_json_error( [ 'msg' => 'El mensaje supera 500 caracteres.' ] );
     }
 
-    $admin_email = get_option( 'admin_email' );
-    $subject = sprintf( '[ResolveCore] Nuevo mensaje de %s — %s', $type, $name );
-    $body  = "Nombre: {$name}\n";
-    $body .= "Email: {$email}\n";
-    $body .= "Tipo: {$type}\n\n";
-    $body .= "Mensaje:\n{$message}";
-    $headers = [
-        'Content-Type: text/plain; charset=UTF-8',
-        sprintf( 'Reply-To: %s <%s>', $name, $email ),
-    ];
-
-    $sent = wp_mail( $admin_email, $subject, $body, $headers );
-    if ( ! $sent ) {
-        wp_send_json_error( [ 'msg' => 'Error al enviar. Inténtalo de nuevo.' ] );
-    }
-
-    $response = [ 'msg' => '¡Mensaje enviado! Te responderemos pronto.' ];
-
+    // 1) Crear ticket en MantisBT (canal primario)
+    $ticket_id = 0;
+    $ticket_err = '';
     if ( function_exists( 'rc_mantis_create_ticket' ) ) {
-        $ticket_id = rc_mantis_create_ticket( [
+        $ticket = rc_mantis_create_ticket( [
             'name'    => $name,
             'email'   => $email,
             'type'    => $type,
             'message' => $message,
         ] );
-        if ( ! is_wp_error( $ticket_id ) && $ticket_id > 0 ) {
-            $response['ticket_id'] = (int) $ticket_id;
-            $response['msg']       = sprintf( '¡Mensaje enviado! Ticket #%d creado. Te responderemos pronto.', (int) $ticket_id );
+        if ( is_wp_error( $ticket ) ) {
+            $ticket_err = $ticket->get_error_message();
+            error_log( '[resolvecore_handle_contact] Mantis: ' . $ticket_err );
+        } elseif ( (int) $ticket > 0 ) {
+            $ticket_id = (int) $ticket;
         }
     }
 
-    wp_send_json_success( $response );
+    // 2) Email (canal secundario, no bloquea respuesta)
+    $admin_email = get_option( 'admin_email' );
+    $subject     = sprintf( '[ResolveCore] %s%s — %s',
+        $ticket_id ? "#{$ticket_id} " : '',
+        $type,
+        $name
+    );
+    $body  = "Nombre: {$name}\n";
+    $body .= "Email: {$email}\n";
+    $body .= "Tipo: {$type}\n";
+    if ( $ticket_id ) {
+        $body .= "Ticket MantisBT: #{$ticket_id}\n";
+    }
+    $body .= "\nMensaje:\n{$message}\n";
+    $headers = [
+        'Content-Type: text/plain; charset=UTF-8',
+        sprintf( 'Reply-To: %s <%s>', $name, $email ),
+    ];
+    $mail_sent = @wp_mail( $admin_email, $subject, $body, $headers );
+
+    // 3) Respuesta — éxito si AL MENOS uno funcionó
+    if ( ! $ticket_id && ! $mail_sent ) {
+        wp_send_json_error( [
+            'msg'   => 'No pudimos procesar tu mensaje. Escríbenos directamente a ' . esc_html( $admin_email ) . '.',
+            'debug' => $ticket_err ?: 'mail_failed',
+        ] );
+    }
+
+    $msg = $ticket_id
+        ? sprintf( '¡Mensaje recibido! Ticket #%d creado, te responderemos en menos de 2 horas.', $ticket_id )
+        : '¡Mensaje recibido! Te responderemos en menos de 2 horas.';
+
+    wp_send_json_success( array_filter( [
+        'msg'       => $msg,
+        'ticket_id' => $ticket_id ?: null,
+    ] ) );
 }
 add_action( 'wp_ajax_resolvecore_contact',        'resolvecore_handle_contact' );
 add_action( 'wp_ajax_nopriv_resolvecore_contact', 'resolvecore_handle_contact' );
+
+/**
+ * Consulta el estado de un ticket de MantisBT vía AJAX para mostrar timeline.
+ * Solo expone status_id + 4 fases agregadas — no datos personales ni descripción.
+ */
+function resolvecore_handle_ticket_status() {
+    check_ajax_referer( 'resolvecore_contact', 'nonce' );
+
+    $id = absint( $_POST['ticket_id'] ?? 0 );
+    if ( $id < 1 ) {
+        wp_send_json_error( [ 'msg' => 'ID de ticket inválido.' ] );
+    }
+
+    // Rate limit: 30 consultas/hora por IP
+    $rate_key = 'rc_status_' . resolvecore_client_ip_hash();
+    $attempts = (int) get_transient( $rate_key );
+    if ( $attempts >= 30 ) {
+        wp_send_json_error( [ 'msg' => 'Demasiadas consultas. Espera un rato.' ] );
+    }
+    set_transient( $rate_key, $attempts + 1, HOUR_IN_SECONDS );
+
+    if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+        wp_send_json_error( [ 'msg' => 'Integración MantisBT no disponible.' ] );
+    }
+    $api = rc_mantis_get_api();
+    if ( ! $api ) {
+        wp_send_json_error( [ 'msg' => 'MantisBT no configurado.' ] );
+    }
+
+    $res = $api->get_issue( $id );
+    if ( is_wp_error( $res ) ) {
+        wp_send_json_error( [ 'msg' => 'Ticket no encontrado.' ] );
+    }
+
+    $issue = $res['issues'][0] ?? null;
+    if ( ! $issue ) {
+        wp_send_json_error( [ 'msg' => 'Ticket vacío.' ] );
+    }
+
+    $status_name = (string) ( $issue['status']['name'] ?? 'new' );
+    $status_id   = (int)    ( $issue['status']['id']   ?? 10 );
+
+    // Mantis status enum → 4 fases UX
+    // 10 new · 20 feedback · 30 acknowledged · 40 confirmed · 50 assigned · 80 resolved · 90 closed
+    $phase = match ( true ) {
+        $status_id >= 80 => 4,
+        $status_id >= 50 => 3,
+        $status_id >= 30 => 2,
+        default          => 1,
+    };
+
+    $events = [
+        [ 'phase' => 1, 'label' => 'Recibido',       'desc' => 'Ticket creado y en cola de revisión.' ],
+        [ 'phase' => 2, 'label' => 'En diagnóstico', 'desc' => 'Técnico analizando el problema.' ],
+        [ 'phase' => 3, 'label' => 'En resolución',  'desc' => 'Trabajando en la solución (AnyDesk).' ],
+        [ 'phase' => 4, 'label' => 'Resuelto',       'desc' => 'Ticket cerrado. Resumen técnico en la nota del ticket.' ],
+    ];
+
+    wp_send_json_success( [
+        'ticket_id'  => $id,
+        'status'     => $status_name,
+        'status_id'  => $status_id,
+        'phase'      => $phase,
+        'events'     => $events,
+        'created_at' => $issue['created_at'] ?? null,
+        'updated_at' => $issue['updated_at'] ?? null,
+    ] );
+}
+add_action( 'wp_ajax_resolvecore_ticket_status',        'resolvecore_handle_ticket_status' );
+add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
