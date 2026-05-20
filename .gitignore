@@ -56,3 +56,4 @@ graphify-out/
 
 # Agent rules de herramientas AI dentro de carpetas de scripts
 scripts/**/.agent/
+.deploy-creds.local.txt
