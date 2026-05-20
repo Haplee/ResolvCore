@@ -181,10 +181,97 @@ a:hover { text-decoration: underline; }
 }
 
 /* ── Fixes globales ───── */
-.rc-header { width:100%; display:block; position:sticky; top:0; z-index:200; background:rgba(10,12,16,.95); border-bottom:1px solid var(--rc-border); }
-.rc-nav { display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; }
-.rc-nav__links { display:flex; gap:1.5rem; list-style:none; }
+.rc-header { width:100%; display:block; position:sticky; top:0; z-index:200; background:rgba(10,12,16,.95); border-bottom:1px solid var(--rc-border); backdrop-filter: blur(12px); }
+.rc-nav { display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; gap:1.5rem; }
+.rc-nav__links { display:flex; gap:1.5rem; list-style:none; margin-left:auto; }
 .rc-nav__links li::marker { display:none; }
+
+/* ── Header CTA "Contacta con nosotros" ───── */
+.rc-header-cta {
+  font-family: var(--rc-mono);
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: #000;
+  background: var(--rc-accent);
+  padding: 9px 18px;
+  text-decoration: none;
+  font-weight: 700;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background .2s, transform .2s, box-shadow .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rc-header-cta:hover {
+  background: #00ffb3;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,229,160,.25);
+  text-decoration: none;
+}
+@media (max-width: 640px) {
+  .rc-header-cta { font-size: 11px; padding: 7px 12px; }
+  .rc-nav__links { display: none; }
+}
+
+/* ── FAB flotante de contacto ───── */
+.rc-fab-contact {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 9000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--rc-accent);
+  color: #000;
+  font-family: var(--rc-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 12px 20px;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 8px 28px rgba(0,229,160,.28), 0 2px 6px rgba(0,0,0,.25);
+  transition: transform .25s, box-shadow .25s, background .25s;
+}
+.rc-fab-contact:hover {
+  background: #00ffb3;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,229,160,.4), 0 4px 10px rgba(0,0,0,.3);
+  text-decoration: none;
+}
+.rc-fab-contact:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.rc-fab-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.rc-fab-contact::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 0 0 rgba(0,229,160,.55);
+  animation: rcFabPulse 2.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes rcFabPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(0,229,160,.45); }
+  70%  { box-shadow: 0 0 0 14px rgba(0,229,160,0);   }
+  100% { box-shadow: 0 0 0 0   rgba(0,229,160,0);   }
+}
+@media (max-width: 480px) {
+  .rc-fab-text { display: none; }
+  .rc-fab-contact { padding: 14px; }
+  .rc-fab-icon { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-fab-contact::after { animation: none; }
+  .rc-fab-contact:hover { transform: none; }
+}
 
 .rc-docs-main,
 .rc-cl-main {
