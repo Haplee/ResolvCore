@@ -33,6 +33,8 @@
 | [manual-usuario-mantis.md](tecnica/manual-usuario-mantis.md) | Manual técnico de configuración, BD, workflow y permisos de MantisBT |
 | [mantis-permisos.md](tecnica/mantis-permisos.md) | Matriz de permisos por capacidad y rol — configuración de seguridad de MantisBT |
 | [despliegue-ionos.md](tecnica/despliegue-ionos.md) | Despliegue producción en VPS Ionos Linux S: WP + Mantis + Let's Encrypt en mismo VPS (2,50 €/mes) |
+| [correo-dkim.md](tecnica/correo-dkim.md) | Correo saliente sin spam: configuración SPF/DKIM/DMARC para los emails de confirmación de ticket |
+| [versionado.md](tecnica/versionado.md) | Criterio de versionado: tema, producto, plugins y esquema de diagnóstico |
 | [servicios-adicionales.md](tecnica/servicios-adicionales.md) | Clonación, congelación, acceso remoto, cifrado, despliegue por imágenes |
 | [tutorial-wordpress-manual.md](tecnica/tutorial-wordpress-manual.md) | Tutorial de instalación y configuración manual de WordPress |
 | [so-especializado.md](tecnica/so-especializado.md) | Sistemas operativos especializados y su relación con ResolveCore |

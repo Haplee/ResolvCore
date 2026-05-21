@@ -37,6 +37,7 @@ get_header();
           <li>Página pública «Estado de la flota» con métricas agregadas (sin datos personales)</li>
           <li>Endpoint REST público <code>rc/v1/fleet/stats</code> de estadísticas agregadas</li>
           <li>Navegación con menú desplegable «Recursos» (Documentación, Changelog, Estado de la flota)</li>
+          <li>Correo de confirmación automático al cliente con su número de incidencia y enlace de seguimiento en tiempo real</li>
         </ul>
       </div>
 

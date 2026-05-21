@@ -3,7 +3,7 @@
  * Plugin Name: ResolveCore — Fleet Panel
  * Plugin URI:  https://github.com/Haplee/ResolveCore
  * Description: Panel multiplataforma de flota: agentes Win/Linux/Android publican su JSON de diagnóstico vía REST y se centralizan en wp-admin.
- * Version:     0.2.1
+ * Version:     0.2.2
  * Author:      Francisco Vidal Mateo
  * License:     GPL-2.0+
  * Text Domain: rc-fleet
@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'RC_FLEET_VERSION', '0.2.1' );
+define( 'RC_FLEET_VERSION', '0.2.2' );
 define( 'RC_FLEET_DB_VER', '1' );
 define( 'RC_FLEET_TABLE',  'rc_fleet_hosts' );
 
@@ -195,6 +195,9 @@ function rc_fleet_rest_post( WP_REST_Request $req ) {
         $action = 'created';
     }
 
+    // Invalida la caché del panel público: los agregados han cambiado.
+    delete_transient( RC_FLEET_STATS_CACHE );
+
     return rest_ensure_response( [
         'ok'      => true,
         'action'  => $action,
@@ -228,11 +231,22 @@ function rc_fleet_rest_list( WP_REST_Request $req ) {
 
 // ── Fleet status público (sin datos personales) ────────────────────────────────
 
+const RC_FLEET_STATS_CACHE = 'rc_fleet_public_stats';
+
 /**
  * Estadísticas agregadas de la flota. NUNCA expone email, hostname ni JSON —
  * solo recuentos, medias y distribución. Apto para mostrar en página pública.
+ *
+ * Resultado cacheado 5 min en un transient: el endpoint público es anónimo y
+ * podría recibir tráfico sin control; sin caché cada visita lanzaría 2 queries
+ * de agregación. La caché se invalida en cada POST de agente (rc_fleet_rest_post).
  */
 function rc_fleet_get_public_stats(): array {
+    $cached = get_transient( RC_FLEET_STATS_CACHE );
+    if ( is_array( $cached ) ) {
+        return $cached;
+    }
+
     global $wpdb;
     $table = $wpdb->prefix . RC_FLEET_TABLE;
 
@@ -255,7 +269,7 @@ function rc_fleet_get_public_stats(): array {
         $by_os[ $o ] = isset( $by_os_rows[ $o ] ) ? (int) $by_os_rows[ $o ]->n : 0;
     }
 
-    return [
+    $stats = [
         'total'           => (int) ( $agg['total']       ?? 0 ),
         'avg_score'       => (int) ( $agg['avg_score']    ?? 0 ),
         'buenos'          => (int) ( $agg['buenos']       ?? 0 ),
@@ -265,6 +279,9 @@ function rc_fleet_get_public_stats(): array {
         'ultima_conexion' => $agg['ultima_conexion'] ?: null,
         'by_os'           => $by_os,
     ];
+
+    set_transient( RC_FLEET_STATS_CACHE, $stats, 5 * MINUTE_IN_SECONDS );
+    return $stats;
 }
 
 function rc_fleet_rest_stats( WP_REST_Request $req ) {

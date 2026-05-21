@@ -1902,6 +1902,7 @@ function submitForm(e) {
           link.href = '#';
           link.className = 'rc-ticket-link';
           link.dataset.ticket = res.data.ticket_id;
+          link.dataset.token = res.data.ticket_token || '';
           link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;cursor:pointer;text-decoration:underline;';
           link.textContent = '[VER TICKET #' + res.data.ticket_id + ']';
           msg.appendChild(link);
@@ -2110,7 +2111,8 @@ function submitForm(e) {
   const titleEl  = document.getElementById('rc-ticket-modal-title');
   const bodyEl   = document.getElementById('rc-ticket-modal-body');
   const refresh  = document.getElementById('rc-ticket-refresh');
-  let currentId  = null;
+  let currentId    = null;
+  let currentToken = '';
 
   function openModal() {
     modal.classList.add('open');
@@ -2122,6 +2124,7 @@ function submitForm(e) {
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     currentId = null;
+    currentToken = '';
   }
 
   modal.addEventListener('click', e => {
@@ -2186,8 +2189,9 @@ function submitForm(e) {
       </dl>`;
   }
 
-  function fetchStatus(id) {
+  function fetchStatus(id, token) {
     currentId = id;
+    currentToken = token || '';
     renderLoading();
     openModal();
 
@@ -2195,6 +2199,7 @@ function submitForm(e) {
     fd.append('action', 'resolvecore_ticket_status');
     fd.append('nonce', document.querySelector('[name="rc_nonce"]').value);
     fd.append('ticket_id', id);
+    fd.append('token', currentToken);
 
     fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: fd })
       .then(r => r.json())
@@ -2211,10 +2216,19 @@ function submitForm(e) {
     if (!link) return;
     e.preventDefault();
     const id = link.dataset.ticket;
-    if (id) fetchStatus(id);
+    const token = link.dataset.token || '';
+    if (id) fetchStatus(id, token);
   });
 
-  refresh.addEventListener('click', () => { if (currentId) fetchStatus(currentId); });
+  refresh.addEventListener('click', () => { if (currentId) fetchStatus(currentId, currentToken); });
+
+  // Auto-abrir el seguimiento desde el enlace del correo de confirmación: ?rc_ticket=N&rc_t=TOKEN
+  const rcParams = new URLSearchParams(window.location.search);
+  const rcTicketParam = rcParams.get('rc_ticket');
+  const rcTokenParam = rcParams.get('rc_t') || '';
+  if (rcTicketParam && /^[0-9]+$/.test(rcTicketParam)) {
+    fetchStatus(rcTicketParam, rcTokenParam);
+  }
 })();
 </script>
 
