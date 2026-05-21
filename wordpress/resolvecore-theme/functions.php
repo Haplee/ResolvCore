@@ -229,6 +229,25 @@ add_action( 'wp_ajax_resolvecore_contact',        'resolvecore_handle_contact' )
 add_action( 'wp_ajax_nopriv_resolvecore_contact', 'resolvecore_handle_contact' );
 
 /**
+ * Remitente unificado del correo saliente.
+ *
+ * Por defecto WordPress envía como `WordPress <wordpress@dominio>`: nombre
+ * genérico y dirección que no coincide con el buzón autenticado del relay
+ * SMTP. Los filtros antispam (Ionos incluido) lo penalizan. Se fija el From
+ * al buzón del dominio (= usuario del relay) con el nombre del proyecto.
+ */
+function resolvecore_mail_from( string $from ): string {
+    $admin = get_option( 'admin_email' );
+    return is_email( $admin ) ? $admin : $from;
+}
+add_filter( 'wp_mail_from', 'resolvecore_mail_from' );
+
+function resolvecore_mail_from_name(): string {
+    return 'ResolveCore';
+}
+add_filter( 'wp_mail_from_name', 'resolvecore_mail_from_name' );
+
+/**
  * Token de seguimiento derivado del ID de ticket.
  *
  * Sin él, el parámetro `?rc_ticket=N` sería enumerable: cualquiera podría
