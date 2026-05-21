@@ -188,11 +188,11 @@ body { background: var(--rc-bg); color: var(--rc-text); font-family: var(--rc-sa
   <div class="rc-ct-grid">
 
     <aside class="rc-ct-side">
-      <a class="rc-ct-channel" href="mailto:fvidalmateo@gmail.com">
+      <a class="rc-ct-channel" href="mailto:tecnicos@resolvecore.website">
         <div class="rc-ct-channel-icon">✉</div>
         <div>
           <div class="rc-ct-channel-label">EMAIL DIRECTO</div>
-          <div class="rc-ct-channel-val">fvidalmateo@gmail.com</div>
+          <div class="rc-ct-channel-val">tecnicos@resolvecore.website</div>
         </div>
       </a>
       <a class="rc-ct-channel" href="https://github.com/Haplee/ResolveCore/issues/new" target="_blank" rel="noopener noreferrer">
@@ -230,7 +230,7 @@ body { background: var(--rc-bg); color: var(--rc-text); font-family: var(--rc-sa
 
     <div class="rc-ct-form-box">
       <div class="rc-ct-form-title">Abrir ticket</div>
-      <p class="rc-ct-form-sub">Cuanto más detalle, más rápido el diagnóstico. Adjunta capturas a fvidalmateo@gmail.com si las tienes.</p>
+      <p class="rc-ct-form-sub">Cuanto más detalle, más rápido el diagnóstico. Adjunta capturas a tecnicos@resolvecore.website si las tienes.</p>
 
       <form id="rc-contact-form" class="rc-form">
         <input type="hidden" name="rc_website" value="">

@@ -1199,11 +1199,11 @@
 
   <!-- Canales rápidos -->
   <div class="rc-quick-channels rc-reveal">
-    <a class="rc-channel" href="mailto:fvidalmateo@gmail.com" aria-label="Enviar email">
+    <a class="rc-channel" href="mailto:tecnicos@resolvecore.website" aria-label="Enviar email">
       <div class="rc-channel-icon">✉</div>
       <div class="rc-channel-body">
         <div class="rc-channel-label">EMAIL DIRECTO</div>
-        <div class="rc-channel-val">fvidalmateo@gmail.com</div>
+        <div class="rc-channel-val">tecnicos@resolvecore.website</div>
       </div>
     </a>
     <a class="rc-channel" href="https://github.com/Haplee/ResolveCore/issues/new" target="_blank" rel="noopener noreferrer" aria-label="Abrir issue en GitHub">
@@ -1277,7 +1277,7 @@
         <div class="rc-contact-item-icon">⬡</div>
         <div>
           <div class="rc-contact-item-label">EMAIL</div>
-          <div class="rc-contact-item-val"><a href="mailto:fvidalmateo@gmail.com">fvidalmateo@gmail.com</a></div>
+          <div class="rc-contact-item-val"><a href="mailto:tecnicos@resolvecore.website">tecnicos@resolvecore.website</a></div>
         </div>
       </div>
       <div class="rc-contact-item">

@@ -27,7 +27,7 @@ $updated = '2026-05-20';
     <dt>Titular</dt>      <dd>Francisco Vidal Mateo</dd>
     <dt>Actividad</dt>    <dd>Proyecto académico TFG ASIR — soporte técnico remoto (no actividad comercial)</dd>
     <dt>Sitio web</dt>    <dd><a href="https://resolvecore.website">resolvecore.website</a></dd>
-    <dt>Contacto</dt>     <dd><a href="mailto:fvidalmateo@gmail.com">fvidalmateo@gmail.com</a></dd>
+    <dt>Contacto</dt>     <dd><a href="mailto:tecnicos@resolvecore.website">tecnicos@resolvecore.website</a></dd>
     <dt>Repositorio</dt>  <dd><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer">github.com/Haplee/ResolveCore</a></dd>
     <dt>Licencia</dt>     <dd>Código fuente bajo GPL-3.0-or-later</dd>
   </dl>
