@@ -89,7 +89,9 @@
       "Bash(curl -s -o /tmp/rc_cl.html -w \"%{http_code} bytes:%{size_download}\\\\n\" --max-time 20 \"http://localhost:8080/?page_id=changelog\")",
       "Bash(curl -s -o /tmp/rc_cl2.html -w \"changelog-slug:%{http_code}\\\\n\" --max-time 20 \"http://localhost:8080/changelog/\")",
       "Read(//tmp/**)",
-      "Bash(curl -s -o /tmp/rc_t.html -w \"with-params:%{http_code}\\\\n\" --max-time 20 \"http://localhost:8080/?rc_ticket=42&rc_t=a4165c0472de0a584503\")"
+      "Bash(curl -s -o /tmp/rc_t.html -w \"with-params:%{http_code}\\\\n\" --max-time 20 \"http://localhost:8080/?rc_ticket=42&rc_t=a4165c0472de0a584503\")",
+      "Bash(curl -s -o /dev/null -w \"home: %{http_code}  tiempo: %{time_total}s\\\\n\" --max-time 20 https://resolvecore.website/)",
+      "Bash(curl -s -o /dev/null -w \"contacto: %{http_code}  tiempo: %{time_total}s\\\\n\" --max-time 20 https://resolvecore.website/contacto/)"
     ]
   }
 }
