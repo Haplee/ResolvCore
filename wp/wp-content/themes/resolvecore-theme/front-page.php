@@ -154,6 +154,46 @@
     }
     .rc-nav-links a:hover { color: var(--rc-text); }
     .rc-nav-links a:hover::after { width: 100%; }
+    /* Dropdown Recursos */
+    .rc-nav-dd { position: relative; }
+    .rc-nav-dd-btn {
+      font-family: var(--rc-sans); font-size: 13px; color: var(--rc-muted);
+      background: none; border: none; cursor: pointer; font-weight: 500;
+      letter-spacing: .03em; transition: color .2s;
+      display: flex; align-items: center; gap: 5px; padding: 0; line-height: inherit;
+    }
+    .rc-nav-dd-btn:hover,
+    .rc-nav-dd:hover .rc-nav-dd-btn,
+    .rc-nav-dd-btn[aria-expanded="true"] { color: var(--rc-text); }
+    .rc-nav-dd-caret { font-size: 9px; transition: transform .25s; }
+    .rc-nav-dd:hover .rc-nav-dd-caret,
+    .rc-nav-dd-btn[aria-expanded="true"] .rc-nav-dd-caret { transform: rotate(180deg); }
+    .rc-nav-dd-menu {
+      position: absolute; top: calc(100% + 12px); left: 50%;
+      transform: translateX(-50%) translateY(-6px);
+      background: rgba(17,19,24,0.98); border: 1px solid var(--rc-border2);
+      border-radius: 8px; padding: 6px; min-width: 210px; list-style: none;
+      display: flex; flex-direction: column; gap: 2px;
+      opacity: 0; visibility: hidden;
+      transition: opacity .2s, transform .2s, visibility .2s;
+      backdrop-filter: blur(16px); box-shadow: 0 12px 32px rgba(0,0,0,.45);
+    }
+    .rc-nav-dd:hover .rc-nav-dd-menu,
+    .rc-nav-dd-menu.open {
+      opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
+    }
+    .rc-nav-dd-menu li { list-style: none; }
+    .rc-nav-dd-menu a {
+      display: block; padding: 9px 12px; border-radius: 5px;
+      font-size: 13px; color: var(--rc-muted);
+    }
+    .rc-nav-dd-menu a::after { display: none; }
+    .rc-nav-dd-menu a:hover { background: var(--rc-surface2); color: var(--rc-accent); }
+    .rc-mobile-menu-label {
+      font-family: var(--rc-mono); font-size: 10px; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--rc-accent);
+      padding-top: .5rem; border-top: 1px solid var(--rc-border);
+    }
     .rc-nav-cta {
       font-family: var(--rc-mono); font-size: 12px; letter-spacing: .06em;
       color: var(--rc-accent); border: 1px solid var(--rc-accent);
@@ -183,8 +223,9 @@
     ============================================================ */
     .rc-hero {
       position: relative; min-height: 100vh;
-      display: flex; align-items: center;
+      display: flex; align-items: center; justify-content: center;
       padding: 80px 2.5rem 0; overflow: hidden;
+      text-align: center;
     }
     .rc-hero-grid {
       position: absolute; inset: 0;
@@ -226,8 +267,13 @@
       100% { transform: translateY(-10vh) translateX(30px); opacity: 0; }
     }
     .rc-hero-content {
-      position: relative; max-width: 750px; z-index: 2;
+      position: relative; max-width: 850px; z-index: 2;
+      margin: 0 auto; text-align: center;
     }
+    .rc-hero-sub { margin-left: auto; margin-right: auto; }
+    .rc-hero-actions { justify-content: center; }
+    .rc-hero-stats { justify-content: center; }
+    .rc-badge { margin-left: auto; margin-right: auto; }
     .rc-badge {
       display: inline-flex; align-items: center; gap: 8px;
       font-family: var(--rc-mono); font-size: 11px; color: var(--rc-accent);
@@ -276,9 +322,18 @@
     }
     .rc-btn-outline:hover { border-color: var(--rc-accent); color: var(--rc-accent); }
     .rc-hero-stats {
-      margin-top: 4rem; display: flex; gap: 3rem;
+      margin-top: 3rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem 2.5rem;
       padding-top: 2rem; border-top: 1px solid var(--rc-border);
       animation: rcFadeUp .8s .4s ease both;
+    }
+    @media (max-width: 768px) {
+      .rc-hero-stats { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+    }
+    @media (max-width: 380px) {
+      .rc-hero-stats { grid-template-columns: 1fr; gap: 1rem; }
     }
     .rc-stat-num {
       font-family: var(--rc-mono); font-size: 1.9rem;
@@ -286,18 +341,34 @@
     }
     .rc-stat-label { font-size: 12px; color: var(--rc-muted); margin-top: 3px; }
     .rc-hero-scroll {
-      position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      font-family: var(--rc-mono); font-size: 10px; color: var(--rc-muted);
-      letter-spacing: .1em; animation: rcFadeUp .8s .6s ease both;
+      position: absolute; bottom: 2.5rem; left: 2rem;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-family: var(--rc-mono); font-size: 9px; color: var(--rc-muted);
+      letter-spacing: .14em; animation: rcFadeUp .8s .6s ease both;
+      writing-mode: vertical-rl; transform: rotate(180deg);
     }
-    .rc-hero-scroll-line {
-      width: 1px; height: 40px; background: linear-gradient(to bottom, var(--rc-accent), transparent);
-      animation: rcScrollLine 2s ease-in-out infinite;
+    .rc-hero-scroll-mouse {
+      width: 22px; height: 36px; border: 1.5px solid var(--rc-muted);
+      border-radius: 12px; display: flex; justify-content: center;
+      padding-top: 6px; box-sizing: border-box; writing-mode: horizontal-tb;
+      transform: rotate(180deg);
+      transition: border-color .25s;
     }
-    @keyframes rcScrollLine {
-      0%, 100% { transform: scaleY(1); opacity: 1; }
-      50% { transform: scaleY(0.5); opacity: 0.4; }
+    .rc-hero-scroll:hover .rc-hero-scroll-mouse { border-color: var(--rc-accent); }
+    .rc-hero-scroll-wheel {
+      width: 2px; height: 6px; background: var(--rc-accent); border-radius: 2px;
+      animation: rcMouseWheel 1.8s ease-in-out infinite;
+    }
+    @keyframes rcMouseWheel {
+      0%   { transform: translateY(0);   opacity: 1;  }
+      50%  { transform: translateY(8px); opacity: .35; }
+      100% { transform: translateY(0);   opacity: 1;  }
+    }
+    @media (max-width: 768px) {
+      .rc-hero-scroll { left: 1rem; bottom: 1.5rem; font-size: 8px; }
+    }
+    @media (max-width: 480px) {
+      .rc-hero-scroll { display: none; }
     }
 
     /* ============================================================
@@ -371,7 +442,17 @@
        DEMO INTERACTIVA
     ============================================================ */
     .rc-demo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; }
-    .rc-demo-controls { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.5rem; }
+    .rc-demo-platforms { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    .rc-demo-plat {
+      flex: 1; font-family: var(--rc-mono); font-size: 11px; letter-spacing: .04em;
+      color: var(--rc-muted); background: var(--rc-surface);
+      border: 1px solid var(--rc-border2); padding: 8px 6px; cursor: pointer;
+      transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .rc-demo-plat:hover, .rc-demo-plat.active {
+      color: var(--rc-accent); border-color: rgba(0,229,160,.4); background: rgba(0,229,160,.05);
+    }
+    .rc-demo-controls { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.25rem; }
     .rc-demo-btn {
       font-family: var(--rc-mono); font-size: 12px; letter-spacing: .05em;
       color: var(--rc-muted); background: var(--rc-surface);
@@ -387,6 +468,13 @@
       width: 6px; height: 6px; border-radius: 50%; background: var(--rc-border2); flex-shrink: 0;
     }
     .rc-demo-btn.active .rc-demo-btn-dot { background: var(--rc-accent); }
+    .rc-demo-replay {
+      margin-top: 1rem; font-family: var(--rc-mono); font-size: 11px; letter-spacing: .04em;
+      color: var(--rc-muted); background: transparent; border: 1px solid var(--rc-border2);
+      padding: 8px 14px; cursor: pointer; transition: all .2s;
+    }
+    .rc-demo-replay:hover { color: var(--rc-accent); border-color: rgba(0,229,160,.4); }
+    .rc-demo-replay:disabled { opacity: .4; cursor: not-allowed; }
     .rc-terminal {
       background: #0d0f13; border: 1px solid var(--rc-border2);
       padding: 1.25rem; font-family: var(--rc-mono); font-size: 12px; line-height: 1.85;
@@ -397,6 +485,7 @@
     .td1 { background: #ff5f57; } .td2 { background: #febc2e; } .td3 { background: #28c840; }
     .rc-term-title { margin-left: 6px; font-size: 11px; color: var(--rc-muted); }
     .tl-p { color: var(--rc-accent); }
+    .tl-typed { color: var(--rc-text); }
     .tl-ok   { color: #28c840; display: block; }
     .tl-warn { color: #febc2e; display: block; }
     .tl-err  { color: #ff5f57; display: block; }
@@ -405,11 +494,44 @@
     .tl-cmd  { display: block; }
     .rc-cursor { display: inline-block; width: 7px; height: 13px; background: var(--rc-accent); animation: rcBlink 1s step-end infinite; vertical-align: middle; margin-left: 2px; }
     @keyframes rcBlink { 50% { opacity: 0; } }
-    #rc-term-output { transition: opacity .3s; }
+    #rc-term-output { transition: opacity .3s; max-height: 300px; overflow-y: auto; }
+    #rc-term-output::-webkit-scrollbar { width: 4px; }
+    #rc-term-output::-webkit-scrollbar-thumb { background: var(--rc-border2); border-radius: 2px; }
     .rc-demo-progress { margin-top: 1.25rem; }
     .rc-demo-progress-label { font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
-    .rc-demo-bar { height: 3px; background: var(--rc-border2); position: relative; overflow: hidden; }
-    .rc-demo-bar-fill { height: 100%; background: var(--rc-accent); width: 0%; transition: width 2s ease; }
+    .rc-demo-bar { height: 4px; background: var(--rc-border2); position: relative; overflow: hidden; border-radius: 2px; }
+    .rc-demo-bar-fill { height: 100%; background: var(--rc-accent); width: 0%; transition: width .25s ease; }
+
+    /* Panel de resultado de la demo */
+    .rc-demo-result { margin-top: 2.5rem; animation: rcFadeUp .4s ease; }
+    .rc-demo-result[hidden] { display: none; }
+    @keyframes rcFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .rc-demo-result-grid { display: grid; grid-template-columns: auto 1fr; gap: 1.75rem; align-items: center; margin-bottom: 1.5rem; }
+    .rc-demo-gauge-card { text-align: center; }
+    .rc-demo-gauge { position: relative; width: 124px; height: 124px; margin: 0 auto; }
+    .rc-demo-gauge-val { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--rc-mono); font-size: 1.7rem; font-weight: 700; }
+    .rc-demo-gauge-lbl { font-family: var(--rc-mono); font-size: 10px; letter-spacing: .1em; color: var(--rc-muted); text-transform: uppercase; margin-top: .55rem; }
+    .rc-demo-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+    .rc-demo-stat { background: var(--rc-surface); border: 1px solid var(--rc-border); padding: 1rem .75rem; text-align: center; }
+    .rc-demo-stat-num { font-family: var(--rc-mono); font-size: 1.65rem; font-weight: 700; color: var(--rc-accent); }
+    .rc-demo-stat-lbl { font-size: 11px; color: var(--rc-muted); margin-top: 4px; }
+    .rc-compare { background: var(--rc-surface); border: 1px solid var(--rc-border); padding: 1.5rem; }
+    .rc-compare-title { font-family: var(--rc-mono); font-size: 11px; letter-spacing: .08em; color: var(--rc-muted); text-transform: uppercase; margin-bottom: 1rem; }
+    .rc-compare-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rc-border); font-size: 13px; }
+    .rc-compare-row:last-child { border-bottom: none; }
+    .rc-compare-lbl { color: var(--rc-muted); }
+    .rc-compare-before { font-family: var(--rc-mono); color: var(--rc-warn); }
+    .rc-compare-arrow { color: var(--rc-muted); }
+    .rc-compare-after { font-family: var(--rc-mono); color: var(--rc-accent); font-weight: 700; }
+    .rc-demo-cta {
+      display: inline-block; margin-top: 1.5rem; font-family: var(--rc-mono);
+      font-size: 12px; letter-spacing: .04em; color: var(--rc-accent);
+      border: 1px solid var(--rc-accent); padding: 11px 22px; text-decoration: none; transition: all .25s;
+    }
+    .rc-demo-cta:hover { background: var(--rc-accent); color: #000; }
+    @media (max-width: 880px) {
+      .rc-demo-result-grid { grid-template-columns: 1fr; }
+    }
 
     /* ============================================================
        VULNERABILITY TABLE
@@ -424,8 +546,11 @@
     .sev-high { background: rgba(254,188,46,.1);  color: #febc2e;        border: 1px solid rgba(254,188,46,.2); }
     .sev-med  { background: rgba(0,153,255,.1);   color: var(--rc-accent2); border: 1px solid rgba(0,153,255,.2); }
     .rc-vuln-name { flex: 1; }
+    .rc-vuln-name a { color: var(--rc-accent2); text-decoration: none; border-bottom: 1px dotted rgba(0,153,255,.45); }
+    .rc-vuln-name a:hover { color: var(--rc-accent); }
     .rc-vuln-fix { font-family: var(--rc-mono); font-size: 10px; color: var(--rc-accent); cursor: pointer; padding: 3px 8px; border: 1px solid rgba(0,229,160,.2); transition: all .2s; background: transparent; }
     .rc-vuln-fix:hover { background: rgba(0,229,160,.1); }
+    .rc-vuln-fix:disabled { cursor: default; opacity: .7; }
     .rc-vuln-fix.fixed { color: #28c840; border-color: rgba(40,200,64,.2); cursor: default; }
 
     /* ============================================================
@@ -491,6 +616,12 @@
     .price-period { font-size: 12px; color: var(--rc-muted); }
     .rc-pricing-divider { height: 1px; background: var(--rc-border); margin: 1.25rem 0; }
     .rc-pricing-feature { font-size: 13px; color: var(--rc-muted); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+    .rc-beta-tag {
+      display: inline-block; padding: 1px 6px; margin-left: 4px;
+      font-family: var(--rc-mono); font-size: 9px; letter-spacing: .1em;
+      background: rgba(0,153,255,.18); color: var(--rc-accent2);
+      border: 1px solid rgba(0,153,255,.35); border-radius: 2px;
+    }
     .pf-check { color: var(--rc-accent); } .pf-none { color: var(--rc-border2); }
 
     /* ============================================================
@@ -614,7 +745,6 @@
 
     @media (max-width: 768px) {
       .rc-demo-layout, .rc-contact-layout { grid-template-columns: 1fr; }
-      .rc-hero-stats { gap: 1.5rem; flex-wrap: wrap; }
       .rc-nav-links { display: none; }
       .rc-nav-cta { display: none; }
       .rc-hamburger { display: flex; }
@@ -623,6 +753,38 @@
       .rc-flow { justify-content: center; gap: .25rem; }
       .rc-flow-step { min-width: 90px; flex: 0 0 calc(33% - .5rem); }
       .rc-flow-arrow { display: none; }
+      .rc-section { padding: 4rem 1.5rem; }
+      .rc-nav { padding: 0 1.25rem; }
+      .rc-hero { padding: 80px 1.5rem 2rem; }
+      .rc-hero h1 { font-size: clamp(2rem, 8vw, 3rem); }
+      .rc-hero-sub { font-size: 1rem; }
+      .rc-hero-actions { flex-direction: column; align-items: stretch; gap: .75rem; }
+      .rc-hero-actions a { text-align: center; width: 100%; padding: 14px; }
+      .rc-services-grid { grid-template-columns: 1fr; }
+      .rc-pricing-grid { grid-template-columns: 1fr; }
+      .rc-vuln-row { flex-wrap: wrap; }
+      .rc-vuln-name { flex: 1 0 100%; order: 2; margin: 4px 0; }
+      .rc-quick-channels { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .rc-section { padding: 3rem 1rem; }
+      .rc-hero { padding: 72px 1rem 1.5rem; }
+      .rc-hero h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); line-height: 1.15; }
+      .rc-badge { font-size: 10px; padding: 4px 10px; }
+      .rc-section-title { font-size: 1.5rem; }
+      .rc-platforms { padding: 1rem; }
+      .rc-plat-items { gap: 1rem; }
+      .rc-service-card { padding: 1.5rem 1.25rem; }
+      .rc-terminal { font-size: 11px; padding: 1rem; min-height: 240px; }
+      .rc-faq-q { font-size: 13px; padding: 1rem; }
+      .rc-form-input, .rc-form-select, .rc-form-textarea { font-size: 16px; } /* iOS no zoom on focus */
+    }
+    /* Touch tap targets ≥ 44px (WCAG) */
+    @media (hover: none) {
+      .rc-btn-primary, .rc-btn-outline, .rc-nav-cta, .rc-form-submit {
+        min-height: 44px;
+      }
+      .rc-nav-links a, .rc-footer-col a { padding: 8px 0; display: inline-block; }
     }
   </style>
 </head>
@@ -653,8 +815,18 @@
     <li><a href="#como-funciona">Proceso</a></li>
     <li><a href="#precios">Precios</a></li>
     <li><a href="#faq">FAQ</a></li>
+    <li class="rc-nav-dd">
+      <button type="button" class="rc-nav-dd-btn" id="rc-dd-btn"
+              aria-expanded="false" aria-haspopup="true" aria-controls="rc-dd-recursos">
+        Recursos <span class="rc-nav-dd-caret" aria-hidden="true">▾</span>
+      </button>
+      <ul class="rc-nav-dd-menu" id="rc-dd-recursos" aria-labelledby="rc-dd-btn">
+        <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a></li>
+        <li><a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a></li>
+        <li><a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a></li>
+      </ul>
+    </li>
     <li><a href="#contacto">Contacto</a></li>
-    <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Docs</a></li>
   </ul>
   <a href="#contacto" class="rc-nav-cta">SOLICITAR SOPORTE</a>
   <button type="button" class="rc-hamburger" id="rc-hamburger"
@@ -670,7 +842,10 @@
   <a href="#precios">Precios</a>
   <a href="#faq">FAQ</a>
   <a href="#contacto">Contacto</a>
-  <a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Docs</a>
+  <span class="rc-mobile-menu-label">Recursos</span>
+  <a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a>
+  <a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a>
+  <a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a>
 </div>
 
 <main id="main-content">
@@ -694,14 +869,15 @@
       <a href="#servicios" class="rc-btn-outline">VER SERVICIOS</a>
     </div>
     <div class="rc-hero-stats">
-      <div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Tiempo de respuesta</div></div>
-      <div><div class="rc-stat-num" data-count="500">0</div><div class="rc-stat-label">CVEs en base de datos</div></div>
-      <div><div class="rc-stat-num">Windows · Linux · Android</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+      <div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
+      <div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+      <div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
+      <div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
     </div>
   </div>
-  <div class="rc-hero-scroll">
+  <div class="rc-hero-scroll" aria-hidden="true">
+    <div class="rc-hero-scroll-mouse"><div class="rc-hero-scroll-wheel"></div></div>
     <span>SCROLL</span>
-    <div class="rc-hero-scroll-line"></div>
   </div>
 </section>
 
@@ -731,7 +907,7 @@
       ['◈','02','Proyección de vida útil del hardware','Algoritmos predictivos que analizan el estado actual de tus componentes y estiman cuándo podrían fallar, con antelación.',['Temperatura y desgaste de disco (S.M.A.R.T)','Historial de uso de batería','Alertas preventivas configurables']],
       ['⬡','03','Análisis de vulnerabilidades del SO','Escanea el sistema operativo contra una base de datos de CVEs actualizada, detecta parches pendientes y aplica reparaciones automáticas.',['Base de datos de vulnerabilidades propia','Reparación con un clic','Compatible con políticas empresariales']],
       ['◇','04','Optimización del sistema','Limpieza profunda, desfragmentación inteligente, gestión de servicios de inicio y liberación de espacio en disco de forma segura.',['Limpieza de archivos temporales y caché','Gestión de programas de inicio','Modo seguro de limpieza']],
-      ['⬡','05','Panel multiplataforma','Gestiona Windows, Linux y Android desde una única interfaz con historial de análisis y seguimiento continuo del estado del equipo.',['Panel unificado multi-dispositivo','Histórico de diagnósticos','Exportación de reportes']],
+      ['⬡','05','Panel multiplataforma (Beta)','Dashboard centralizado en wp-admin que recibe el JSON de diagnóstico de cada agente (Win/Linux/Android) vía REST autenticado, calcula un score 0-100 de salud y agrupa los hosts por cliente y SO.',['Endpoint REST <code>/wp-json/rc/v1/fleet</code>','Score salud + filtros por SO','Listado ordenable y exportable']],
       ['◈','06','Actualizaciones automáticas','Mantén todos tus sistemas al día con actualizaciones silenciosas y programadas con control total y rollback instantáneo.',['Actualizaciones programadas en silencio','Rollback instantáneo ante fallos','Compatible con entornos sin conexión']],
     ];
     foreach ($services as $s): ?>
@@ -818,89 +994,60 @@
   <div class="rc-reveal">
     <div class="rc-section-label">// DEMO INTERACTIVA</div>
     <h2 class="rc-section-title">Prueba el diagnóstico</h2>
-    <p class="rc-section-desc">Selecciona un módulo para ver cómo actúa ResolveCore en tiempo real.</p>
+    <p class="rc-section-desc">Elige plataforma y módulo para ver cómo actúa ResolveCore. Simulación con datos de ejemplo.</p>
   </div>
   <div class="rc-demo-layout rc-reveal">
     <div>
+      <div class="rc-demo-platforms" role="tablist" aria-label="Plataforma de la demo">
+        <button class="rc-demo-plat active" role="tab" aria-selected="true" onclick="selectPlatform('windows',this)"><span aria-hidden="true">⊞</span> Windows</button>
+        <button class="rc-demo-plat" role="tab" aria-selected="false" onclick="selectPlatform('linux',this)"><span aria-hidden="true">☰</span> Linux</button>
+        <button class="rc-demo-plat" role="tab" aria-selected="false" onclick="selectPlatform('android',this)"><span aria-hidden="true">◈</span> Android</button>
+      </div>
       <div class="rc-demo-controls">
-        <button class="rc-demo-btn active" onclick="runDemo('diagnostico',this)">
+        <button class="rc-demo-btn active" onclick="selectModule('diagnostico',this)">
           <div class="rc-demo-btn-dot"></div> Diagnóstico completo
         </button>
-        <button class="rc-demo-btn" onclick="runDemo('vulnerabilidades',this)">
+        <button class="rc-demo-btn" onclick="selectModule('vulnerabilidades',this)">
           <div class="rc-demo-btn-dot"></div> Escaneo de vulnerabilidades
         </button>
-        <button class="rc-demo-btn" onclick="runDemo('hardware',this)">
+        <button class="rc-demo-btn" onclick="selectModule('hardware',this)">
           <div class="rc-demo-btn-dot"></div> Proyección de hardware
         </button>
-        <button class="rc-demo-btn" onclick="runDemo('optimizacion',this)">
+        <button class="rc-demo-btn" onclick="selectModule('optimizacion',this)">
           <div class="rc-demo-btn-dot"></div> Optimización del sistema
         </button>
       </div>
       <div class="rc-demo-progress">
         <div class="rc-demo-progress-label"><span id="rc-prog-label">Listo</span><span id="rc-prog-pct">—</span></div>
-        <div class="rc-demo-bar"><div class="rc-demo-bar-fill" id="rc-demo-bar"></div></div>
+        <div class="rc-demo-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso del análisis">
+          <div class="rc-demo-bar-fill" id="rc-demo-bar"></div>
+        </div>
       </div>
-      <div class="rc-vuln-section" style="margin-top:1.25rem" id="rc-vuln-table">
-        <div class="rc-vuln-header">VULNERABILIDADES DETECTADAS <span class="rc-vuln-status">LIVE</span></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-crit">CRÍTICO</span><span class="rc-vuln-name">CVE-2024-3049 — Kernel privilege escalation</span><button type="button" class="rc-vuln-fix" aria-label="Reparar CVE-2024-3049">[REPARAR]</button></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-high">ALTO</span><span class="rc-vuln-name">CVE-2024-1871 — SMB remote code exec</span><button type="button" class="rc-vuln-fix" aria-label="Reparar CVE-2024-1871">[REPARAR]</button></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-med">MEDIO</span><span class="rc-vuln-name">CVE-2023-4911 — glibc buffer overflow</span><button type="button" class="rc-vuln-fix" aria-label="Aplicar parche CVE-2023-4911">[PARCHE]</button></div>
-        <div class="rc-vuln-row"><span class="rc-vuln-sev sev-med">MEDIO</span><span class="rc-vuln-name">CVE-2023-2650 — OpenSSL DoS</span><button type="button" class="rc-vuln-fix" aria-label="Aplicar parche CVE-2023-2650">[PARCHE]</button></div>
-      </div>
+      <button type="button" class="rc-demo-replay" id="rc-demo-replay" onclick="replayDemo()">↻ Repetir análisis</button>
     </div>
     <div class="rc-terminal">
       <div class="rc-term-header">
         <div class="rc-term-dot td1"></div><div class="rc-term-dot td2"></div><div class="rc-term-dot td3"></div>
         <span class="rc-term-title" id="rc-term-title">resolvecore — diagnóstico</span>
       </div>
-      <div id="rc-term-output">
-        <span class="tl-cmd"><span class="tl-p">rc@system:~$</span> resolvecore --scan --full</span>
-        <span class="tl-dim">Iniciando análisis del sistema...</span>
-        <span class="tl-ok">✓ CPU: Intel Core i7-12700H — 8% carga</span>
-        <span class="tl-ok">✓ RAM: 16GB DDR5 — 42% en uso</span>
-        <span class="tl-warn">⚠ SSD: 87% lleno — acción recomendada</span>
-        <span class="tl-ok">✓ Temperatura: 54°C — nominal</span>
-        <span class="tl-dim">─────────────────────────────</span>
-        <span class="tl-info">→ 2 vulnerabilidades críticas encontradas</span>
-        <span class="tl-ok">✓ Análisis completado en 3.2s</span>
-        <span class="tl-cmd"><span class="tl-p">rc@system:~$</span> <span class="rc-cursor"></span></span>
-      </div>
+      <div id="rc-term-output" aria-live="polite" aria-atomic="false"></div>
     </div>
+  </div>
+
+  <!-- PANEL DE RESULTADO -->
+  <div class="rc-demo-result" id="rc-demo-result" hidden>
+    <div class="rc-demo-result-grid">
+      <div class="rc-demo-gauge-card">
+        <div class="rc-demo-gauge" id="rc-demo-gauge"></div>
+        <div class="rc-demo-gauge-lbl">Salud del sistema</div>
+      </div>
+      <div class="rc-demo-stats" id="rc-demo-stats"></div>
+    </div>
+    <div id="rc-demo-context"></div>
+    <a class="rc-demo-cta" href="#contacto">Solicitar diagnóstico real de mi equipo →</a>
   </div>
 </section>
 
-<hr class="rc-section-divider">
-
-<!-- ==================== CTA ==================== -->
-<section class="rc-section" id="soporte" aria-label="Empezar">
-  <div class="rc-cta-band rc-reveal">
-    <div>
-      <div class="rc-section-label">// EMPEZAR</div>
-      <h2 class="rc-section-title" style="margin-bottom:.75rem">¿Tienes un problema con tu equipo?</h2>
-      <p style="color:var(--rc-muted);max-width:480px;margin-bottom:2rem;line-height:1.7">
-        Cuéntanos qué ocurre. Un técnico analizará tu sistema en remoto, aplicará la solución y te entregará un informe técnico completo.
-      </p>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap">
-        <a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
-        <a href="#precios" class="rc-btn-outline">VER PLANES</a>
-      </div>
-    </div>
-    <div class="rc-cta-band-stats">
-      <div class="rc-cta-stat">
-        <div class="rc-stat-num">&lt;2h</div>
-        <div class="rc-stat-label">Tiempo de respuesta</div>
-      </div>
-      <div class="rc-cta-stat">
-        <div class="rc-stat-num">500+</div>
-        <div class="rc-stat-label">CVEs analizados</div>
-      </div>
-      <div class="rc-cta-stat">
-        <div class="rc-stat-num">3</div>
-        <div class="rc-stat-label">Plataformas</div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <hr class="rc-section-divider">
 
@@ -922,7 +1069,7 @@
       <div class="rc-pricing-feature"><span class="pf-none">─</span> Análisis de vulnerabilidades</div>
       <div class="rc-pricing-feature"><span class="pf-none">─</span> Proyección de hardware</div>
       <div class="rc-pricing-feature"><span class="pf-none">─</span> Panel multiplataforma</div>
-      <div style="margin-top:1.5rem"><a href="#descargar" class="rc-btn-outline" style="width:100%;justify-content:center;font-size:11px;padding:10px">DESCARGAR GRATIS</a></div>
+      <div style="margin-top:1.5rem"><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer" class="rc-btn-outline" style="width:100%;justify-content:center;font-size:11px;padding:10px">DESCARGAR EN GITHUB →</a></div>
     </div>
     <div class="rc-pricing-card featured">
       <div class="rc-pricing-label">PLAN</div>
@@ -946,7 +1093,7 @@
       <div class="rc-pricing-feature"><span class="pf-check">■</span> Dispositivos ilimitados</div>
       <div class="rc-pricing-feature"><span class="pf-check">■</span> Win + Linux + Android</div>
       <div class="rc-pricing-feature"><span class="pf-check">■</span> BD de vulnerabilidades offline</div>
-      <div class="rc-pricing-feature"><span class="pf-check">■</span> Panel multiplataforma</div>
+      <div class="rc-pricing-feature"><span class="pf-check">■</span> Panel multiplataforma <span class="rc-beta-tag">BETA</span></div>
       <div style="margin-top:1.5rem"><a href="#contacto" class="rc-btn-outline" style="width:100%;justify-content:center;font-size:11px;padding:10px;display:flex">CONTACTAR</a></div>
     </div>
   </div>
@@ -1178,30 +1325,96 @@
 
 <!-- ==================== FOOTER ==================== -->
 <div class="rc-footer-outer">
-  <footer class="rc-footer" role="contentinfo">
-    <div>
-      <div class="rc-footer-logo">
-        <picture>
-          <source srcset="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg' ); ?>" type="image/svg+xml">
-          <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png' ); ?>"
-               alt=""
-               class="rc-footer-logo-img" width="160" height="40"
-               loading="lazy" decoding="async">
-        </picture>
+  <footer class="rc-footer-pro" role="contentinfo">
+    <div class="rc-footer-grid">
+      <div class="rc-footer-brand">
+        <div class="rc-footer-logo">
+          <picture>
+            <source srcset="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg' ); ?>" type="image/svg+xml">
+            <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png' ); ?>"
+                 alt="ResolveCore"
+                 class="rc-footer-logo-img" width="160" height="40"
+                 loading="lazy" decoding="async">
+          </picture>
+        </div>
+        <p class="rc-footer-slogan">Solución a tus problemas informáticos.</p>
+        <p class="rc-footer-copy">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG ASIR</p>
       </div>
-      <div class="rc-footer-copy">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG ASIR</div>
+
+      <nav class="rc-footer-col" aria-label="Producto">
+        <div class="rc-footer-col-title">Producto</div>
+        <ul>
+          <li><a href="#servicios">Servicios</a></li>
+          <li><a href="#como-funciona">Proceso</a></li>
+          <li><a href="#precios">Precios</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <nav class="rc-footer-col" aria-label="Recursos">
+        <div class="rc-footer-col-title">Recursos</div>
+        <ul>
+          <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a></li>
+          <li><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+      </nav>
+
+      <nav class="rc-footer-col" aria-label="Legal">
+        <div class="rc-footer-col-title">Legal</div>
+        <ul>
+          <li><a href="<?php echo esc_url( home_url( '/aviso-legal/' ) ); ?>">Aviso legal</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/privacidad/' ) ); ?>">Privacidad (RGPD)</a></li>
+          <li><a href="<?php echo esc_url( home_url( '/cookies/' ) ); ?>">Cookies</a></li>
+        </ul>
+      </nav>
     </div>
-    <nav aria-label="Enlaces de pie de página">
-      <ul class="rc-footer-links">
-        <li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Docs</a></li>
-        <li><a href="#servicios">Servicios</a></li>
-        <li><a href="#precios">Precios</a></li>
-        <li><a href="https://github.com/Haplee/ResolveCore" target="_blank" rel="noopener noreferrer" aria-label="ResolveCore en GitHub (abre en pestaña nueva)">GitHub</a></li>
-        <li><a href="#contacto">Contacto</a></li>
-      </ul>
-    </nav>
-    <div class="rc-footer-slogan">Solución a tus problemas informáticos.</div>
+
+    <div class="rc-footer-bottom">
+      <span>GPL-3.0-or-later · Open Source</span>
+      <span class="rc-footer-bottom-divider" aria-hidden="true">·</span>
+      <span>Hecho en España</span>
+    </div>
   </footer>
+  <style>
+    .rc-footer-pro {
+      max-width: 1200px; margin: 0 auto;
+      padding: 3rem 2.5rem 2rem;
+      color: var(--rc-text); font-family: var(--rc-sans);
+    }
+    .rc-footer-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+      gap: 2.5rem;
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--rc-border);
+    }
+    .rc-footer-brand .rc-footer-logo-img { width: 160px; height: 40px; object-fit: contain; object-position: left center; }
+    .rc-footer-slogan { color: var(--rc-muted); font-size: 13px; margin: 1rem 0 .5rem; line-height: 1.6; max-width: 260px; }
+    .rc-footer-copy { color: var(--rc-muted); font-size: 12px; }
+    .rc-footer-col-title {
+      font-family: var(--rc-mono); font-size: 11px; letter-spacing: .12em;
+      color: var(--rc-accent); margin-bottom: 1rem; text-transform: uppercase;
+    }
+    .rc-footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    .rc-footer-col a { font-size: 13px; color: var(--rc-muted); text-decoration: none; transition: color .2s; }
+    .rc-footer-col a:hover { color: var(--rc-accent); }
+    .rc-footer-bottom {
+      padding-top: 1.5rem;
+      display: flex; gap: .75rem; flex-wrap: wrap;
+      font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted);
+      letter-spacing: .04em;
+    }
+    @media (max-width: 768px) {
+      .rc-footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+      .rc-footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      .rc-footer-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+    }
+  </style>
 </div>
 
 <!-- ==================== JAVASCRIPT ==================== -->
@@ -1236,6 +1449,20 @@ function setMenuOpen(open) {
 hamburger.addEventListener('click', () => setMenuOpen(!mobileMenu.classList.contains('open')));
 mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && mobileMenu.classList.contains('open')) setMenuOpen(false); });
+
+/* --- Nav dropdown "Recursos" (click + teclado; hover lo cubre CSS) --- */
+document.querySelectorAll('.rc-nav-dd').forEach(dd => {
+  const btn  = dd.querySelector('.rc-nav-dd-btn');
+  const menu = dd.querySelector('.rc-nav-dd-menu');
+  const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); };
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = menu.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', e => { if (!dd.contains(e.target)) close(); });
+  dd.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); btn.focus(); } });
+});
 
 /* --- Scroll reveal --- */
 const reveals = document.querySelectorAll('.rc-reveal');
@@ -1297,125 +1524,334 @@ if (particleContainer && !reducedMotion) {
 document.querySelectorAll('.rc-vuln-fix').forEach(btn => btn.addEventListener('click', () => fixVuln(btn)));
 
 /* --- Demo interactiva --- */
-const demoScenarios = {
-  diagnostico: {
-    title: 'resolvecore — diagnóstico',
-    lines: [
-      ['cmd', 'rc@system:~$ resolvecore --scan --full'],
-      ['dim', 'Iniciando análisis del sistema...'],
-      ['ok',  '✓ CPU: Intel Core i7-12700H — 8% carga'],
-      ['ok',  '✓ RAM: 16GB DDR5 — 42% en uso'],
-      ['warn','⚠ SSD: 87% lleno — acción recomendada'],
-      ['ok',  '✓ Temperatura: 54°C — nominal'],
-      ['dim', '─────────────────────────────'],
-      ['info','→ 2 vulnerabilidades críticas encontradas'],
-      ['ok',  '✓ Análisis completado en 3.2s'],
-    ],
-    label: 'Ejecutando diagnóstico...'
-  },
-  vulnerabilidades: {
-    title: 'resolvecore — vulnerabilidades',
-    lines: [
-      ['cmd', 'rc@system:~$ resolvecore --vuln-scan'],
-      ['dim', 'Cargando base de datos CVE...'],
-      ['info','→ Comparando con 500+ entradas conocidas'],
-      ['err', '✗ CVE-2024-3049 — Kernel priv. escalation [CRÍTICO]'],
-      ['warn','⚠ CVE-2024-1871 — SMB remote code exec [ALTO]'],
-      ['warn','⚠ CVE-2023-4911 — glibc buffer overflow [MEDIO]'],
-      ['warn','⚠ CVE-2023-2650 — OpenSSL DoS [MEDIO]'],
-      ['dim', '─────────────────────────────'],
-      ['info','→ 4 vulnerabilidades encontradas'],
-      ['ok',  '✓ Parches disponibles para todas'],
-    ],
-    label: 'Escaneando vulnerabilidades...'
-  },
-  hardware: {
-    title: 'resolvecore — hardware',
-    lines: [
-      ['cmd', 'rc@system:~$ resolvecore --hardware-check'],
-      ['dim', 'Leyendo datos S.M.A.R.T...'],
-      ['ok',  '✓ SSD Samsung 970 EVO — 94% salud'],
-      ['warn','⚠ Temperatura SSD: 61°C — elevada'],
-      ['ok',  '✓ RAM: Sin errores detectados'],
-      ['ok',  '✓ Batería: 91% capacidad original'],
-      ['dim', '─────────────────────────────'],
-      ['info','→ Vida útil estimada SSD: ~18 meses'],
-      ['info','→ Vida útil estimada batería: ~24 meses'],
-      ['ok',  '✓ Informe guardado en /reports/hw_2024.pdf'],
-    ],
-    label: 'Analizando hardware...'
-  },
-  optimizacion: {
-    title: 'resolvecore — optimización',
-    lines: [
-      ['cmd', 'rc@system:~$ resolvecore --optimize --safe'],
-      ['dim', 'Analizando archivos temporales...'],
-      ['info','→ 4.2 GB en archivos temporales detectados'],
-      ['info','→ 23 procesos de inicio innecesarios'],
-      ['ok',  '✓ Limpieza de caché completada — 2.1 GB liberados'],
-      ['ok',  '✓ Archivos temporales eliminados — 1.8 GB'],
-      ['ok',  '✓ 12 procesos de inicio desactivados'],
-      ['dim', '─────────────────────────────'],
-      ['ok',  '✓ Sistema optimizado — +18% rendimiento estimado'],
-    ],
-    label: 'Optimizando sistema...'
-  }
+/* ── Plataformas: prompt + comando real por SO ── */
+const demoPlatforms = {
+  windows: { label: 'Windows', prompt: 'PS C:\\>',
+    cmd: { diagnostico: '.\\ResolveCore.ps1 -Scan -Full',
+           vulnerabilidades: '.\\ResolveCore.ps1 -VulnScan',
+           hardware: '.\\ResolveCore.ps1 -HardwareCheck',
+           optimizacion: '.\\ResolveCore.ps1 -Optimize -Safe' } },
+  linux:   { label: 'Linux', prompt: 'rc@linux:~$',
+    cmd: { diagnostico: 'bash diagnostico.sh --full',
+           vulnerabilidades: 'python3 buscar_vulnerabilidades.py',
+           hardware: 'bash diagnostico.sh --hardware',
+           optimizacion: 'bash optimizacion.sh --safe' } },
+  android: { label: 'Android', prompt: 'rc@android:/ $',
+    cmd: { diagnostico: 'bash diagnostico.sh --adb',
+           vulnerabilidades: 'python3 buscar_vulnerabilidades.py --platform A',
+           hardware: 'bash diagnostico.sh --battery',
+           optimizacion: 'bash optimizacion.sh --trim-cache' } },
 };
 
-let demoRunning = false;
-function runDemo(scenario, btn) {
-  if (demoRunning) return;
-  document.querySelectorAll('.rc-demo-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const data = demoScenarios[scenario];
-  document.getElementById('rc-term-title').textContent = data.title;
-  document.getElementById('rc-prog-label').textContent = data.label;
-  const bar = document.getElementById('rc-demo-bar');
-  bar.style.width = '0%';
-  const output = document.getElementById('rc-term-output');
-  output.style.opacity = '0';
-  setTimeout(() => {
-    output.innerHTML = '';
-    bar.style.width = '100%';
-    demoRunning = true;
-    data.lines.forEach((line, i) => {
-      setTimeout(() => {
-        const span = document.createElement('span');
-        if (line[0] === 'cmd') {
-          span.className = 'tl-cmd';
-          span.innerHTML = '<span class="tl-p">' + line[1].split('$')[0] + '$</span>' + line[1].split('$')[1];
-        } else {
-          span.className = 'tl-' + line[0];
-          span.textContent = line[1];
-        }
-        output.appendChild(span);
-        if (i === data.lines.length - 1) {
-          const cursor = document.createElement('span');
-          cursor.className = 'tl-cmd';
-          cursor.innerHTML = '<span class="tl-p">rc@system:~$</span> <span class="rc-cursor"></span>';
-          output.appendChild(cursor);
-          document.getElementById('rc-prog-label').textContent = 'Completado';
-          document.getElementById('rc-prog-pct').textContent = '100%';
-          demoRunning = false;
-        }
-      }, i * 280);
-    });
-    output.style.opacity = '1';
-  }, 350);
+/* Un texto puede ser string o un objeto {windows,linux,android} */
+function pickPlat(v, plat) {
+  return (v && typeof v === 'object') ? (v[plat] || v.windows) : v;
 }
 
-/* --- Fix vulnerability buttons --- */
+/* ── Módulos: contenido del escenario (independiente del SO) ── */
+const demoModules = {
+  diagnostico: {
+    title: 'diagnóstico', label: 'Ejecutando diagnóstico...', score: 68,
+    lines: [
+      ['dim', 'Iniciando análisis del sistema...'],
+      ['ok', { windows: '✓ CPU: Intel Core i7-12700H — 8% carga',
+               linux:   '✓ CPU: AMD Ryzen 7 5800X — 6% carga',
+               android: '✓ SoC: Snapdragon 8 Gen 2 — 11% carga' }],
+      ['ok', { windows: '✓ RAM: 16 GB DDR5 — 42% en uso',
+               linux:   '✓ RAM: 32 GB DDR4 — 28% en uso',
+               android: '✓ RAM: 8 GB LPDDR5 — 61% en uso' }],
+      ['warn', { windows: '⚠ SSD C: 87% lleno — acción recomendada',
+                 linux:   '⚠ Partición /: 87% llena — acción recomendada',
+                 android: '⚠ Almacenamiento: 91% lleno — crítico' }],
+      ['ok', '✓ Temperatura: 54°C — nominal'],
+      ['dim', '─────────────────────────────'],
+      ['info', '→ 2 vulnerabilidades críticas encontradas'],
+      ['ok', '✓ Análisis completado en 3.2 s'],
+    ],
+    stats: [ { num: 68, label: 'Salud /100' }, { num: 87, label: '% disco usado' }, { num: 2, label: 'vulns críticas' } ],
+    vulns: [
+      { sev: 'crit', cve: 'CVE-2024-3049', desc: 'Kernel privilege escalation', action: 'REPARAR' },
+      { sev: 'high', cve: 'CVE-2024-1871', desc: 'SMB remote code exec', action: 'REPARAR' },
+    ],
+    compare: null,
+  },
+  vulnerabilidades: {
+    title: 'vulnerabilidades', label: 'Escaneando vulnerabilidades...', score: 54,
+    lines: [
+      ['dim', 'Cargando base de datos CVE (NVD · CISA KEV · OSV)...'],
+      ['info', '→ Comparando el inventario con 500+ entradas conocidas'],
+      ['err', '✗ CVE-2024-3049 — Kernel priv. escalation [CRÍTICO]'],
+      ['warn', '⚠ CVE-2024-1871 — SMB remote code exec [ALTO]'],
+      ['warn', '⚠ CVE-2023-4911 — glibc buffer overflow [MEDIO]'],
+      ['warn', '⚠ CVE-2023-2650 — OpenSSL DoS [MEDIO]'],
+      ['dim', '─────────────────────────────'],
+      ['info', '→ 4 vulnerabilidades encontradas · parches disponibles'],
+      ['ok', '✓ Escaneo completado en 4.7 s'],
+    ],
+    stats: [ { num: 54, label: 'Salud /100' }, { num: 4, label: 'CVE detectados' }, { num: 1, label: 'en CISA KEV' } ],
+    vulns: [
+      { sev: 'crit', cve: 'CVE-2024-3049', desc: 'Kernel privilege escalation', action: 'REPARAR' },
+      { sev: 'high', cve: 'CVE-2024-1871', desc: 'SMB remote code exec', action: 'REPARAR' },
+      { sev: 'med',  cve: 'CVE-2023-4911', desc: 'glibc buffer overflow', action: 'PARCHE' },
+      { sev: 'med',  cve: 'CVE-2023-2650', desc: 'OpenSSL DoS', action: 'PARCHE' },
+    ],
+    compare: null,
+  },
+  hardware: {
+    title: 'hardware', label: 'Analizando hardware...', score: 79,
+    lines: [
+      ['dim', 'Leyendo datos S.M.A.R.T...'],
+      ['ok', { windows: '✓ SSD Samsung 970 EVO — 94% salud',
+               linux:   '✓ SSD WD Black SN770 — 96% salud',
+               android: '✓ UFS 3.1 128 GB — 92% salud' }],
+      ['warn', '⚠ Temperatura del disco: 61°C — elevada'],
+      ['ok', { windows: '✓ RAM: sin errores detectados',
+               linux:   '✓ RAM ECC: sin errores detectados',
+               android: '✓ Memoria: sin errores detectados' }],
+      ['ok', { windows: '✓ Batería: 91% de capacidad original',
+               linux:   '✓ Batería: 88% de capacidad original',
+               android: '✓ Batería: 86% — 320 ciclos' }],
+      ['dim', '─────────────────────────────'],
+      ['info', '→ Vida útil estimada: ~18 meses'],
+      ['ok', '✓ Proyección guardada en el informe PDF'],
+    ],
+    stats: [ { num: 79, label: 'Salud /100' }, { num: 94, label: '% salud SSD' }, { num: 18, label: 'meses de vida' } ],
+    vulns: [],
+    compare: {
+      title: 'Proyección a 12 meses',
+      rows: [
+        { label: 'Salud del SSD', before: '94%', after: '81%' },
+        { label: 'Capacidad de batería', before: '91%', after: '78%' },
+        { label: 'Ciclos de batería', before: '320', after: '~680' },
+      ],
+    },
+  },
+  optimizacion: {
+    title: 'optimización', label: 'Optimizando sistema...', score: 84,
+    lines: [
+      ['dim', 'Analizando archivos temporales y arranque...'],
+      ['info', '→ 4.0 GB en archivos temporales detectados'],
+      ['info', { windows: '→ 23 procesos de inicio innecesarios',
+                 linux:   '→ 14 servicios systemd innecesarios',
+                 android: '→ 19 apps activas en segundo plano' }],
+      ['ok', '✓ Caché y temporales limpiados — 4.0 GB liberados'],
+      ['ok', { windows: '✓ 12 procesos de inicio desactivados',
+               linux:   '✓ 8 servicios desactivados',
+               android: '✓ Caché de 19 apps recortada' }],
+      ['dim', '─────────────────────────────'],
+      ['ok', '✓ Sistema optimizado — +18% de rendimiento estimado'],
+    ],
+    stats: [ { num: 84, label: 'Salud /100' }, { num: 4, label: 'GB liberados' }, { num: 18, label: '% más rápido' } ],
+    vulns: [],
+    compare: {
+      title: 'Antes / después',
+      rows: [
+        { label: 'Disco usado', before: '87%', after: '71%' },
+        { label: 'Procesos al inicio', before: '23', after: '11' },
+        { label: 'Tiempo de arranque', before: '23 s', after: '11 s' },
+        { label: 'Salud del sistema', before: '61', after: '84' },
+      ],
+    },
+  },
+};
+
+const demoState = { platform: 'windows', module: 'diagnostico', running: false };
+const demoReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function selectPlatform(p, btn) {
+  if (demoState.running) return;
+  demoState.platform = p;
+  document.querySelectorAll('.rc-demo-plat').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  runDemo();
+}
+function selectModule(m, btn) {
+  if (demoState.running) return;
+  demoState.module = m;
+  document.querySelectorAll('.rc-demo-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  runDemo();
+}
+function replayDemo() { if (!demoState.running) runDemo(); }
+
+function runDemo(instant) {
+  const plat   = demoPlatforms[demoState.platform];
+  const mod    = demoModules[demoState.module];
+  const cmdStr = plat.cmd[demoState.module];
+  const lines  = mod.lines;
+  const output = document.getElementById('rc-term-output');
+  const bar    = document.getElementById('rc-demo-bar');
+  const barWrap = bar.parentElement;
+  const replay = document.getElementById('rc-demo-replay');
+  const reduce = demoReduceMotion || instant === true;
+  const totalSteps = lines.length + 1;
+  let step = 0;
+
+  function setProgress() {
+    const pct = Math.round(step / totalSteps * 100);
+    bar.style.width = pct + '%';
+    barWrap.setAttribute('aria-valuenow', pct);
+    document.getElementById('rc-prog-pct').textContent = pct + '%';
+  }
+  function addLine(i) {
+    const ln = lines[i];
+    const span = document.createElement('span');
+    span.className = 'tl-' + ln[0];
+    span.textContent = pickPlat(ln[1], demoState.platform);
+    output.appendChild(span);
+    step++; setProgress();
+    output.scrollTop = output.scrollHeight;
+  }
+  function finish() {
+    const cur = document.createElement('span');
+    cur.className = 'tl-cmd';
+    const p = document.createElement('span'); p.className = 'tl-p'; p.textContent = plat.prompt + ' ';
+    const c = document.createElement('span'); c.className = 'rc-cursor';
+    cur.appendChild(p); cur.appendChild(c);
+    output.appendChild(cur);
+    output.scrollTop = output.scrollHeight;
+    document.getElementById('rc-prog-label').textContent = 'Completado';
+    demoState.running = false;
+    replay.disabled = false;
+    showDemoResult(mod, reduce);
+  }
+
+  document.getElementById('rc-term-title').textContent = 'resolvecore — ' + mod.title;
+  document.getElementById('rc-prog-label').textContent = mod.label;
+  output.innerHTML = '';
+  bar.style.width = '0%';
+  document.getElementById('rc-demo-result').hidden = true;
+  demoState.running = true;
+  replay.disabled = true;
+
+  const cmdEl = document.createElement('span');
+  cmdEl.className = 'tl-cmd';
+  const pEl = document.createElement('span'); pEl.className = 'tl-p'; pEl.textContent = plat.prompt + ' ';
+  const tEl = document.createElement('span'); tEl.className = 'tl-typed';
+  cmdEl.appendChild(pEl); cmdEl.appendChild(tEl);
+  output.appendChild(cmdEl);
+
+  if (reduce) {
+    tEl.textContent = cmdStr;
+    step++; setProgress();
+    for (let i = 0; i < lines.length; i++) addLine(i);
+    finish();
+    return;
+  }
+
+  let ci = 0;
+  (function type() {
+    if (ci <= cmdStr.length) {
+      tEl.textContent = cmdStr.slice(0, ci++);
+      setTimeout(type, 26);
+    } else {
+      step++; setProgress();
+      let li = 0;
+      (function nextLine() {
+        if (li < lines.length) { addLine(li++); setTimeout(nextLine, 230); }
+        else finish();
+      })();
+    }
+  })();
+}
+
+function animateCount(el, target, dur) {
+  const start = performance.now();
+  (function tick(now) {
+    const p = Math.min(1, (now - start) / dur);
+    el.textContent = Math.round(p * target);
+    if (p < 1) requestAnimationFrame(tick);
+  })(start);
+}
+
+function showDemoResult(mod, instant) {
+  document.getElementById('rc-demo-result').hidden = false;
+
+  /* Gauge SVG */
+  const gauge = document.getElementById('rc-demo-gauge');
+  const color = mod.score >= 80 ? '#00e5a0' : mod.score >= 60 ? '#ffc107' : '#ff4757';
+  const r = 42, circ = 2 * Math.PI * r;
+  gauge.innerHTML =
+    '<svg width="124" height="124" viewBox="0 0 110 110">'
+    + '<circle cx="55" cy="55" r="' + r + '" fill="none" stroke="#1e2330" stroke-width="8"/>'
+    + '<circle id="rc-gauge-arc" cx="55" cy="55" r="' + r + '" fill="none" stroke="' + color
+    + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 ' + circ
+    + '" transform="rotate(-90 55 55)"/></svg>'
+    + '<div class="rc-demo-gauge-val" style="color:' + color + '">0</div>';
+  const arc = gauge.querySelector('#rc-gauge-arc');
+  const val = gauge.querySelector('.rc-demo-gauge-val');
+  const targetDash = mod.score / 100 * circ;
+  if (instant) {
+    arc.setAttribute('stroke-dasharray', targetDash + ' ' + circ);
+    val.textContent = mod.score;
+  } else {
+    arc.style.transition = 'stroke-dasharray 1.1s ease';
+    requestAnimationFrame(() => arc.setAttribute('stroke-dasharray', targetDash + ' ' + circ));
+    animateCount(val, mod.score, 1100);
+  }
+
+  /* Contadores */
+  const stats = document.getElementById('rc-demo-stats');
+  stats.innerHTML = mod.stats.map(s =>
+    '<div class="rc-demo-stat"><div class="rc-demo-stat-num" data-num="' + s.num + '">0</div>'
+    + '<div class="rc-demo-stat-lbl">' + s.label + '</div></div>').join('');
+  stats.querySelectorAll('.rc-demo-stat-num').forEach(el => {
+    const n = parseInt(el.dataset.num, 10);
+    if (instant) el.textContent = n; else animateCount(el, n, 1000);
+  });
+
+  /* Contexto: vulnerabilidades o comparativa */
+  const ctx = document.getElementById('rc-demo-context');
+  if (mod.vulns && mod.vulns.length) ctx.innerHTML = renderDemoVulns(mod.vulns);
+  else if (mod.compare)              ctx.innerHTML = renderDemoCompare(mod.compare);
+  else                               ctx.innerHTML = '';
+}
+
+function renderDemoVulns(vulns) {
+  const sevLbl = { crit: 'CRÍTICO', high: 'ALTO', med: 'MEDIO' };
+  let h = '<div class="rc-vuln-section" style="margin-top:0">'
+    + '<div class="rc-vuln-header">VULNERABILIDADES DETECTADAS <span class="rc-vuln-status">SIMULACIÓN</span></div>';
+  vulns.forEach(v => {
+    h += '<div class="rc-vuln-row">'
+      + '<span class="rc-vuln-sev sev-' + v.sev + '">' + sevLbl[v.sev] + '</span>'
+      + '<span class="rc-vuln-name"><a href="https://nvd.nist.gov/vuln/detail/' + v.cve
+      + '" target="_blank" rel="noopener noreferrer">' + v.cve + '</a> — ' + v.desc + '</span>'
+      + '<button type="button" class="rc-vuln-fix" onclick="fixVuln(this)" aria-label="'
+      + (v.action === 'REPARAR' ? 'Reparar ' : 'Aplicar parche ') + v.cve + '">[' + v.action + ']</button>'
+      + '</div>';
+  });
+  return h + '</div>';
+}
+
+function renderDemoCompare(cmp) {
+  let h = '<div class="rc-compare"><div class="rc-compare-title">' + cmp.title + '</div>';
+  cmp.rows.forEach(r => {
+    h += '<div class="rc-compare-row">'
+      + '<span class="rc-compare-lbl">' + r.label + '</span>'
+      + '<span class="rc-compare-before">' + r.before + '</span>'
+      + '<span class="rc-compare-arrow" aria-hidden="true">→</span>'
+      + '<span class="rc-compare-after">' + r.after + '</span></div>';
+  });
+  return h + '</div>';
+}
+
+/* --- Reparar vulnerabilidad (simulación) --- */
 function fixVuln(el) {
   if (el.classList.contains('fixed')) return;
   el.textContent = '[APLICANDO...]';
-  el.style.opacity = '0.5';
+  el.disabled = true;
   setTimeout(() => {
-    el.textContent = '[✓ REPARADO]';
+    el.textContent = '[✓ HECHO]';
     el.classList.add('fixed');
-    el.style.opacity = '1';
-    el.closest('.rc-vuln-row').style.opacity = '0.4';
-  }, 1200);
+    el.closest('.rc-vuln-row').style.opacity = '0.45';
+  }, 1100);
 }
+
+/* Render inicial sin animación */
+runDemo(true);
 
 /* --- Form validation & counter --- */
 const textarea = document.getElementById('rc_message');
@@ -1464,7 +1900,10 @@ function submitForm(e) {
         if (res.data.ticket_id) {
           const link = document.createElement('a');
           link.href = '#';
-          link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;';
+          link.className = 'rc-ticket-link';
+          link.dataset.ticket = res.data.ticket_id;
+          link.dataset.token = res.data.ticket_token || '';
+          link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;cursor:pointer;text-decoration:underline;';
           link.textContent = '[VER TICKET #' + res.data.ticket_id + ']';
           msg.appendChild(link);
         }
@@ -1486,6 +1925,311 @@ function submitForm(e) {
       btn.textContent = 'ENVIAR MENSAJE →';
     });
 }
+</script>
+
+<!-- ==================== MODAL TRACKING TICKET ==================== -->
+<div class="rc-ticket-modal" id="rc-ticket-modal" role="dialog" aria-modal="true" aria-labelledby="rc-ticket-modal-title" aria-hidden="true">
+  <div class="rc-ticket-modal-overlay" data-rc-close></div>
+  <div class="rc-ticket-modal-box">
+    <button class="rc-ticket-modal-close" aria-label="Cerrar" data-rc-close>&times;</button>
+    <div class="rc-ticket-modal-head">
+      <div class="rc-ticket-modal-label">// SEGUIMIENTO DEL TICKET</div>
+      <div class="rc-ticket-modal-title" id="rc-ticket-modal-title">Cargando…</div>
+    </div>
+    <div class="rc-ticket-modal-body" id="rc-ticket-modal-body">
+      <div class="rc-ticket-loading">
+        <div class="rc-ticket-spin"></div>
+        <span>Consultando estado en MantisBT…</span>
+      </div>
+    </div>
+    <div class="rc-ticket-modal-foot">
+      <button type="button" class="rc-ticket-refresh" id="rc-ticket-refresh">↻ Actualizar</button>
+      <span class="rc-ticket-foot-note">Estado en tiempo real desde MantisBT.</span>
+    </div>
+  </div>
+</div>
+<style>
+.rc-ticket-modal {
+  position: fixed; inset: 0; z-index: 10000;
+  display: none; align-items: center; justify-content: center;
+  padding: 1.5rem; box-sizing: border-box;
+}
+.rc-ticket-modal.open { display: flex; animation: rcFadeUp .25s ease both; }
+.rc-ticket-modal-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,.78);
+  backdrop-filter: blur(6px);
+}
+.rc-ticket-modal-box {
+  position: relative; max-width: 560px; width: 100%;
+  background: var(--rc-surface); border: 1px solid var(--rc-border2);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  max-height: 90vh; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.rc-ticket-modal-close {
+  position: absolute; top: 10px; right: 10px;
+  width: 32px; height: 32px; background: transparent;
+  border: 1px solid var(--rc-border); color: var(--rc-muted);
+  cursor: pointer; font-size: 18px; line-height: 1;
+  transition: all .2s; font-family: var(--rc-mono);
+}
+.rc-ticket-modal-close:hover { color: var(--rc-warn); border-color: var(--rc-warn); }
+.rc-ticket-modal-head {
+  padding: 1.5rem 1.75rem 1rem;
+  border-bottom: 1px solid var(--rc-border);
+}
+.rc-ticket-modal-label {
+  font-family: var(--rc-mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--rc-accent); margin-bottom: .5rem;
+}
+.rc-ticket-modal-title {
+  font-family: var(--rc-mono); font-size: 1.3rem; font-weight: 700;
+  color: var(--rc-text);
+}
+.rc-ticket-modal-body {
+  padding: 1.5rem 1.75rem; overflow-y: auto; flex: 1 1 auto;
+}
+.rc-ticket-modal-foot {
+  padding: .9rem 1.75rem; border-top: 1px solid var(--rc-border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.rc-ticket-refresh {
+  font-family: var(--rc-mono); font-size: 11px; letter-spacing: .06em;
+  background: transparent; border: 1px solid var(--rc-border2);
+  color: var(--rc-accent); padding: 6px 12px; cursor: pointer;
+  transition: all .2s;
+}
+.rc-ticket-refresh:hover { border-color: var(--rc-accent); background: rgba(0,229,160,.06); }
+.rc-ticket-foot-note {
+  font-family: var(--rc-mono); font-size: 10px; color: var(--rc-muted);
+  letter-spacing: .04em;
+}
+
+.rc-ticket-loading {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  padding: 2rem 0; color: var(--rc-muted);
+  font-family: var(--rc-mono); font-size: 12px;
+}
+.rc-ticket-spin {
+  width: 32px; height: 32px;
+  border: 2px solid var(--rc-border2); border-top-color: var(--rc-accent);
+  border-radius: 50%; animation: rcSpin 0.9s linear infinite;
+}
+@keyframes rcSpin { to { transform: rotate(360deg); } }
+
+.rc-ticket-error {
+  padding: 1rem; border: 1px solid var(--rc-warn);
+  background: rgba(255,107,53,.06); color: var(--rc-warn);
+  font-family: var(--rc-mono); font-size: 12px;
+}
+
+.rc-ticket-status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--rc-mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+  background: rgba(0,229,160,.1); color: var(--rc-accent);
+  border: 1px solid rgba(0,229,160,.3);
+}
+.rc-ticket-status-pill::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rc-accent); animation: rcPulse 1.6s ease-in-out infinite;
+}
+@keyframes rcPulse { 50% { opacity: .35; } }
+
+/* Timeline tracking — package-style */
+.rc-track {
+  position: relative; padding-left: 0; margin: 1.5rem 0 0;
+  list-style: none;
+}
+.rc-track-step {
+  position: relative; display: flex; gap: 14px;
+  padding-bottom: 1.5rem;
+}
+.rc-track-step:last-child { padding-bottom: 0; }
+.rc-track-step::before {
+  content: ''; position: absolute; left: 9px; top: 22px;
+  width: 2px; height: calc(100% - 16px);
+  background: var(--rc-border2);
+}
+.rc-track-step:last-child::before { display: none; }
+.rc-track-step.done::before { background: var(--rc-accent); }
+.rc-track-dot {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border-radius: 50%; border: 2px solid var(--rc-border2);
+  background: var(--rc-surface); margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: transparent; font-weight: 700;
+}
+.rc-track-step.done .rc-track-dot {
+  background: var(--rc-accent); border-color: var(--rc-accent); color: #000;
+}
+.rc-track-step.done .rc-track-dot::after { content: '✓'; }
+.rc-track-step.active .rc-track-dot {
+  background: var(--rc-surface); border-color: var(--rc-accent);
+  box-shadow: 0 0 0 4px rgba(0,229,160,.18);
+  animation: rcDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes rcDotPulse {
+  50% { box-shadow: 0 0 0 8px rgba(0,229,160,.05); }
+}
+.rc-track-info { flex: 1; min-width: 0; }
+.rc-track-label {
+  font-family: var(--rc-mono); font-size: 13px; font-weight: 700;
+  color: var(--rc-muted); margin-bottom: 2px;
+}
+.rc-track-step.done    .rc-track-label { color: var(--rc-text); }
+.rc-track-step.active  .rc-track-label { color: var(--rc-accent); }
+.rc-track-desc {
+  font-size: 12px; color: var(--rc-muted); line-height: 1.5;
+}
+
+.rc-ticket-meta-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1rem;
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px dashed var(--rc-border);
+  font-family: var(--rc-mono); font-size: 11px;
+}
+.rc-ticket-meta-grid dt {
+  color: var(--rc-muted); letter-spacing: .06em; text-transform: uppercase;
+  font-size: 10px;
+}
+.rc-ticket-meta-grid dd {
+  color: var(--rc-text); margin: 0;
+}
+@media (max-width: 480px) {
+  .rc-ticket-modal-box  { max-height: 95vh; }
+  .rc-ticket-modal-head { padding: 1.25rem 1.25rem .75rem; }
+  .rc-ticket-modal-body { padding: 1.25rem; }
+  .rc-ticket-modal-foot { padding: .75rem 1.25rem; }
+  .rc-ticket-meta-grid  { grid-template-columns: 1fr; }
+}
+</style>
+<script>
+(function() {
+  const modal    = document.getElementById('rc-ticket-modal');
+  const titleEl  = document.getElementById('rc-ticket-modal-title');
+  const bodyEl   = document.getElementById('rc-ticket-modal-body');
+  const refresh  = document.getElementById('rc-ticket-refresh');
+  let currentId    = null;
+  let currentToken = '';
+
+  function openModal() {
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    currentId = null;
+    currentToken = '';
+  }
+
+  modal.addEventListener('click', e => {
+    if (e.target.matches('[data-rc-close]')) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[c]);
+  }
+
+  function renderLoading() {
+    bodyEl.innerHTML = `
+      <div class="rc-ticket-loading">
+        <div class="rc-ticket-spin"></div>
+        <span>Consultando estado en MantisBT…</span>
+      </div>`;
+  }
+
+  function renderError(msg) {
+    bodyEl.innerHTML = `<div class="rc-ticket-error">${escapeHtml(msg || 'Error desconocido.')}</div>`;
+  }
+
+  function formatDate(s) {
+    if (!s) return '—';
+    try {
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return s;
+      return d.toLocaleString('es-ES', {
+        day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      });
+    } catch { return s; }
+  }
+
+  function renderTicket(data) {
+    titleEl.textContent = 'Ticket #' + data.ticket_id;
+    const steps = (data.events || []).map(ev => {
+      let cls = 'pending';
+      if (ev.phase <  data.phase) cls = 'done';
+      if (ev.phase === data.phase) cls = 'active';
+      return `
+        <li class="rc-track-step ${cls}">
+          <div class="rc-track-dot"></div>
+          <div class="rc-track-info">
+            <div class="rc-track-label">${escapeHtml(ev.label)}</div>
+            <div class="rc-track-desc">${escapeHtml(ev.desc)}</div>
+          </div>
+        </li>`;
+    }).join('');
+
+    bodyEl.innerHTML = `
+      <span class="rc-ticket-status-pill">${escapeHtml((data.status || '').toUpperCase())}</span>
+      <ul class="rc-track">${steps}</ul>
+      <dl class="rc-ticket-meta-grid">
+        <dt>Creado</dt>     <dd>${escapeHtml(formatDate(data.created_at))}</dd>
+        <dt>Actualizado</dt><dd>${escapeHtml(formatDate(data.updated_at))}</dd>
+      </dl>`;
+  }
+
+  function fetchStatus(id, token) {
+    currentId = id;
+    currentToken = token || '';
+    renderLoading();
+    openModal();
+
+    const fd = new FormData();
+    fd.append('action', 'resolvecore_ticket_status');
+    fd.append('nonce', document.querySelector('[name="rc_nonce"]').value);
+    fd.append('ticket_id', id);
+    fd.append('token', currentToken);
+
+    fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) renderTicket(res.data);
+        else renderError(res.data && res.data.msg);
+      })
+      .catch(() => renderError('Error de red. Inténtalo de nuevo.'));
+  }
+
+  // Delegación: cualquier .rc-ticket-link en la página
+  document.addEventListener('click', e => {
+    const link = e.target.closest('.rc-ticket-link');
+    if (!link) return;
+    e.preventDefault();
+    const id = link.dataset.ticket;
+    const token = link.dataset.token || '';
+    if (id) fetchStatus(id, token);
+  });
+
+  refresh.addEventListener('click', () => { if (currentId) fetchStatus(currentId, currentToken); });
+
+  // Auto-abrir el seguimiento desde el enlace del correo de confirmación: ?rc_ticket=N&rc_t=TOKEN
+  const rcParams = new URLSearchParams(window.location.search);
+  const rcTicketParam = rcParams.get('rc_ticket');
+  const rcTokenParam = rcParams.get('rc_t') || '';
+  if (rcTicketParam && /^[0-9]+$/.test(rcTicketParam)) {
+    fetchStatus(rcTicketParam, rcTokenParam);
+  }
+})();
 </script>
 
 <!-- ==================== FAB CONTACTO ==================== -->

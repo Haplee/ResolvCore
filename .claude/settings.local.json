@@ -77,7 +77,19 @@
       "Bash(base64 -w0 /tmp/inject-token.sh)",
       "Bash(base64 -w0 /tmp/final-sync.sh)",
       "Bash(base64 -w0 /tmp/fixct.sh)",
-      "PowerShell(Test-Path *)"
+      "PowerShell(Test-Path *)",
+      "Read(//c/Users/franc/**)",
+      "PowerShell($t = Get-Item \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wp\\\\wp-content\\\\themes\\\\resolvecore-theme\"; \"Theme LinkType: $\\($t.LinkType\\)  Target: $\\($t.Target\\)\"; $p = Get-Item \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wp\\\\wp-content\\\\plugins\\\\rc-mantisbt\"; \"Plugin LinkType: $\\($p.LinkType\\)  Target: $\\($p.Target\\)\"; \"--- versions in wp/ theme ---\"; Select-String -Path \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wp\\\\wp-content\\\\themes\\\\resolvecore-theme\\\\style.css\" -Pattern \"Version:\" | Select-Object -First 1; \"--- wp-config DB ---\"; Select-String -Path \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\wp\\\\wp-config.php\" -Pattern \"DB_|SQLITE|WP_HOME|WP_SITEURL\" | Select-Object -ExpandProperty Line)",
+      "Bash(curl -s -o /dev/null -w \"8080:%{http_code}\\\\n\" --max-time 3 http://localhost:8080/)",
+      "Bash(curl -s -o /dev/null -w \"8091:%{http_code}\\\\n\" --max-time 5 http://localhost:8091/)",
+      "Bash(curl -s -o \"C:/Users/franc/AppData/Local/Temp/rc_front.html\" -w \"front /:%{http_code}\\\\n\" --max-time 15 http://localhost:8080/)",
+      "Bash(awk '{print $5}')",
+      "Bash(taskkill //F //IM php.exe)",
+      "Bash(curl -s -o \"C:/Users/franc/AppData/Local/Temp/rc_front.html\" -w \"front /:%{http_code} bytes:%{size_download}\\\\n\" --max-time 25 http://localhost:8080/)",
+      "Bash(curl -s -o /tmp/rc_cl.html -w \"%{http_code} bytes:%{size_download}\\\\n\" --max-time 20 \"http://localhost:8080/?page_id=changelog\")",
+      "Bash(curl -s -o /tmp/rc_cl2.html -w \"changelog-slug:%{http_code}\\\\n\" --max-time 20 \"http://localhost:8080/changelog/\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /tmp/rc_t.html -w \"with-params:%{http_code}\\\\n\" --max-time 20 \"http://localhost:8080/?rc_ticket=42&rc_t=a4165c0472de0a584503\")"
     ]
   }
 }

@@ -27,6 +27,30 @@ function resolvecore_setup() {
 }
 add_action( 'after_setup_theme', 'resolvecore_setup' );
 
+/**
+ * Menú de pie de página por defecto — se usa cuando no hay un menú
+ * asignado a la ubicación 'footer' en Apariencia → Menús.
+ */
+function resolvecore_footer_menu_fallback(): void {
+    $links = [
+        '/docs/'         => 'Documentación',
+        '/changelog/'    => 'Changelog',
+        '/fleet-status/' => 'Estado de la flota',
+        '/aviso-legal/'  => 'Aviso legal',
+        '/privacidad/'   => 'Privacidad',
+        '/cookies/'      => 'Cookies',
+    ];
+    echo '<ul class="rc-footer-links">';
+    foreach ( $links as $path => $label ) {
+        printf(
+            '<li><a href="%s">%s</a></li>',
+            esc_url( home_url( $path ) ),
+            esc_html( $label )
+        );
+    }
+    echo '</ul>';
+}
+
 // Preconnect a Google Fonts (FCP/LCP boost) — antes de wp_head
 function resolvecore_resource_hints( $urls, $relation ) {
     if ( $relation === 'preconnect' ) {
@@ -82,7 +106,7 @@ function resolvecore_scripts() {
     wp_enqueue_style( 'resolvecore-fonts',
         'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap',
         [], null );
-    wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), [], '2.0.1' );
+    wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), [], '3.1.2' );
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_scripts' );
 
@@ -141,38 +165,323 @@ function resolvecore_handle_contact() {
         wp_send_json_error( [ 'msg' => 'El mensaje supera 500 caracteres.' ] );
     }
 
-    $admin_email = get_option( 'admin_email' );
-    $subject = sprintf( '[ResolveCore] Nuevo mensaje de %s — %s', $type, $name );
-    $body  = "Nombre: {$name}\n";
-    $body .= "Email: {$email}\n";
-    $body .= "Tipo: {$type}\n\n";
-    $body .= "Mensaje:\n{$message}";
-    $headers = [
-        'Content-Type: text/plain; charset=UTF-8',
-        sprintf( 'Reply-To: %s <%s>', $name, $email ),
-    ];
-
-    $sent = wp_mail( $admin_email, $subject, $body, $headers );
-    if ( ! $sent ) {
-        wp_send_json_error( [ 'msg' => 'Error al enviar. Inténtalo de nuevo.' ] );
-    }
-
-    $response = [ 'msg' => '¡Mensaje enviado! Te responderemos pronto.' ];
-
+    // 1) Crear ticket en MantisBT (canal primario)
+    $ticket_id = 0;
+    $ticket_err = '';
     if ( function_exists( 'rc_mantis_create_ticket' ) ) {
-        $ticket_id = rc_mantis_create_ticket( [
+        $ticket = rc_mantis_create_ticket( [
             'name'    => $name,
             'email'   => $email,
             'type'    => $type,
             'message' => $message,
         ] );
-        if ( ! is_wp_error( $ticket_id ) && $ticket_id > 0 ) {
-            $response['ticket_id'] = (int) $ticket_id;
-            $response['msg']       = sprintf( '¡Mensaje enviado! Ticket #%d creado. Te responderemos pronto.', (int) $ticket_id );
+        if ( is_wp_error( $ticket ) ) {
+            $ticket_err = $ticket->get_error_message();
+            error_log( '[resolvecore_handle_contact] Mantis: ' . $ticket_err );
+        } elseif ( (int) $ticket > 0 ) {
+            $ticket_id = (int) $ticket;
         }
     }
 
-    wp_send_json_success( $response );
+    // 2) Email al técnico (canal secundario, no bloquea respuesta)
+    $admin_email = get_option( 'admin_email' );
+    $subject     = sprintf( '[ResolveCore] %s%s — %s',
+        $ticket_id ? "#{$ticket_id} " : '',
+        $type,
+        $name
+    );
+    $body  = "Nombre: {$name}\n";
+    $body .= "Email: {$email}\n";
+    $body .= "Tipo: {$type}\n";
+    if ( $ticket_id ) {
+        $body .= "Ticket MantisBT: #{$ticket_id}\n";
+    }
+    $body .= "\nMensaje:\n{$message}\n";
+    $headers = [
+        'Content-Type: text/plain; charset=UTF-8',
+        sprintf( 'Reply-To: %s <%s>', $name, $email ),
+    ];
+    $mail_sent = @wp_mail( $admin_email, $subject, $body, $headers );
+
+    // 2b) Email de confirmación al cliente — incidencia + seguimiento.
+    //     Canal informativo: si falla, solo se registra; no altera la respuesta.
+    resolvecore_send_client_confirmation( $email, $name, $ticket_id, $type, $message );
+
+    // 3) Respuesta — éxito si AL MENOS uno funcionó
+    if ( ! $ticket_id && ! $mail_sent ) {
+        wp_send_json_error( [
+            'msg'   => 'No pudimos procesar tu mensaje. Escríbenos directamente a ' . esc_html( $admin_email ) . '.',
+            'debug' => $ticket_err ?: 'mail_failed',
+        ] );
+    }
+
+    $msg = $ticket_id
+        ? sprintf( '¡Mensaje recibido! Ticket #%d creado, te responderemos en menos de 2 horas.', $ticket_id )
+        : '¡Mensaje recibido! Te responderemos en menos de 2 horas.';
+
+    wp_send_json_success( array_filter( [
+        'msg'          => $msg,
+        'ticket_id'    => $ticket_id ?: null,
+        'ticket_token' => $ticket_id ? resolvecore_ticket_token( $ticket_id ) : null,
+    ] ) );
 }
 add_action( 'wp_ajax_resolvecore_contact',        'resolvecore_handle_contact' );
 add_action( 'wp_ajax_nopriv_resolvecore_contact', 'resolvecore_handle_contact' );
+
+/**
+ * Token de seguimiento derivado del ID de ticket.
+ *
+ * Sin él, el parámetro `?rc_ticket=N` sería enumerable: cualquiera podría
+ * consultar el estado de tickets ajenos incrementando el número. El token es
+ * un HMAC-SHA256 con `wp_salt('auth')` — determinista (no requiere almacenarlo)
+ * e imposible de falsificar sin la salt del sitio.
+ */
+function resolvecore_ticket_token( int $id ): string {
+    return substr( hash_hmac( 'sha256', 'rc_ticket_' . $id, wp_salt( 'auth' ) ), 0, 20 );
+}
+
+/**
+ * Envía al cliente un correo HTML de confirmación con el número de incidencia
+ * y el enlace de seguimiento en tiempo real.
+ *
+ * Canal informativo: si wp_mail falla solo se registra en el log — nunca
+ * bloquea ni altera la respuesta AJAX al usuario.
+ *
+ * @param string $email      Correo del cliente (ya validado en el handler).
+ * @param string $name       Nombre del cliente (ya saneado).
+ * @param int    $ticket_id  ID de MantisBT, o 0 si no se pudo crear.
+ * @param string $type       Tipo de solicitud (whitelist del handler).
+ * @param string $message    Mensaje del cliente (ya saneado).
+ * @return bool  true si wp_mail aceptó el envío.
+ */
+function resolvecore_send_client_confirmation( string $email, string $name, int $ticket_id, string $type, string $message ): bool {
+    if ( ! is_email( $email ) ) {
+        return false;
+    }
+
+    $type_labels = [
+        'soporte'      => 'Soporte técnico',
+        'bug'          => 'Reporte de error',
+        'colaboracion' => 'Colaboración',
+        'licencia'     => 'Licencia',
+        'otro'         => 'Consulta general',
+        'contacto'     => 'Consulta general',
+    ];
+    $type_label = $type_labels[ $type ] ?? 'Consulta general';
+
+    // Las 4 fases coinciden con el timeline de resolvecore_handle_ticket_status().
+    $fases = [
+        [ 'Recibido',       'Ticket creado y en cola de revisión.' ],
+        [ 'En diagnóstico', 'El técnico analiza el problema.' ],
+        [ 'En resolución',  'Trabajo sobre la solución mediante AnyDesk.' ],
+        [ 'Resuelto',       'Ticket cerrado con resumen técnico adjunto.' ],
+    ];
+    $fases_html = '';
+    foreach ( $fases as $i => $f ) {
+        $fases_html .=
+              '<tr>'
+            . '<td style="width:28px;padding:5px 0;vertical-align:top;">'
+            . '<span style="display:inline-block;width:22px;height:22px;line-height:22px;'
+            . 'text-align:center;border-radius:50%;background:#1a1d24;border:1px solid #2a2e38;'
+            . 'color:#00e5a0;font-family:monospace;font-size:11px;font-weight:700;">' . ( $i + 1 ) . '</span>'
+            . '</td>'
+            . '<td style="padding:5px 0 5px 10px;">'
+            . '<div style="color:#e8eaed;font-size:13px;font-weight:600;">' . esc_html( $f[0] ) . '</div>'
+            . '<div style="color:#7a7f8e;font-size:12px;">' . esc_html( $f[1] ) . '</div>'
+            . '</td>'
+            . '</tr>';
+    }
+
+    $track_url = $ticket_id
+        ? add_query_arg( [
+            'rc_ticket' => $ticket_id,
+            'rc_t'      => resolvecore_ticket_token( $ticket_id ),
+        ], home_url( '/' ) ) . '#contacto'
+        : '';
+
+    $subject = $ticket_id
+        ? sprintf( 'ResolveCore — Incidencia #%d registrada', $ticket_id )
+        : 'ResolveCore — Hemos recibido tu solicitud';
+
+    $e_name = esc_html( $name );
+    $e_type = esc_html( $type_label );
+    $e_msg  = nl2br( esc_html( $message ) );
+
+    // Bloque tarjeta de incidencia (solo si hay ticket).
+    $ticket_block = '';
+    if ( $ticket_id ) {
+        $ticket_block =
+              '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            . 'style="margin:0 0 24px;border:1px solid rgba(0,229,160,.3);border-radius:10px;'
+            . 'background:#0f1f1a;">'
+            . '<tr><td style="padding:18px 22px;">'
+            . '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
+            . 'text-transform:uppercase;">Número de incidencia</div>'
+            . '<div style="color:#00e5a0;font-family:monospace;font-size:30px;font-weight:700;'
+            . 'margin:4px 0 8px;">#' . (int) $ticket_id . '</div>'
+            . '<div style="color:#c5c8cf;font-size:13px;">Categoría: <strong>' . $e_type . '</strong></div>'
+            . '</td></tr></table>';
+    }
+
+    // Botón de seguimiento (solo si hay ticket).
+    $track_block = '';
+    if ( $track_url ) {
+        $track_block =
+              '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">'
+            . '<tr><td style="border-radius:8px;background:#00e5a0;">'
+            . '<a href="' . esc_url( $track_url ) . '" '
+            . 'style="display:inline-block;padding:13px 26px;color:#05140f;font-size:14px;'
+            . 'font-weight:700;text-decoration:none;font-family:Arial,sans-serif;">'
+            . 'Ver estado en tiempo real &rarr;</a>'
+            . '</td></tr></table>';
+    }
+
+    $intro = $ticket_id
+        ? 'Tu solicitud ha quedado registrada con el número de incidencia que ves abajo. '
+            . 'Un técnico la revisará en menos de 2 horas.'
+        : 'Hemos recibido tu solicitud y un técnico la revisará en menos de 2 horas. '
+            . 'En breve recibirás el número de incidencia.';
+
+    $html =
+          '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+        . '<body style="margin:0;padding:0;background:#0a0c10;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0c10;">'
+        . '<tr><td align="center" style="padding:28px 14px;">'
+
+        . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
+        . 'style="max-width:600px;width:100%;background:#111318;border:1px solid #1f232c;border-radius:14px;overflow:hidden;">'
+
+        // Cabecera
+        . '<tr><td style="padding:22px 32px;background:#0a0c10;border-bottom:1px solid #1f232c;">'
+        . '<span style="color:#f5f6f8;font-family:monospace;font-size:18px;font-weight:700;">ResolveCore</span>'
+        . '<span style="color:#00e5a0;font-family:monospace;font-size:11px;letter-spacing:.12em;'
+        . 'float:right;padding-top:6px;">// SOPORTE</span>'
+        . '</td></tr>'
+
+        // Cuerpo
+        . '<tr><td style="padding:32px;">'
+        . '<h1 style="margin:0 0 6px;color:#f5f6f8;font-family:Arial,sans-serif;font-size:21px;">'
+        . 'Hemos recibido tu solicitud</h1>'
+        . '<p style="margin:0 0 20px;color:#c5c8cf;font-family:Arial,sans-serif;font-size:14px;'
+        . 'line-height:1.6;">Hola <strong>' . $e_name . '</strong>, gracias por contactar con '
+        . 'ResolveCore. ' . esc_html( $intro ) . '</p>'
+
+        . $ticket_block
+
+        // Mensaje del cliente
+        . '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
+        . 'text-transform:uppercase;margin-bottom:6px;">// Tu mensaje</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        . 'style="margin:0 0 24px;border-left:3px solid #2a2e38;background:#0e1014;border-radius:0 8px 8px 0;">'
+        . '<tr><td style="padding:14px 18px;color:#c5c8cf;font-family:Arial,sans-serif;'
+        . 'font-size:13px;line-height:1.6;">' . $e_msg . '</td></tr></table>'
+
+        // Seguimiento
+        . '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
+        . 'text-transform:uppercase;margin-bottom:10px;">// Seguimiento de la incidencia</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        . 'style="margin:0 0 22px;">' . $fases_html . '</table>'
+
+        . $track_block
+
+        . '</td></tr>'
+
+        // Pie
+        . '<tr><td style="padding:18px 32px;background:#0a0c10;border-top:1px solid #1f232c;">'
+        . '<p style="margin:0;color:#5a5f6c;font-family:Arial,sans-serif;font-size:11px;line-height:1.6;">'
+        . 'Este correo es automático. Para añadir información a la incidencia, '
+        . 'responde directamente a este mensaje.<br>'
+        . 'ResolveCore — Solución a tus problemas informáticos.</p>'
+        . '</td></tr>'
+
+        . '</table></td></tr></table></body></html>';
+
+    $headers = [
+        'Content-Type: text/html; charset=UTF-8',
+        'Reply-To: ' . get_option( 'admin_email' ),
+    ];
+
+    $sent = @wp_mail( $email, $subject, $html, $headers );
+    if ( ! $sent ) {
+        error_log( '[resolvecore] confirmacion cliente: wp_mail devolvio false' );
+    }
+    return (bool) $sent;
+}
+
+/**
+ * Consulta el estado de un ticket de MantisBT vía AJAX para mostrar timeline.
+ * Solo expone status_id + 4 fases agregadas — no datos personales ni descripción.
+ */
+function resolvecore_handle_ticket_status() {
+    check_ajax_referer( 'resolvecore_contact', 'nonce' );
+
+    $id = absint( $_POST['ticket_id'] ?? 0 );
+    if ( $id < 1 ) {
+        wp_send_json_error( [ 'msg' => 'ID de ticket inválido.' ] );
+    }
+
+    // Token anti-enumeración: impide consultar el estado de tickets ajenos
+    // cambiando el número. Lo emite resolvecore_handle_contact() y el correo.
+    $token = sanitize_text_field( wp_unslash( $_POST['token'] ?? '' ) );
+    if ( ! hash_equals( resolvecore_ticket_token( $id ), $token ) ) {
+        wp_send_json_error( [ 'msg' => 'Enlace de seguimiento no válido.' ] );
+    }
+
+    // Rate limit: 30 consultas/hora por IP
+    $rate_key = 'rc_status_' . resolvecore_client_ip_hash();
+    $attempts = (int) get_transient( $rate_key );
+    if ( $attempts >= 30 ) {
+        wp_send_json_error( [ 'msg' => 'Demasiadas consultas. Espera un rato.' ] );
+    }
+    set_transient( $rate_key, $attempts + 1, HOUR_IN_SECONDS );
+
+    if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+        wp_send_json_error( [ 'msg' => 'Integración MantisBT no disponible.' ] );
+    }
+    $api = rc_mantis_get_api();
+    if ( ! $api ) {
+        wp_send_json_error( [ 'msg' => 'MantisBT no configurado.' ] );
+    }
+
+    $res = $api->get_issue( $id );
+    if ( is_wp_error( $res ) ) {
+        wp_send_json_error( [ 'msg' => 'Ticket no encontrado.' ] );
+    }
+
+    $issue = $res['issues'][0] ?? null;
+    if ( ! $issue ) {
+        wp_send_json_error( [ 'msg' => 'Ticket vacío.' ] );
+    }
+
+    $status_name = (string) ( $issue['status']['name'] ?? 'new' );
+    $status_id   = (int)    ( $issue['status']['id']   ?? 10 );
+
+    // Mantis status enum → 4 fases UX
+    // 10 new · 20 feedback · 30 acknowledged · 40 confirmed · 50 assigned · 80 resolved · 90 closed
+    $phase = match ( true ) {
+        $status_id >= 80 => 4,
+        $status_id >= 50 => 3,
+        $status_id >= 30 => 2,
+        default          => 1,
+    };
+
+    $events = [
+        [ 'phase' => 1, 'label' => 'Recibido',       'desc' => 'Ticket creado y en cola de revisión.' ],
+        [ 'phase' => 2, 'label' => 'En diagnóstico', 'desc' => 'Técnico analizando el problema.' ],
+        [ 'phase' => 3, 'label' => 'En resolución',  'desc' => 'Trabajando en la solución (AnyDesk).' ],
+        [ 'phase' => 4, 'label' => 'Resuelto',       'desc' => 'Ticket cerrado. Resumen técnico en la nota del ticket.' ],
+    ];
+
+    wp_send_json_success( [
+        'ticket_id'  => $id,
+        'status'     => $status_name,
+        'status_id'  => $status_id,
+        'phase'      => $phase,
+        'events'     => $events,
+        'created_at' => $issue['created_at'] ?? null,
+        'updated_at' => $issue['updated_at'] ?? null,
+    ] );
+}
+add_action( 'wp_ajax_resolvecore_ticket_status',        'resolvecore_handle_ticket_status' );
+add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
