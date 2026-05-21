@@ -24,7 +24,7 @@ $updated = '2026-05-20';
 
   <h2>1. Responsable del tratamiento</h2>
   <p><strong>Francisco Vidal Mateo</strong> — TFG ASIR<br>
-  Contacto: <a href="mailto:fvidalmateo@gmail.com">fvidalmateo@gmail.com</a></p>
+  Contacto: <a href="mailto:tecnicos@resolvecore.website">tecnicos@resolvecore.website</a></p>
   <p>Al ser un proyecto académico no profesional, no se ha designado Delegado de Protección de Datos (DPO); las consultas pueden dirigirse al email anterior.</p>
 
   <h2>2. Datos recogidos, finalidad y base legal</h2>
@@ -76,7 +76,7 @@ $updated = '2026-05-20';
     <li><strong>Portabilidad</strong> — recibir los datos en formato estructurado.</li>
     <li><strong>Revocar el consentimiento</strong> prestado.</li>
   </ul>
-  <p>Para ejercer estos derechos, envía un email a <a href="mailto:fvidalmateo@gmail.com">fvidalmateo@gmail.com</a> indicando el derecho que deseas ejercer y adjuntando, en su caso, documento que acredite tu identidad.</p>
+  <p>Para ejercer estos derechos, envía un email a <a href="mailto:tecnicos@resolvecore.website">tecnicos@resolvecore.website</a> indicando el derecho que deseas ejercer y adjuntando, en su caso, documento que acredite tu identidad.</p>
 
   <h2>5. Reclamación ante la autoridad de control</h2>
   <p>Si consideras que tus derechos no han sido atendidos correctamente, tienes derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD): <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">www.aepd.es</a>.</p>
