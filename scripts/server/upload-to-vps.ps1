@@ -70,4 +70,6 @@ Write-Host "  ${sudo}bash $RemotePath/scripts/server/deploy-ionos.sh \" -Foregro
 Write-Host "      --domain TUDOMINIO.es \" -ForegroundColor Yellow
 Write-Host "      --email  admin@TUDOMINIO.es \" -ForegroundColor Yellow
 Write-Host "      --user   franvi \" -ForegroundColor Yellow
-Write-Host "      --ssh-pubkey ""$(`$env:USERPROFILE\.ssh\id_ed25519.pub | Get-Content)""" -ForegroundColor Yellow
+$_pubkeyPath = "$env:USERPROFILE\.ssh\id_ed25519.pub"
+$_pubkey     = if (Test-Path $_pubkeyPath) { (Get-Content $_pubkeyPath -Raw).Trim() } else { 'ssh-ed25519 AAAA...user@host' }
+Write-Host "      --ssh-pubkey `"$_pubkey`"" -ForegroundColor Yellow

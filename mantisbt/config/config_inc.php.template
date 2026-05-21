@@ -43,6 +43,32 @@ $g_bug_submit_status         = NEW_;
 $g_auto_set_status_to_assigned = ON;
 $g_bug_reopen_status         = FEEDBACK;
 
+# ── Gestión de permisos ──────────────────────────────────────
+# Criterio: mínimo privilegio. Cliente = REPORTER, técnico = DEVELOPER.
+# Matriz completa: docs/tecnica/mantis-permisos.md
+$g_view_attachments_threshold     = VIEWER;
+$g_download_attachments_threshold = VIEWER;
+$g_upload_bug_file_threshold      = REPORTER;
+$g_delete_attachments_threshold   = DEVELOPER;
+
+$g_stored_query_create_threshold        = DEVELOPER;
+$g_stored_query_create_shared_threshold = MANAGER;
+
+$g_manage_project_threshold  = MANAGER;
+$g_project_user_threshold    = MANAGER;
+$g_private_project_threshold = DEVELOPER;
+$g_create_project_threshold  = ADMINISTRATOR;
+$g_delete_project_threshold  = ADMINISTRATOR;
+
+$g_custom_field_link_threshold    = MANAGER;
+$g_manage_custom_fields_threshold = ADMINISTRATOR;
+
+$g_view_summary_threshold            = DEVELOPER;
+$g_add_profile_threshold             = DEVELOPER;
+$g_show_user_email_threshold         = ADMINISTRATOR;
+$g_manage_user_threshold             = ADMINISTRATOR;
+$g_notify_new_user_created_threshold = ADMINISTRATOR;
+
 # ── Adjuntos ─────────────────────────────────────────────────
 $g_allow_file_upload  = ON;
 $g_file_upload_method = DISK;
