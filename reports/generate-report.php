@@ -8,6 +8,19 @@
  *
  * Requiere wkhtmltopdf instalado en el PATH del sistema.
  * El archivo informe.html debe estar en el mismo directorio que este script.
+ *
+ * RIESGO DE DEPENDENCIA — wkhtmltopdf:
+ *   El proyecto wkhtmltopdf está ARCHIVADO/sin mantenimiento desde 2023. No
+ *   recibe parches de seguridad y los paquetes oficiales han desaparecido de
+ *   Debian 12+ / Ubuntu 24.04 (hay que instalar el .deb del repo de GitHub).
+ *   Funciona, pero es deuda técnica: si deja de compilar contra una libc nueva
+ *   o aparece un CVE, no habrá fix.
+ *
+ *   Plan de migración (cuando sea necesario): sustituir por DomPDF, una
+ *   librería PHP pura instalable vía Composer (`composer require dompdf/dompdf`)
+ *   sin binario externo ni PATH. CLAUDE.md ya contempla "wkhtmltopdf o DomPDF".
+ *   El único punto de cambio es el bloque "Generar PDF" más abajo; el HTML de
+ *   informe.html y el resto del script no se tocan.
  */
 
 if (php_sapi_name() !== 'cli') {
