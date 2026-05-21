@@ -76,7 +76,8 @@
       "Bash(base64 -w0 /tmp/dbg2.sh)",
       "Bash(base64 -w0 /tmp/inject-token.sh)",
       "Bash(base64 -w0 /tmp/final-sync.sh)",
-      "Bash(base64 -w0 /tmp/fixct.sh)"
+      "Bash(base64 -w0 /tmp/fixct.sh)",
+      "PowerShell(Test-Path *)"
     ]
   }
 }
