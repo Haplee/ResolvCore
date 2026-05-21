@@ -397,12 +397,40 @@ function resolvecore_send_client_confirmation( string $email, string $name, int 
 
         . '</table></td></tr></table></body></html>';
 
+    // Versión texto plano para multipart/alternative: mejora la entregabilidad
+    // y da una alternativa legible si el cliente no renderiza HTML.
+    $text  = "Hemos recibido tu solicitud\n\n";
+    $text .= 'Hola ' . $name . ', gracias por contactar con ResolveCore. ' . $intro . "\n\n";
+    if ( $ticket_id ) {
+        $text .= 'Número de incidencia: #' . (int) $ticket_id . "\n";
+        $text .= 'Categoría: ' . $type_label . "\n\n";
+    }
+    $text .= "Tu mensaje:\n" . $message . "\n\n";
+    $text .= "Seguimiento de la incidencia:\n";
+    foreach ( $fases as $i => $f ) {
+        $text .= '  ' . ( $i + 1 ) . '. ' . $f[0] . ' — ' . $f[1] . "\n";
+    }
+    if ( $track_url ) {
+        $text .= "\nVer estado en tiempo real:\n" . $track_url . "\n";
+    }
+    $text .= "\n—\nEste correo es automático. Para añadir información a la incidencia, "
+        . "responde directamente a este mensaje.\n"
+        . "ResolveCore — Solución a tus problemas informáticos.\n";
+
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
         'Reply-To: ' . get_option( 'admin_email' ),
+        'List-Unsubscribe: <mailto:' . get_option( 'admin_email' ) . '?subject=baja-resolvecore>',
     ];
 
+    // Adjunta la parte de texto plano como AltBody solo para este envío.
+    $alt_body = static function ( $phpmailer ) use ( $text ) {
+        $phpmailer->AltBody = $text;
+    };
+    add_action( 'phpmailer_init', $alt_body );
     $sent = @wp_mail( $email, $subject, $html, $headers );
+    remove_action( 'phpmailer_init', $alt_body );
+
     if ( ! $sent ) {
         error_log( '[resolvecore] confirmacion cliente: wp_mail devolvio false' );
     }
