@@ -100,6 +100,7 @@ apt-get install -y -qq \
     php${PHP_VERSION}-zip php${PHP_VERSION}-intl php${PHP_VERSION}-cli \
     php${PHP_VERSION}-bcmath \
     certbot python3-certbot-nginx \
+    wkhtmltopdf \
     unzip git ufw fail2ban curl wget
 
 # ─── 3. Usuario non-root + SSH key ───────────────────────────────────────────

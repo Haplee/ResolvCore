@@ -3,7 +3,7 @@
  * Plugin Name: ResolveCore — Fleet Panel
  * Plugin URI:  https://github.com/Haplee/ResolveCore
  * Description: Panel multiplataforma de flota: agentes Win/Linux/Android publican su JSON de diagnóstico vía REST y se centralizan en wp-admin.
- * Version:     0.1.0
+ * Version:     0.2.1
  * Author:      Francisco Vidal Mateo
  * License:     GPL-2.0+
  * Text Domain: rc-fleet
@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'RC_FLEET_VERSION', '0.1.0' );
+define( 'RC_FLEET_VERSION', '0.2.1' );
 define( 'RC_FLEET_DB_VER', '1' );
 define( 'RC_FLEET_TABLE',  'rc_fleet_hosts' );
 
@@ -129,6 +129,12 @@ add_action( 'rest_api_init', function () {
         'callback'            => 'rc_fleet_rest_list',
         'permission_callback' => 'rc_fleet_check_auth',
     ] );
+    // Endpoint PÚBLICO: solo agregados, sin emails/hostnames/JSON.
+    register_rest_route( 'rc/v1', '/fleet/stats', [
+        'methods'             => 'GET',
+        'callback'            => 'rc_fleet_rest_stats',
+        'permission_callback' => '__return_true',
+    ] );
 } );
 
 function rc_fleet_rest_post( WP_REST_Request $req ) {
@@ -219,6 +225,171 @@ function rc_fleet_rest_list( WP_REST_Request $req ) {
     }
     return rest_ensure_response( [ 'ok' => true, 'count' => count( $rows ), 'hosts' => $rows ] );
 }
+
+// ── Fleet status público (sin datos personales) ────────────────────────────────
+
+/**
+ * Estadísticas agregadas de la flota. NUNCA expone email, hostname ni JSON —
+ * solo recuentos, medias y distribución. Apto para mostrar en página pública.
+ */
+function rc_fleet_get_public_stats(): array {
+    global $wpdb;
+    $table = $wpdb->prefix . RC_FLEET_TABLE;
+
+    $agg = $wpdb->get_row(
+        "SELECT
+            COUNT(*)                                             AS total,
+            ROUND(AVG(last_score))                               AS avg_score,
+            SUM(last_score >= 80)                                AS buenos,
+            SUM(last_score >= 60 AND last_score < 80)            AS mejorables,
+            SUM(last_score < 60)                                 AS criticos,
+            SUM(last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR))  AS activos_24h,
+            MAX(last_seen)                                       AS ultima_conexion
+         FROM {$table}",
+        ARRAY_A
+    );
+
+    $by_os_rows = $wpdb->get_results( "SELECT os, COUNT(*) AS n FROM {$table} GROUP BY os", OBJECT_K );
+    $by_os = [];
+    foreach ( [ 'windows', 'linux', 'macos', 'android', 'unknown' ] as $o ) {
+        $by_os[ $o ] = isset( $by_os_rows[ $o ] ) ? (int) $by_os_rows[ $o ]->n : 0;
+    }
+
+    return [
+        'total'           => (int) ( $agg['total']       ?? 0 ),
+        'avg_score'       => (int) ( $agg['avg_score']    ?? 0 ),
+        'buenos'          => (int) ( $agg['buenos']       ?? 0 ),
+        'mejorables'      => (int) ( $agg['mejorables']   ?? 0 ),
+        'criticos'        => (int) ( $agg['criticos']     ?? 0 ),
+        'activos_24h'     => (int) ( $agg['activos_24h']  ?? 0 ),
+        'ultima_conexion' => $agg['ultima_conexion'] ?: null,
+        'by_os'           => $by_os,
+    ];
+}
+
+function rc_fleet_rest_stats( WP_REST_Request $req ) {
+    return rest_ensure_response( rc_fleet_get_public_stats() );
+}
+
+/**
+ * Renderiza el panel público de estado de la flota (HTML autocontenido).
+ * Usado por el shortcode [rc_fleet_status] y por la plantilla page-fleet-status.php.
+ */
+function rc_fleet_render_stats(): string {
+    $s   = rc_fleet_get_public_stats();
+    $css = '<style>
+      .rc-fleet-panel{max-width:920px;margin:0 auto;font-family:var(--rc-sans,system-ui,sans-serif)}
+      .rc-fleet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.25rem}
+      .rc-fleet-card{background:var(--rc-surface,#111318);border:1px solid var(--rc-border,rgba(255,255,255,.08));border-radius:10px;padding:1.3rem 1.4rem}
+      .rc-fleet-num{font-family:var(--rc-mono,monospace);font-size:2.1rem;font-weight:700;line-height:1}
+      .rc-fleet-lbl{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--rc-muted,#7a7f8e);margin-top:.5rem}
+      .rc-fleet-sec{font-family:var(--rc-mono,monospace);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--rc-muted,#7a7f8e);margin:1.6rem 0 .8rem}
+      .rc-fleet-bar-row{margin:.5rem 0}
+      .rc-fleet-bar-top{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:5px}
+      .rc-fleet-bar-wrap{height:8px;background:var(--rc-border,rgba(255,255,255,.08));border-radius:5px;overflow:hidden}
+      .rc-fleet-bar{height:100%;border-radius:5px}
+      .rc-fleet-os{display:flex;flex-wrap:wrap;gap:.6rem}
+      .rc-fleet-chip{display:flex;align-items:center;gap:.5rem;background:var(--rc-surface,#111318);border:1px solid var(--rc-border,rgba(255,255,255,.08));border-radius:8px;padding:.6rem .9rem;font-size:.85rem}
+      .rc-fleet-chip b{font-family:var(--rc-mono,monospace)}
+      .rc-fleet-foot{font-size:.72rem;color:var(--rc-muted,#7a7f8e);margin-top:1.4rem;font-family:var(--rc-mono,monospace)}
+      .rc-fleet-empty{text-align:center;padding:3rem 1rem;color:var(--rc-muted,#7a7f8e);border:1px dashed var(--rc-border,rgba(255,255,255,.12));border-radius:10px}
+      .rc-fleet-banner{display:flex;align-items:center;gap:.6rem;background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.22);color:#e8c84a;border-radius:8px;padding:.7rem 1rem;font-size:.85rem;margin-bottom:1.25rem}
+      .rc-fleet-dot{width:9px;height:9px;border-radius:50%;background:#ffc107;flex:none;box-shadow:0 0 0 0 rgba(255,193,7,.6);animation:rcFleetPulse 1.9s ease-in-out infinite}
+      @keyframes rcFleetPulse{0%,100%{opacity:.35;box-shadow:0 0 0 0 rgba(255,193,7,.5)}50%{opacity:1;box-shadow:0 0 0 6px rgba(255,193,7,0)}}
+      .rc-fleet-card.is-empty{border-style:dashed}
+      .rc-fleet-card.is-empty .rc-fleet-num{color:var(--rc-muted,#7a7f8e)}
+    </style>';
+
+    if ( $s['total'] === 0 ) {
+        return $css
+            . '<div class="rc-fleet-panel">'
+            . '<div class="rc-fleet-banner"><span class="rc-fleet-dot" aria-hidden="true"></span>'
+            . 'Esperando el primer agente. El panel se rellena en cuanto un equipo publica su diagnóstico.</div>'
+            . '<div class="rc-fleet-grid">'
+            . '<div class="rc-fleet-card is-empty"><div class="rc-fleet-num">0</div><div class="rc-fleet-lbl">Equipos monitorizados</div></div>'
+            . '<div class="rc-fleet-card is-empty"><div class="rc-fleet-num">0</div><div class="rc-fleet-lbl">Activos últimas 24 h</div></div>'
+            . '<div class="rc-fleet-card is-empty"><div class="rc-fleet-num">&mdash;</div><div class="rc-fleet-lbl">Salud media</div></div>'
+            . '</div></div>';
+    }
+
+    $pct = static function ( int $n ) use ( $s ): int {
+        return (int) round( $n / max( 1, $s['total'] ) * 100 );
+    };
+    $sc_color = $s['avg_score'] >= 80 ? '#00e5a0' : ( $s['avg_score'] >= 60 ? '#ffc107' : '#ff4757' );
+
+    $os_meta = [
+        'windows' => [ '⊞', 'Windows' ],
+        'linux'   => [ '☰', 'Linux'   ],
+        'macos'   => [ '⌥', 'macOS'   ],
+        'android' => [ '◈', 'Android' ],
+        'unknown' => [ '⬡', 'Otros'   ],
+    ];
+
+    ob_start();
+    echo $css;
+    ?>
+    <div class="rc-fleet-panel">
+      <div class="rc-fleet-grid">
+        <div class="rc-fleet-card">
+          <div class="rc-fleet-num"><?php echo (int) $s['total']; ?></div>
+          <div class="rc-fleet-lbl">Equipos monitorizados</div>
+        </div>
+        <div class="rc-fleet-card">
+          <div class="rc-fleet-num" style="color:#00e5a0"><?php echo (int) $s['activos_24h']; ?></div>
+          <div class="rc-fleet-lbl">Activos últimas 24 h</div>
+        </div>
+        <div class="rc-fleet-card">
+          <div class="rc-fleet-num" style="color:<?php echo esc_attr( $sc_color ); ?>"><?php echo (int) $s['avg_score']; ?><span style="font-size:1rem">/100</span></div>
+          <div class="rc-fleet-lbl">Salud media</div>
+        </div>
+      </div>
+
+      <div class="rc-fleet-sec">// Distribución de salud</div>
+      <?php
+      foreach ( [
+          [ 'Buen estado (≥80)',  $s['buenos'],     '#00e5a0' ],
+          [ 'Mejorable (60-79)',  $s['mejorables'], '#ffc107' ],
+          [ 'Crítico (<60)',      $s['criticos'],   '#ff4757' ],
+      ] as $row ):
+          [ $label, $n, $color ] = $row;
+      ?>
+        <div class="rc-fleet-bar-row">
+          <div class="rc-fleet-bar-top">
+            <span><?php echo esc_html( $label ); ?></span>
+            <span><?php echo (int) $n; ?> · <?php echo $pct( (int) $n ); ?>%</span>
+          </div>
+          <div class="rc-fleet-bar-wrap">
+            <div class="rc-fleet-bar" style="width:<?php echo $pct( (int) $n ); ?>%;background:<?php echo esc_attr( $color ); ?>"></div>
+          </div>
+        </div>
+      <?php endforeach; ?>
+
+      <div class="rc-fleet-sec">// Por sistema operativo</div>
+      <div class="rc-fleet-os">
+        <?php foreach ( $os_meta as $key => $meta ):
+            $n = (int) ( $s['by_os'][ $key ] ?? 0 );
+            if ( $n === 0 ) continue;
+        ?>
+          <div class="rc-fleet-chip">
+            <span aria-hidden="true"><?php echo esc_html( $meta[0] ); ?></span>
+            <span><?php echo esc_html( $meta[1] ); ?></span>
+            <b><?php echo $n; ?></b>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <?php if ( $s['ultima_conexion'] ): ?>
+        <div class="rc-fleet-foot">
+          Última conexión registrada hace
+          <?php echo esc_html( human_time_diff( strtotime( $s['ultima_conexion'] ), current_time( 'timestamp' ) ) ); ?>.
+        </div>
+      <?php endif; ?>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+}
+
+add_shortcode( 'rc_fleet_status', 'rc_fleet_render_stats' );
 
 // ── Admin page ────────────────────────────────────────────────────────────────
 

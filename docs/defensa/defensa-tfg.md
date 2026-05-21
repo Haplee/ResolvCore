@@ -82,9 +82,9 @@ Construir una plataforma operativa que permita a un técnico:
 | O5 | Schema JSON cross-platform unificado | ✅ Completado — Windows migrado a `hardware {}` v4.0.0 |
 | O6 | Plugin WP integración MantisBT | ✅ Completado |
 | O7 | Tema WP landing pública | ✅ Completado v3.0.0 |
-| O8 | Generador PDF informes | 🟡 Plantilla diseñada, no implementado |
+| O8 | Generador PDF informes | ✅ Completado — `reports/generate-report.php` + wkhtmltopdf |
 | O9 | Base CVE sincronizada con NVD | 🟡 Schema definido, cron pendiente |
-| O10 | Despliegue VPS productivo | 🔴 Pendiente |
+| O10 | Despliegue VPS productivo | 🟡 Scripts listos (`deploy-ionos.sh` + `upload-to-vps.ps1`), pendiente ejecución |
 
 ### Fuera de alcance (declarado)
 - App móvil nativa Android (queda como roadmap, no entregable TFG).
@@ -484,12 +484,18 @@ Si falla la nota pero el adjunto subió → no se aborta (el JSON ya está en el
 ## 11. Módulo 6 — Tema WordPress (frontend público)
 
 ### `wordpress/resolvecore-theme/`
-- `front-page.php` (1278 líneas) — landing pública one-page
+- `front-page.php` — landing pública one-page
+- `header.php` / `footer.php` — cabecera y pie compartidos por las páginas internas
 - `index.php` — fallback mínimo
 - `page-docs.php` — documentación técnica
-- `page-changelog.php` — historial de versiones
-- `style.css` — estilos compartidos docs/changelog
-- `functions.php` — setup, hooks, AJAX form
+- `page-changelog.php` — historial de versiones (4 releases reales: v0.9.0 → v1.2.0)
+- `page-fleet-status.php` — panel público de estado de la flota
+- `page-contacto.php` + páginas legales (aviso legal, privacidad, cookies)
+- `style.css` — estilos compartidos de las páginas internas
+- `functions.php` — setup, hooks, AJAX form, fallback de menús
+
+### Navegación unificada
+Antes existían dos sistemas de navegación distintos (la `front-page.php` con su nav propia y `header.php` con `wp_nav_menu`). Se unificaron: ambas comparten ahora la misma estructura y un menú desplegable **«Recursos»** (Documentación · Changelog · Estado de la flota). El desplegable funciona con hover (CSS) y con click/teclado (JS, `aria-expanded` + cierre con Esc). El menú de pie de página tiene `fallback_cb` para mostrar enlaces aunque no haya un menú configurado en `Apariencia → Menús`.
 
 ### Mejoras aplicadas (último ciclo)
 **`functions.php`:**
@@ -530,22 +536,48 @@ Si falla la nota pero el adjunto subió → no se aborta (el JSON ya está en el
 
 ## 12. Módulo 7 — Informe técnico PDF
 
-### Plantilla (diseño aprobado, implementación pendiente)
-**Secciones obligatorias** (no se acortan por diseño del servicio):
-1. Resumen ejecutivo
-2. Ficha del equipo (modelo, SO, hardware)
-3. Incidencias detectadas
-4. Vulnerabilidades CVE encontradas + severidad
-5. Acciones realizadas
-6. Estado actual del sistema
-7. Recomendaciones
-8. **Proyección de vida útil del equipo** (heurística sobre S.M.A.R.T + edad CPU + GPU)
-9. Anexo: log completo del diagnóstico
+### Plantilla + generador (implementado)
 
-### Implementación prevista
-- HTML plantilla → `wkhtmltopdf` o `DomPDF` (PHP nativo; menos dependencias).
-- Datos inyectados desde JSON diagnóstico estructurado.
-- Adjunto automático al ticket MantisBT al cerrar incidencia (vía `rc_mantis_attach_diagnostic` ya operativo para el JSON, mismo patrón para PDF).
+**Artefactos:**
+- `reports/informe.html` — plantilla HTML autocontenida, paleta corporativa dark, gauges SVG circulares, score de salud, cards por módulo (CPU/RAM/disco/red/seguridad/batería), sección de recomendaciones priorizadas (crit/warn/ok). Normaliza JSON Windows v4.0.0 y Linux/macOS/Android.
+- `reports/generate-report.php` — generador CLI:
+
+```bash
+# Generar PDF desde JSON de diagnóstico
+php reports/generate-report.php --json scripts/diagnosticos/resultado.json
+
+# Con ticket MantisBT y adjunto automático
+php reports/generate-report.php \
+    --json scripts/diagnosticos/resultado.json \
+    --output informes/informe_TICKET42.pdf \
+    --ticket 42 \
+    --mantis-url https://mantis.resolvecore.es \
+    --mantis-token <TOKEN>
+
+# Variables de entorno alternativas
+RC_MANTIS_URL=https://mantis.resolvecore.es \
+RC_MANTIS_TOKEN=<TOKEN> \
+php reports/generate-report.php --json diag.json --ticket 42
+```
+
+**Secciones del informe** (no se acortan por diseño del servicio):
+1. Puntuaciones de salud (global, RAM, CPU, disco, batería) — gauges SVG
+2. Ficha del equipo (hostname, SO, uptime, actualizaciones pendientes)
+3. Procesador (modelo, núcleos, temperatura, carga)
+4. Memoria RAM (total, disponible, % uso)
+5. Almacenamiento (discos físicos, particiones, S.M.A.R.T, desgaste SSD)
+6. Batería (carga actual, desgaste acumulado, ciclos)
+7. Red (WiFi, latencia, pérdida de paquetes)
+8. Seguridad (firewall, Defender, UAC, SELinux, FileVault, Gatekeeper, root, bootloader)
+9. Recomendaciones priorizadas (críticas primero, con descripción accionable)
+
+**Pipeline:**
+1. `generate-report.php` lee el JSON diagnóstico y valida schema mínimo (`_meta.plataforma` + `_meta.version`).
+2. Inyecta JSON en `<script type="application/json">` (con `<\/script>` escapado).
+3. Llama a `wkhtmltopdf` para convertir el HTML renderizado a PDF A4.
+4. Si se especifica `--ticket`, adjunta el PDF al ticket MantisBT vía REST API (`POST /api/rest/issues/{id}/files`).
+
+**Decisión wkhtmltopdf vs DomPDF:** wkhtmltopdf renderiza el HTML idéntico al navegador (gauges SVG, CSS vars, grid), DomPDF no soporta SVG ni CSS custom properties de forma fiable. El VPS incluye wkhtmltopdf en el deploy script.
 
 > 📸 **Evidencia:** Justificaciones y servicios documentados gráficamente en `docs/capturas/17-05-Servicios/`.
 
@@ -582,16 +614,35 @@ Se evaluó hosting compartido vs VPS:
 
 Decisión pendiente del tutor: ¿se exige URL pública para la defensa? Si no, WSL local es suficiente.
 
-### Despliegue base (Ubuntu 22.04 LTS)
-```bash
-apt update && apt install -y nginx php8.2-fpm php8.2-{mysql,curl,gd,mbstring,xml,zip} \
-                              mariadb-server wkhtmltopdf certbot python3-certbot-nginx
+### Despliegue automatizado (implementado)
+
+**Artefactos:**
+- `scripts/server/deploy-ionos.sh` — script idempotente (re-ejecutable) que monta el stack completo en un VPS Ubuntu 24.04 LTS desde cero. 16 pasos: actualización del sistema → LEMP + wkhtmltopdf → usuario non-root → SSH hardening → UFW + fail2ban → swap 2 GB → MariaDB (DBs + usuarios) → WordPress core → `wp-config.php` (SALTs auto-generados) → tema + plugin desde repo → MantisBT 2.28.1 → nginx vhosts → PHP-FPM tuning → Let's Encrypt (con check DNS previo) → cron MantisBT.
+- `scripts/server/upload-to-vps.ps1` — empaqueta el repo (tar.gz, excluye `.git`, `wp/`, `node_modules`) y lo sube al VPS vía `scp`, extrae en `/opt/resolvecore-source`.
+
+**Flujo de despliegue:**
+```powershell
+# 1. Desde Windows local — subir código al VPS
+.\scripts\server\upload-to-vps.ps1 -VpsHost resolvecore.es -User franvi
+
+# 2. En el VPS — ejecutar deploy completo
+bash /opt/resolvecore-source/scripts/server/deploy-ionos.sh \
+    --domain resolvecore.es \
+    --email  admin@resolvecore.es \
+    --user   franvi \
+    --ssh-pubkey "ssh-ed25519 AAAA..."
 ```
-Servicios:
-- `nginx` :80/:443 (reverse proxy + SSL Let's Encrypt)
-- `php8.2-fpm` (socket Unix)
-- `mariadb` :3306 local únicamente
-- Cron: `cve-sync-weekly.sh`
+
+**Stack desplegado:**
+- nginx :80/:443 — WordPress en `resolvecore.es`, MantisBT en `mantis.resolvecore.es`
+- PHP-FPM 8.3 (pool `ondemand`, 8 workers, 256 MB, 25 MB upload)
+- MariaDB local — `wp_resolvecore` + `mantisbt`
+- Let's Encrypt — certbot auto-renew
+- Swap 2 GB — crítico para VPS S con 2 GB RAM
+- wkhtmltopdf — generación de informes PDF
+- UFW + fail2ban — hardening perímetro
+
+**Nota Ionos vs Ubuntu 22.04 vs 24.04:** el script se probó contra Ubuntu 24.04 LTS (PHP 8.3 disponible en repos oficiales). En 22.04 funcionaría con `PHP_VERSION="8.2"`.
 
 > 📸 **Evidencia:** Capturas de la infraestructura y entornos se recogen en `docs/capturas/19-05-Entornos/`.
 
@@ -824,3 +875,7 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 2026-05-20 | Tracking de tickets en tiempo real (UX tipo seguimiento de paquete): nuevo handler AJAX `resolvecore_ticket_status` en `functions.php` que consulta `RC_Mantis_API::get_issue()` y mapea el status enum MantisBT (10/20/30/40/50/80/90) a 4 fases UX (Recibido → En diagnóstico → En resolución → Resuelto), rate-limit 30 consultas/hora/IP, expone solo status_id+phase+timestamps (sin PII). Modal frontend en `front-page.php` (`#rc-ticket-modal`): timeline con dots ✓/activo/pendiente, pulse animation en fase actual, refresh manual, cierre por overlay/Escape/×, lazy fetch al click en `.rc-ticket-link` (delegación de eventos). Scroll indicator reubicado de centro-abajo a esquina inferior izquierda con icono `<mouse>` (border + rueda animada `rcMouseWheel`), oculto en móviles <480px. MantisBT custom fields añadidos al proyecto 1: **Modalidad** (id 3, type=6 list `Remoto\|Presencial`, secuencia 10), **Precio EUR** (id 4, type=2 float, R=Developer/RW=Manager, secuencia 20), **Notas técnico** (id 5, type=10 textarea, secuencia 30). Sistema de tags habilitado: `tag_create_threshold=25` + `tag_attach_threshold=25` (DEVELOPER) — el técnico puede crear y enlazar etiquetas a tickets. |
 | 2026-05-20 | Despliegue producción finalizado en VPS Ionos `resolvecore.website` con HTTPS Let's Encrypt: branding MantisBT personalizado (logo ResolveCore, paleta verde accent, nombre "ResolveCore" en lugar de Mantis), custom fields aplicados (Plataforma list + AnyDesk ID regex), token API en `wp-config.php` como constante `RC_MANTIS_TOKEN` (no en `wp_options` por CLAUDE.md). Tema WP mejorado: hero "Solución a tus problemas informáticos" centrado, eliminados elementos duplicados, stats reales (`<2h`, `3` plataformas, `7` fases, `GPL-3` — no datos inventados), footer 4 columnas con enlaces legales **RGPD**, 3 plantillas legales nuevas (`page-aviso-legal.php` LSSI-CE art.10, `page-privacidad.php` RGPD/LOPDGDD con tabla bases legales, `page-cookies.php` con tabla cookies técnicas), responsive completo (grid → 2 cols 768px → 1 col 380px, `clamp()` headings, touch targets ≥44px `@media (hover:none)`, `font-size:16px` inputs iOS no-zoom). Fix crítico `functions.php` formulario contacto: orden invertido — **MantisBT primario** (crea ticket aunque `wp_mail()` falle por SMTP no configurado), email secundario no bloqueante; antes wp_mail fallaba sin postfix instalado y devolvía "Error al enviar" antes de llegar a Mantis. Postfix instalado en VPS (`Internet Site` mode + `mailname=resolvecore.website`) para canal secundario. Test end-to-end: AJAX `admin-ajax.php` retorna `{"success":true,"ticket_id":2}`, página `/aviso-legal/` HTTP 200. |
 | 2026-05-20 | Hosting producción adquirido: **VPS Ionos Linux S** (Ubuntu 24.04 LTS, 1 vCPU / 2 GB / 80 GB, DC Madrid) a 2,50 €/mes promo. Stack objetivo: WP en `<dominio>` + Mantis en `mantis.<dominio>` en mismo VPS. Añadido `scripts/server/deploy-ionos.sh` — script bash idempotente (16 pasos, ~15 min) que automatiza: apt upgrade, instalación nginx + PHP-FPM 8.3 + MariaDB + certbot + ufw + fail2ban, creación usuario non-root con SSH key, hardening SSH (sin root + sin password auth), firewall ufw (22/80/443), swap 2 GB (vital para 2 GB RAM), creación DBs `wp_resolvecore` + `mantisbt` con usuarios dedicados (permisos mínimos), descarga WP core + generación `wp-config.php` con SALT desde api.wordpress.org, despliegue tema + plugin `rc-mantisbt` vía rsync, descarga MantisBT 2.28.1, vhosts nginx con cache estáticos + bloqueo `xmlrpc.php`/`wp-config.php`/`.htaccess`/`config_inc.php`, tuning PHP-FPM ondemand para 2 GB RAM (`pm.max_children=8`, `memory_limit=256M`), Let's Encrypt para `<dominio>` + `www.<dominio>` + `mantis.<dominio>` con redirect 80→443, cron Mantis (envío emails cada 5 min + schema check diario). Script asociado `scripts/server/upload-to-vps.ps1` (PowerShell Windows): empaqueta repo excluyendo `wp/`, `.git/`, `mantisbt-2.28.1/`, `node_modules/`, `scripts/diagnosticos/`, sube vía scp y extrae en `/opt/resolvecore-source`. Documentación nueva: `docs/tecnica/despliegue-ionos.md` (11 secciones — provisión VPS, DNS, hardening, wizards finales WP+Mantis, custom fields SQL, API token, smoke test end-to-end, backups MySQL cron, snapshots Ionos, operación rutinaria con `rsync` updates desde local, troubleshooting tabla 7 casos, coste real año 1 ~43 € / año 2 ~67 €). Indexado en `docs/INDEX.md`. |
+| 2026-05-21 | **Informe PDF (O8 → ✅)**: nuevo `reports/generate-report.php` — generador CLI que inyecta el JSON de diagnóstico en `reports/informe.html` (escapando `</script>`), convierte a PDF A4 vía wkhtmltopdf y, con `--ticket`, lo adjunta al ticket MantisBT (`POST /api/rest/issues/{id}/files`). Valida schema mínimo `_meta.plataforma`+`version`. `deploy-ionos.sh`: añadido `wkhtmltopdf` al stack apt. Fix `upload-to-vps.ps1`: la línea que muestra la pubkey SSH no expandía `$env:USERPROFILE` (backtick mal escapado) — ahora lee el fichero con `Test-Path` + fallback. Secciones 12 y 13 de este documento reescritas con la implementación real. |
+| 2026-05-21 | **Web — navegación y fleet status**: menú desplegable **«Recursos»** (Documentación · Changelog · Estado de la flota) en `front-page.php` y `header.php`, que se unifican (antes eran dos sistemas de nav distintos). Desplegable con hover (CSS) + click/teclado (JS `aria-expanded`, cierre con Esc), espejado en menú móvil. `rc-fleet`: nuevo endpoint REST **público** `GET /wp-json/rc/v1/fleet/stats` (solo agregados — total, score medio, distribución de salud, recuento por SO, activos 24 h — **sin emails, hostnames ni JSON**), función `rc_fleet_get_public_stats()`, render `rc_fleet_render_stats()` y shortcode `[rc_fleet_status]`. Nueva plantilla `page-fleet-status.php` (panel público). `page-changelog.php` reescrito con 4 releases reales (v0.9.0 beta → v1.2.0). Footer de páginas internas con `fallback_cb` (`resolvecore_footer_menu_fallback`). Skip-link + `id="main-content"` en docs/changelog/fleet-status. El endpoint protegido `POST/GET /fleet` se mantiene con auth Bearer — el 401 al navegarlo sin token es comportamiento correcto. |
+| 2026-05-21 | **Demo interactiva reescrita** (`front-page.php`): selector de plataforma **Windows/Linux/Android** que cambia comando y salida del terminal por SO (`.\ResolveCore.ps1` / `bash diagnostico.sh` / ADB). Datos reestructurados en `demoPlatforms` × `demoModules`. Corregidos 2 bugs: botones `[REPARAR]`/`[PARCHE]` no tenían `onclick` (función `fixVuln` muerta); barra de progreso falsa (ahora cuenta 0→100% sincronizada línea a línea). Añadido: panel de resultado con gauge SVG animado de salud, contadores animados, tabla de vulnerabilidades contextual con CVE enlazados a NVD, vista comparativa antes/después (Optimización y Proyección hardware), efecto typewriter en el comando, botón Repetir, CTA a contacto. A11y: `aria-live` en el terminal, `role="progressbar"`, respeto a `prefers-reduced-motion` (render instantáneo), auto-scroll. Badge `LIVE` → `SIMULACIÓN` (no era live, es HTML simulado). |
+| 2026-05-21 | **Gestión de permisos MantisBT**: nuevo `docs/tecnica/mantis-permisos.md` — matriz de las 19 capacidades (adjuntos, filtros, proyectos, campos personalizados, otros) × 6 roles, con umbral recomendado por capacidad bajo criterio de mínimo privilegio (cliente=REPORTER solo abre/adjunta; técnico=DEVELOPER opera; ADMINISTRATOR gestiona usuarios y proyectos). Bloque de constantes `$g_*_threshold` aplicado en `mantisbt/config/config_inc.php` (Docker local) y `config_inc.php.template` (producción). «Usar filtros guardados» y «Enviar recordatorios» quedan para la GUI (sin constante fiable en 2.28). Indexado en `docs/INDEX.md`. |

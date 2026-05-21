@@ -20,7 +20,7 @@ get_header();
     </ul>
   </aside>
 
-  <main class="rc-docs-main">
+  <main class="rc-docs-main" id="main-content">
     <header class="rc-docs-header">
       <h1 class="rc-docs-title">Documentación</h1>
       <p class="rc-docs-subtitle">ResolveCore v1.0.0 — Guía completa de usuario</p>

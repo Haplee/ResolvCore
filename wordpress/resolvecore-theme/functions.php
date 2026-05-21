@@ -27,6 +27,30 @@ function resolvecore_setup() {
 }
 add_action( 'after_setup_theme', 'resolvecore_setup' );
 
+/**
+ * Menú de pie de página por defecto — se usa cuando no hay un menú
+ * asignado a la ubicación 'footer' en Apariencia → Menús.
+ */
+function resolvecore_footer_menu_fallback(): void {
+    $links = [
+        '/docs/'         => 'Documentación',
+        '/changelog/'    => 'Changelog',
+        '/fleet-status/' => 'Estado de la flota',
+        '/aviso-legal/'  => 'Aviso legal',
+        '/privacidad/'   => 'Privacidad',
+        '/cookies/'      => 'Cookies',
+    ];
+    echo '<ul class="rc-footer-links">';
+    foreach ( $links as $path => $label ) {
+        printf(
+            '<li><a href="%s">%s</a></li>',
+            esc_url( home_url( $path ) ),
+            esc_html( $label )
+        );
+    }
+    echo '</ul>';
+}
+
 // Preconnect a Google Fonts (FCP/LCP boost) — antes de wp_head
 function resolvecore_resource_hints( $urls, $relation ) {
     if ( $relation === 'preconnect' ) {
@@ -82,7 +106,7 @@ function resolvecore_scripts() {
     wp_enqueue_style( 'resolvecore-fonts',
         'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap',
         [], null );
-    wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), [], '2.0.1' );
+    wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), [], '3.1.1' );
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_scripts' );
 

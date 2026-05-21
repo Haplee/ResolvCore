@@ -1,7 +1,7 @@
 # ResolveCore — Índice de Documentación
 
 **TFG ASIR 2024/25 · Francisco Vidal Mateo**  
-Última actualización: 20 de mayo de 2026
+Última actualización: 21 de mayo de 2026
 
 ---
 
@@ -31,6 +31,7 @@
 | [flujo-sistema.md](tecnica/flujo-sistema.md) | Diagrama del flujo completo: formulario → ticket → diagnóstico → informe |
 | [mantis-integration.md](tecnica/mantis-integration.md) | Integración WordPress ↔ MantisBT vía REST API |
 | [manual-usuario-mantis.md](tecnica/manual-usuario-mantis.md) | Manual técnico de configuración, BD, workflow y permisos de MantisBT |
+| [mantis-permisos.md](tecnica/mantis-permisos.md) | Matriz de permisos por capacidad y rol — configuración de seguridad de MantisBT |
 | [despliegue-ionos.md](tecnica/despliegue-ionos.md) | Despliegue producción en VPS Ionos Linux S: WP + Mantis + Let's Encrypt en mismo VPS (2,50 €/mes) |
 | [servicios-adicionales.md](tecnica/servicios-adicionales.md) | Clonación, congelación, acceso remoto, cifrado, despliegue por imágenes |
 | [tutorial-wordpress-manual.md](tecnica/tutorial-wordpress-manual.md) | Tutorial de instalación y configuración manual de WordPress |
