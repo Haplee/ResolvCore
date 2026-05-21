@@ -106,7 +106,7 @@ function resolvecore_scripts() {
     wp_enqueue_style( 'resolvecore-fonts',
         'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap',
         [], null );
-    wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), [], '3.1.2' );
+    wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), [], '3.1.3' );
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_scripts' );
 

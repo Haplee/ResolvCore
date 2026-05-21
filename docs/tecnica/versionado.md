@@ -101,7 +101,7 @@ Versión del **contrato JSON** entre los scripts y `rc-mantisbt` /
 
 | Componente | Versión |
 |------------|---------|
-| Tema `resolvecore-theme` | `3.1.2` |
+| Tema `resolvecore-theme` | `3.1.3` |
 | Producto (changelog) | `v1.2.0` |
 | Plugin `rc-fleet` | `0.2.2` |
 | Plugin `rc-mantisbt` | `1.0.0` |
