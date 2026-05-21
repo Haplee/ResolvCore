@@ -10,6 +10,12 @@
 #   sudo bash scripts/server/setup-mail-dkim.sh --domain resolvecore.es --selector rc
 #   sudo bash scripts/server/setup-mail-dkim.sh --domain resolvecore.es --check
 #
+#   # Relay saliente vía smarthost — necesario en VPS que bloquean el puerto 25
+#   # saliente (Ionos lo hace por defecto). Pide usuario y contraseña del buzón
+#   # de forma interactiva; la contraseña NO se pasa por la línea de comandos.
+#   sudo bash scripts/server/setup-mail-dkim.sh --domain resolvecore.es \
+#        --relayhost smtp.ionos.es:587
+#
 # Tras ejecutarlo, imprime los 3 registros DNS (SPF/DKIM/DMARC) que hay que
 # crear en el panel de Ionos. Ver docs/tecnica/correo-dkim.md.
 #
@@ -21,6 +27,7 @@ set -euo pipefail
 DOMAIN=""
 SELECTOR="rc"
 CHECK_ONLY=false
+RELAYHOST=""
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 info()  { printf '  \033[0;36m▸\033[0m %s\n' "$*"; }
@@ -33,9 +40,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --domain)    DOMAIN="${2:-}"; shift 2 ;;
         --selector)  SELECTOR="${2:-}"; shift 2 ;;
+        --relayhost) RELAYHOST="${2:-}"; shift 2 ;;
         --check)     CHECK_ONLY=true; shift ;;
         -h|--help)
-            sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
         *) fail "Opción desconocida: $1"; exit 2 ;;
     esac
@@ -53,6 +61,11 @@ fi
 
 if [[ ! "$SELECTOR" =~ ^[a-zA-Z0-9]+$ ]]; then
     fail "Selector no válido (solo alfanumérico): $SELECTOR"
+    exit 2
+fi
+
+if [[ -n "$RELAYHOST" && ! "$RELAYHOST" =~ ^[a-zA-Z0-9.-]+:[0-9]+$ ]]; then
+    fail "Relayhost no válido. Formato esperado HOST:PUERTO. Ej: smtp.ionos.es:587"
     exit 2
 fi
 
@@ -139,8 +152,51 @@ postconf -e "milter_default_action = accept"
 postconf -e "milter_protocol = 6"
 postconf -e "smtpd_milters = inet:localhost:8891"
 postconf -e "non_smtpd_milters = inet:localhost:8891"
-postconf -e "myhostname = ${DOMAIN}"
+# myhostname usa el subdominio mail.* a propósito: si fuese el dominio raíz,
+# Postfix lo metería en mydestination y entregaría LOCALMENTE el correo a
+# buzones del dominio (p.ej. tecnicos@dominio), que en realidad viven en el
+# proveedor de correo externo — rebotaría con "unknown user".
+postconf -e "myhostname = mail.${DOMAIN}"
 ok "Postfix configurado"
+
+# ── Relay saliente vía smarthost ─────────────────────────────────────────────
+# Muchos proveedores de VPS (Ionos incluido) bloquean el puerto 25 saliente.
+# Sin relay, el correo se queda en cola con "Connection timed out". La solución
+# es enviar autenticado por el smarthost SMTP del proveedor (puerto 587).
+if [[ -n "$RELAYHOST" ]]; then
+    RELAY_HOST_PART="${RELAYHOST%:*}"
+    RELAY_PORT_PART="${RELAYHOST##*:}"
+    RELAY_BRACKET="[${RELAY_HOST_PART}]:${RELAY_PORT_PART}"
+
+    info "Configurando relay saliente vía ${RELAYHOST}"
+    info "El correo saldrá autenticado por ese smarthost (evita el bloqueo del puerto 25)."
+    printf '  Usuario SMTP (buzón completo, p.ej. tecnicos@%s): ' "$DOMAIN"
+    read -r SMTP_USER
+    printf '  Contraseña SMTP (no se mostrará): '
+    read -rs SMTP_PASS
+    echo ""
+
+    if [[ -z "$SMTP_USER" || -z "$SMTP_PASS" ]]; then
+        fail "Usuario o contraseña vacíos — relay no configurado."
+        exit 1
+    fi
+
+    umask 077
+    printf '%s %s:%s\n' "$RELAY_BRACKET" "$SMTP_USER" "$SMTP_PASS" > /etc/postfix/sasl_passwd
+    unset SMTP_PASS
+    postmap /etc/postfix/sasl_passwd
+    chmod 600 /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
+
+    postconf -e "relayhost = ${RELAY_BRACKET}"
+    postconf -e "smtp_sasl_auth_enable = yes"
+    postconf -e "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd"
+    postconf -e "smtp_sasl_security_options = noanonymous"
+    postconf -e "smtp_tls_security_level = encrypt"
+    # Sin el dominio raíz en mydestination: el correo a buzones del dominio
+    # sale por el relay en lugar de intentar entrega local.
+    postconf -e "mydestination = localhost.localdomain, localhost"
+    ok "Relay saliente configurado"
+fi
 
 # ── Reinicio de servicios ────────────────────────────────────────────────────
 info "Reiniciando servicios…"
@@ -160,6 +216,11 @@ echo "==========================================================================
 echo ""
 echo " 1) SPF  — Tipo TXT, Host: @ (raíz)"
 echo "    v=spf1 a mx ip4:${SERVER_IP} ~all"
+if [[ -n "$RELAYHOST" ]]; then
+    echo "    OJO: el correo sale por el relay ${RELAY_HOST_PART}. Añade el include"
+    echo "    SPF de tu proveedor. Ionos:  ...ip4:${SERVER_IP} include:_spf-eu.ionos.com ~all"
+    echo "    Si ya hay un TXT SPF del proveedor, FUSIONA — no crees un segundo."
+fi
 echo ""
 echo " 2) DKIM — Tipo TXT, Host: ${SELECTOR}._domainkey"
 echo "    (valor entre comillas del fichero ${PUBLIC_TXT}):"
@@ -173,3 +234,10 @@ echo "==========================================================================
 info "Verifica tras propagar DNS:  dig +short TXT ${SELECTOR}._domainkey.${DOMAIN}"
 info "Prueba de entrega:          envía un correo de test a https://www.mail-tester.com"
 info "Detalle completo:           docs/tecnica/correo-dkim.md"
+if [[ -n "$RELAYHOST" ]]; then
+    echo ""
+    info "Relay activo. Prueba el envío saliente:"
+    info "  echo test | sendmail tu-correo@gmail.com  &&  tail -n5 /var/log/mail.log"
+    info "Busca 'status=sent' y 'relay=${RELAY_HOST_PART}'. Si ves 'SASL"
+    info "authentication failed', revisa usuario/contraseña en /etc/postfix/sasl_passwd."
+fi
