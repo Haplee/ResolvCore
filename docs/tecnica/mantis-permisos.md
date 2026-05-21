@@ -154,3 +154,54 @@ $g_notify_new_user_created_threshold  = ADMINISTRATOR;
 > Tras editar `config_inc.php`, recarga cualquier página de MantisBT para aplicar los cambios. Si una capacidad aparece distinta en la interfaz, prevalece el valor guardado en base de datos sobre el de `config_inc.php`: revísalo en `Gestionar → Configuración → Gestión de permisos`.
 
 > **VPS en producción:** la instancia ya desplegada en `mantis.resolvecore.website` usa su propio `config_inc.php` (generado por el instalador, fuera del repo). Para aplicar estos permisos allí, copia el bloque anterior a `/var/www/mantis/config/config_inc.php` en el VPS.
+
+---
+
+## Checklist de verificación (smoke-test)
+
+Tras aplicar los permisos, comprueba que la configuración funciona como se
+espera. Crea un usuario de prueba por cada rol relevante y recorre esta lista.
+Marca **OK** si el resultado coincide con lo previsto.
+
+### Preparación
+
+- [ ] Existe un usuario de prueba `test-informador` con nivel **Informador**.
+- [ ] Existe un usuario de prueba `test-desarrollador` con nivel **Desarrollador**.
+- [ ] Existe una incidencia de prueba con un adjunto (JSON o captura).
+
+### Rol Informador (cliente)
+
+- [ ] Puede **ver y descargar** el adjunto de su incidencia.
+- [ ] Puede **adjuntar** un fichero nuevo a la incidencia.
+- [ ] **NO** ve el botón de **borrar adjunto** (capacidad denegada).
+- [ ] **NO** puede guardar filtros (solo usar los existentes).
+- [ ] **NO** ve el menú `Gestionar` (sin gestión de proyectos ni usuarios).
+- [ ] **NO** ve el panel **Resumen**.
+
+### Rol Desarrollador (técnico)
+
+- [ ] Puede **borrar** un adjunto de una incidencia.
+- [ ] Puede **guardar un filtro** propio.
+- [ ] **NO** puede guardar un filtro **compartido** (umbral Supervisor).
+- [ ] Ve el panel **Resumen** con estadísticas.
+- [ ] Puede **enviar recordatorios**.
+- [ ] Aparece automáticamente con acceso a un **proyecto privado** nuevo.
+- [ ] **NO** puede crear ni borrar proyectos.
+
+### Rol Administrador
+
+- [ ] Puede **crear y borrar** proyectos.
+- [ ] Puede **gestionar campos personalizados** (Plataforma, AnyDesk ID…).
+- [ ] Puede **ver el correo** de otros usuarios.
+
+### Integración con el plugin WordPress
+
+- [ ] El token de API usado por `rc-mantisbt` pertenece a un usuario con nivel
+      **Informador o superior** (mínimo necesario para crear incidencias).
+- [ ] Al enviar el formulario de contacto en WordPress se crea la incidencia
+      en MantisBT y el JSON de diagnóstico queda adjunto.
+- [ ] El cliente recibe el correo de confirmación con su número `#ID`
+      (ver `docs/tecnica/correo-dkim.md`).
+
+> Si algún punto falla, revisa primero `Gestionar → Configuración → Gestión de
+> permisos` en la base de datos: ese valor prevalece sobre `config_inc.php`.
