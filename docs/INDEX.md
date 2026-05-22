@@ -1,7 +1,7 @@
 # ResolveCore — Índice de Documentación
 
 **TFG ASIR 2024/25 · Francisco Vidal Mateo**  
-Última actualización: 21 de mayo de 2026
+Última actualización: 22 de mayo de 2026
 
 ---
 
@@ -50,6 +50,14 @@
 | [schema-diagnostico.schema.json](scripting/schema-diagnostico.schema.json) | JSON Schema formal para validación |
 | [schema-vulnerabilidades.md](scripting/schema-vulnerabilidades.md) | Esquema de la base de datos de vulnerabilidades |
 | [regex-y-json-diagnostico.md](scripting/regex-y-json-diagnostico.md) | Patrones regex y técnicas de parsing JSON en los scripts |
+
+---
+
+## tareas/ — Trabajo planificado
+
+| Fichero | Descripción |
+|---------|-------------|
+| [implementar-servicios-adicionales.md](tareas/implementar-servicios-adicionales.md) | Prompt de tarea diferida: implementar los scripts de congelación, clonación y kit en `scripts/servicios/` |
 
 ---
 
