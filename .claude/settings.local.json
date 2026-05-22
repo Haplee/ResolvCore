@@ -91,7 +91,11 @@
       "Read(//tmp/**)",
       "Bash(curl -s -o /tmp/rc_t.html -w \"with-params:%{http_code}\\\\n\" --max-time 20 \"http://localhost:8080/?rc_ticket=42&rc_t=a4165c0472de0a584503\")",
       "Bash(curl -s -o /dev/null -w \"home: %{http_code}  tiempo: %{time_total}s\\\\n\" --max-time 20 https://resolvecore.website/)",
-      "Bash(curl -s -o /dev/null -w \"contacto: %{http_code}  tiempo: %{time_total}s\\\\n\" --max-time 20 https://resolvecore.website/contacto/)"
+      "Bash(curl -s -o /dev/null -w \"contacto: %{http_code}  tiempo: %{time_total}s\\\\n\" --max-time 20 https://resolvecore.website/contacto/)",
+      "Bash(dir C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore /ad /b)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\scripts\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | Sort-Object FullName)",
+      "PowerShell(head *)",
+      "PowerShell(git *)"
     ]
   }
 }
