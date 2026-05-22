@@ -72,7 +72,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 <script type="application/json" id="rc-data">__JSON_DATA__</script>
 <script>
 // Carga segura: el JSON vive en un <script type="application/json"> y se
-// parsea aquí. Evita romper el HTML si el JSON contiene "</script>" (ya
+// parsea aquí. Evita romper el HTML si el JSON contiene "<\/script>" (ya
 // pre-escapado a "<\/script>" por el generador) o caracteres como $1 que
 // PowerShell -replace interpretaría como backreference de regex.
 const RAW = JSON.parse(document.getElementById('rc-data').textContent);
@@ -115,8 +115,8 @@ function norm(d){
   return{
     plataforma:p,hostname:d._meta?.hostname||'—',generado:d._meta?.generado_en||'',admin:d._meta?.admin??d._meta?.root??false,
     os:so.nombre||'—',uptime:so.uptime_horas??null,parches:so.actualizaciones_pendientes??null,
-    cpu:hw.cpu_nombre||'—',cpu_cores:hw.cpu_cores??null,cpu_pct:null,cpu_temp:hw.cpu_temp_c??null,
-    ram_total:hw.ram_gb??null,ram_libre:null,ram_pct:null,
+    cpu:hw.cpu_nombre||'—',cpu_cores:hw.cpu_cores??null,cpu_pct:d.rendimiento?.cpu_uso_pct??null,cpu_temp:hw.cpu_temp_c??null,
+    ram_total:hw.ram_gb??null,ram_libre:null,ram_pct:d.rendimiento?.memoria_uso_pct??null,
     discos:hw.discos||[],particiones:[],
     smart_rows,smart_status:hw.smart_status??null,disk_free:hw.disk_free_gb??null,disk_uso:hw.disk_uso_pct??null,
     gpu:(typeof hw.gpu==='string'?hw.gpu:hw.gpu?.nombre)||null,
@@ -128,7 +128,7 @@ function norm(d){
     defender_dias:seg.defender_firma_dias??null,uac:null,selinux:seg.selinux||null,
     filevault:seg.filevault??null,gatekeeper:seg.gatekeeper??null,rooteado:seg.rooteado??false,
     sec_patch:so.parche_seguridad||null,bootloader_locked:seg.bootloader_bloqueado??null,
-    apps_total:d.aplicaciones?.total??null,svc_detenidos:0,
+    apps_total:Array.isArray(d.software)?d.software.length:(d.aplicaciones?.total??null),svc_detenidos:d.servicios?.automaticos_detenidos??0,
   };
 }
 

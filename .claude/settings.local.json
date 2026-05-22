@@ -95,7 +95,17 @@
       "Bash(dir C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore /ad /b)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\scripts\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | Sort-Object FullName)",
       "PowerShell(head *)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "Bash(python3 -m http.server 8181 --directory scripts/diagnosticos)",
+      "Bash(chromium --headless --no-sandbox --disable-gpu --dump-dom \"http://localhost:8181/diagnostico_Victus-by-FranVi_20260522_172836.html\")",
+      "Bash(google-chrome --headless=new --no-sandbox --disable-gpu --dump-dom \"http://localhost:8181/diagnostico_Victus-by-FranVi_20260522_172836.html\")",
+      "Bash(google-chrome --headless=new --no-sandbox --disable-gpu --enable-logging --log-level=0 --v=1 \"http://localhost:8181/diagnostico_Victus-by-FranVi_20260522_172836.html\")",
+      "Bash(node *)",
+      "Read(//usr/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(google-chrome --headless=new --no-sandbox --disable-gpu --repl \"http://localhost:8181/diagnostico_Victus-by-FranVi_20260522_172836.html\")",
+      "Bash(kill %1)",
+      "Bash(google-chrome --headless=new --no-sandbox --disable-gpu --dump-dom \"file:///tmp/diagnostico_test.html\")"
     ]
   }
 }
