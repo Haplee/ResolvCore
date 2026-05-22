@@ -106,7 +106,7 @@ header() {
     [[ "$SILENT" == "true" ]] && return
     echo ""
     echo -e "  ┌─────────────────────────────────────────────────────────────────┐"
-    echo -e "  │   ${CYAN}ResolveCore — Diagnóstico de Sistema Linux — v3.0.0${NC}        │"
+    echo -e "  │   ${CYAN}ResolveCore — Diagnóstico de Sistema Linux — v3.2.0${NC}        │"
     echo -e "  │   $(date '+%Y-%m-%d %H:%M:%S')                                         │"
     echo -e "  └─────────────────────────────────────────────────────────────────┘"
     echo ""
