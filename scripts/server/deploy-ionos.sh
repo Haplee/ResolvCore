@@ -198,11 +198,14 @@ if [[ ! -f "$WP_DIR/wp-config.php" ]]; then
         done)
     fi
 
+    # Escape PHP-correcto del password (string entre comillas simples): solo `\` y `'`.
+    WP_DB_PASS_PHP=$(printf '%s' "$WP_DB_PASS" | sed -e 's/\\/\\\\/g' -e "s/'/\\\\'/g")
+
     cat > "$WP_DIR/wp-config.php" <<EOF
 <?php
 define( 'DB_NAME',     'wp_resolvecore' );
 define( 'DB_USER',     'wp_user' );
-define( 'DB_PASSWORD', '${WP_DB_PASS}' );
+define( 'DB_PASSWORD', '${WP_DB_PASS_PHP}' );
 define( 'DB_HOST',     'localhost' );
 define( 'DB_CHARSET',  'utf8mb4' );
 define( 'DB_COLLATE',  '' );
