@@ -390,6 +390,29 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Escáner CVE | NVD · CISA KEV · OSV · EPSS · Shodan ✅ |
 | Última actualización | 20 de mayo de 2026 |
 
+### Versiones por componente
+
+> La versión **del proyecto** (1.2.0) es la del producto end-to-end (web + plugin + scripts + docs). Cada componente versiona de forma independiente porque tienen ciclos de release distintos.
+
+| Componente | Path | Versión | Política |
+|---|---|---|---|
+| Producto (release tag) | repo root | `1.2.0-beta` | SemVer; bump al cerrar hito de roadmap |
+| Tema WordPress | `wordpress/resolvecore-theme/` | `3.0.0` | SemVer; bump al cambiar layout o paleta |
+| Plugin WP (rc-mantisbt) | `wordpress/plugins/rc-mantisbt/` | `1.0.0` | SemVer; bump al cambiar payload Mantis o API REST consumida |
+| Diagnóstico Windows | `scripts/windows/diagnostico.ps1` | `4.1.0` | SemVer; **major** rompe schema JSON |
+| Optimización Windows | `scripts/windows/optimizacion.ps1` | `3.2.0` | SemVer; **major** cambia comportamiento `--undo` |
+| Diagnóstico Linux | `scripts/linux/diagnostico.sh` | `3.2.0` | SemVer; **major** rompe schema JSON |
+| Optimización Linux | `scripts/linux/optimizacion.sh` | `3.2.0` | SemVer |
+| Diagnóstico macOS | `scripts/macos/diagnostico.sh` | `0.1.0-demo` | **stub** — sin SemVer hasta dejar de ser stub |
+| Optimización macOS | `scripts/macos/optimizacion.sh` | `0.1.0-demo` | **stub** |
+| Diagnóstico Android | `scripts/android/diagnostico.sh` | `2.2.0` | SemVer; **major** rompe schema JSON |
+| Optimización Android | `scripts/android/optimizacion.sh` | `3.1.0` | SemVer |
+| Escáner CVE (Python) | `scripts/common/buscar_vulnerabilidades.py` | `1.0.0` | SemVer; **major** cambia feeds o salida JSON |
+| Escáner Shodan | `scripts/common/escaner_shodan.py` | `2.0.0` | SemVer |
+| Schema JSON diagnóstico | `docs/scripting/schema-diagnostico.md` | trackea SO con menor versión | Bump al añadir/quitar campos obligatorios |
+
+**Regla de paridad**: el `_meta.version` del JSON emitido por cada script de diagnóstico **debe coincidir** con la versión declarada en cabecera. Si modificas el schema, bump major y actualiza `docs/scripting/schema-diagnostico.md` (CLAUDE.md lo exige).
+
 ---
 
 ## Licencia

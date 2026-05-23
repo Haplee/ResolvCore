@@ -12,7 +12,6 @@
 | [defensa-tfg.md](defensa/defensa-tfg.md) | Documento maestro de defensa: FAQs del tribunal, decisiones justificadas, errores y aprendizajes |
 | [informe-tutor-estado-proyecto.md](defensa/informe-tutor-estado-proyecto.md) | Estado del proyecto al 20/05 para entrega al tutor |
 | [origen-componentes.md](defensa/origen-componentes.md) | Autoría de cada componente: software de terceros, código propio, uso de IA |
-| [planning_viernes_miercoles_resolvecore.md](defensa/planning_viernes_miercoles_resolvecore.md) | Sprint 16–21 mayo: tareas, criterios de hecho, checklist |
 | [anotaciones-tutor.md](defensa/anotaciones-tutor.md) | Notas y feedback del tutor TFG |
 | [punto-de-partida-ante-proyecto.md](defensa/punto-de-partida-ante-proyecto.md) | Contexto inicial del proyecto antes de empezar |
 | [defensa-scripts-mantis.md](defensa/defensa-scripts-mantis.md) | Preparación defensa: scripts + MantisBT |
@@ -32,6 +31,7 @@
 | [mantis-integration.md](tecnica/mantis-integration.md) | Integración WordPress ↔ MantisBT vía REST API |
 | [manual-usuario-mantis.md](tecnica/manual-usuario-mantis.md) | Manual técnico de configuración, BD, workflow y permisos de MantisBT |
 | [mantis-permisos.md](tecnica/mantis-permisos.md) | Matriz de permisos por capacidad y rol — configuración de seguridad de MantisBT |
+| [equipo-tecnicos.md](tecnica/equipo-tecnicos.md) | Plantilla de equipo (5 técnicos) + procedimiento UI de alta + hardening de cuentas en producción |
 | [despliegue-ionos.md](tecnica/despliegue-ionos.md) | Despliegue producción en VPS Ionos Linux S: WP + Mantis + Let's Encrypt en mismo VPS (2,50 €/mes) |
 | [correo-dkim.md](tecnica/correo-dkim.md) | Correo saliente sin spam: configuración SPF/DKIM/DMARC para los emails de confirmación de ticket |
 | [versionado.md](tecnica/versionado.md) | Criterio de versionado: tema, producto, plugins y esquema de diagnóstico |
