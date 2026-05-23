@@ -12,7 +12,7 @@
 #   4) Verifica cron rc_tech_sla_check programado
 #   5) Crea capability rc_tech para el rol administrator (lo hace el activation hook)
 
-set -uo pipefail
+set -euo pipefail
 
 TARBALL="${1:-/tmp/rc-tech-0.1.0.tar.gz}"
 WP_ROOT="/var/www/wp"
