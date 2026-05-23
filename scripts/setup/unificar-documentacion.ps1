@@ -1,10 +1,19 @@
 # Script para la Unificación de Documentación del TFG
 # Creado para consolidar todos los MDs y subir a Drive fácilmente
+#
+# El artefacto generado vive en docs/build/ (gitignored) — no se versiona porque
+# duplica contenido ya estructurado en docs/. Regenerar bajo demanda.
 
 $docsPath = ".\docs"
-$outputPath = ".\ResolvCore_Documentacion_Unificada.md"
+$buildDir = ".\docs\build"
+$outputPath = Join-Path $buildDir "ResolvCore_Documentacion_Unificada.md"
 
 Write-Host "Iniciando consolidación de documentos de ResolveCore..." -ForegroundColor Cyan
+
+# Asegurar carpeta de salida (gitignored vía docs/build/ en .gitignore)
+if (-not (Test-Path $buildDir)) {
+    New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
+}
 
 # Eliminar el archivo de salida si ya existe
 if (Test-Path $outputPath) {
