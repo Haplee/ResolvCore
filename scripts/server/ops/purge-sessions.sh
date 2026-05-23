@@ -77,9 +77,11 @@ if [[ -r "$MYSQL_CNF" ]]; then
         real=$(grep -oP "\\\$g_database_name\s*=\s*'\K[^']+" /var/www/mantis/config/config_inc.php || true)
         [[ -n "$real" ]] && DB_MANTIS_NAME="$real"
     }
+    # Mantis 2.28+ guarda tokens (sesiones + "remember me" + API) en mantis_tokens_table.
+    # expiry=0 significa "no expira"; solo borramos los con expiry > 0 y vencidos.
     mysql --defaults-file="$MYSQL_CNF" "$DB_MANTIS_NAME" \
-        -e "DELETE FROM mantis_user_session_table WHERE last_active < UNIX_TIMESTAMP(NOW() - INTERVAL 30 DAY);" \
-        || warn "  mantis_user_session_table no existe o query falló"
+        -e "DELETE FROM mantis_tokens_table WHERE expiry > 0 AND expiry < UNIX_TIMESTAMP(NOW());" \
+        || warn "  mantis_tokens_table query falló"
 else
     warn "Falta $MYSQL_CNF — se omite purga de Mantis"
 fi
