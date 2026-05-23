@@ -130,7 +130,7 @@ Requiere PowerShell 5.1 (Windows 10/11 trae 5.1 nativo; recomienda pwsh 7+). Rec
 | **Seguridad** | Windows Defender activo, firewall, BitLocker, UAC |
 | **Integridad** | `sfc /verifyonly` (resumen) |
 
-**Salida**: JSON estructurado conforme a [`docs/schema-diagnostico.md`](schema-diagnostico.md) + HTML autocontenido con CSS embebido. **Exit codes**: 0 OK / 1 error de escritura / 2 fallo fatal en recogida.
+**Salida**: JSON estructurado conforme a [`docs/schema-diagnostico.md`](../scripting/schema-diagnostico.md) + HTML autocontenido con CSS embebido. **Exit codes**: 0 OK / 1 error de escritura / 2 fallo fatal en recogida.
 
 **Flags relevantes para la defensa**:
 - `-OutputDir <dir>` o `-O <dir>`: directorio de salida.

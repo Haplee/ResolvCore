@@ -171,7 +171,7 @@ Cada fase emite un **evento auditable**: log local en cliente, nota en ticket, f
 | Servidor | nginx + PHP-FPM | 1.24 / 8.2 | Performance > Apache para PHP, footprint bajo |
 | Hosting | VPS Linux Ubuntu 22.04 LTS | — | LTS hasta 2027, Snap/APT, soporte amplio |
 
-> Detalle completo: [`docs/stack-tecnologico.md`](stack-tecnologico.md).
+> Detalle completo: [`docs/stack-tecnologico.md`](../tecnica/stack-tecnologico.md).
 
 ---
 
@@ -207,7 +207,7 @@ Salida: JSON (v4.0.0 — todos los datos hardware bajo `hardware {}`) + HTML res
 Esqueleto CLI con `--host --user --port --output --dry-run --confirm`. Devuelve JSON placeholder con `_meta.stub: true`. **Decisión consciente:** la versión completa anterior contenía operaciones destructivas (`mdutil off`, `rm -rf ~/Library/Caches`, `networksetup -setdnsservers`) sin guardas — se redujo a stub hasta poder revisar a fondo.
 
 ### Schema JSON unificado
-Documentado en [`docs/schema-diagnostico.md`](schema-diagnostico.md). Convenciones:
+Documentado en [`docs/schema-diagnostico.md`](../scripting/schema-diagnostico.md). Convenciones:
 - Unidades: GB / MB / MHz / °C / ms
 - Fechas: ISO-8601 UTC
 - Valores desconocidos: `null` literal (nunca `"unknown"`)
@@ -441,7 +441,7 @@ MantisBT alinea stack (PHP + MariaDB), permite custom fields para datos del diag
 | `POST` | `/api/rest/issues/{id}/files` | Subir JSON diagnóstico al ticket |
 | `GET`  | `/api/rest/projects` | Verificación conexión / health-check |
 
-Detalle completo: [`docs/mantis-integration.md`](mantis-integration.md).
+Detalle completo: [`docs/mantis-integration.md`](../tecnica/mantis-integration.md).
 
 ---
 
@@ -846,16 +846,16 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 - [Open Web Application Security Project (OWASP) Top 10](https://owasp.org/Top10/)
 
 ### Documentos internos del proyecto
-- [`README.md`](../README.md) — instalación entorno local
-- [`docs/stack-tecnologico.md`](stack-tecnologico.md) — justificación stack completa
-- [`docs/schema-diagnostico.md`](schema-diagnostico.md) — esquema JSON cross-platform
-- [`docs/mantis-integration.md`](mantis-integration.md) — integración MantisBT detallada
-- [`docs/tutorial-wordpress-manual.md`](tutorial-wordpress-manual.md) — tutorial manual de la web (LocalWP → tema → plugin → producción)
+- [`README.md`](../../README.md) — instalación entorno local
+- [`docs/stack-tecnologico.md`](../tecnica/stack-tecnologico.md) — justificación stack completa
+- [`docs/schema-diagnostico.md`](../scripting/schema-diagnostico.md) — esquema JSON cross-platform
+- [`docs/mantis-integration.md`](../tecnica/mantis-integration.md) — integración MantisBT detallada
+- [`docs/tutorial-wordpress-manual.md`](../tecnica/tutorial-wordpress-manual.md) — tutorial manual de la web (LocalWP → tema → plugin → producción)
 - [`docs/defensa-scripts-mantis.md`](defensa-scripts-mantis.md) — guion técnico de defensa: catálogo de los 17 scripts, integración MantisBT punta a punta, FAQ tribunal
-- [`docs/so-especializado.md`](so-especializado.md) — comparativa SO
+- [`docs/so-especializado.md`](../tecnica/so-especializado.md) — comparativa SO
 - [`docs/anotaciones-tutor.md`](anotaciones-tutor.md) — notas para tutor + glosario VPS
 - [`docs/informe-tutor-estado-proyecto.md`](informe-tutor-estado-proyecto.md) — estado entregable
-- [`.claude/CLAUDE.md`](../.claude/CLAUDE.md) — convenciones de desarrollo
+- [`.claude/CLAUDE.md`](../../.claude/CLAUDE.md) — convenciones de desarrollo
 
 ### Repositorios
 - GitHub: <https://github.com/Haplee/ResolveCore>
@@ -895,3 +895,4 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 2026-05-21 | **Correo de contacto profesional**: sustituido el email personal `fvidalmateo@gmail.com` por el buzón Ionos del dominio `tecnicos@resolvecore.website` en las 4 páginas del tema donde aparecía — `front-page.php` (canales de contacto), `page-contacto.php`, y las páginas legales `page-aviso-legal.php` (LSSI) y `page-privacidad.php` (RGPD: responsable del tratamiento y ejercicio de derechos). Tema `resolvecore-theme` v3.1.2 → **v3.1.3**. El `admin_email` de WordPress (usado por `resolvecore_handle_contact()` y el `Reply-To` de la confirmación) se cambia en `Ajustes → Generales` del VPS. |
 | 2026-05-21 | **Correo saliente en producción — relay Ionos + mejoras de entregabilidad**: el despliegue real destapó que Ionos bloquea el puerto 25 saliente del VPS (`Connection timed out`, correo en cola). Se configuró Postfix para relayar el correo autenticado por el smarthost `smtp.ionos.es:587` (buzón `tecnicos@`); `setup-mail-dkim.sh` ganó el flag `--relayhost` (relay + SASL, contraseña pedida de forma interactiva) y fija `myhostname = mail.<dominio>` + `mydestination` sin el dominio raíz, lo que corrige el rebote `unknown user` de los buzones del dominio. `resolvecore_send_client_confirmation()` pasó a `multipart/alternative` — añade una parte de texto plano junto al HTML — y emite la cabecera `List-Unsubscribe`. Doc `docs/tecnica/correo-dkim.md` ampliada con la sección "1b. Relay saliente". Verificado con mail-tester sobre el ticket #8: SPF/DKIM/DMARC autenticados, sin blacklist, enlace de seguimiento con token HMAC respondiendo 200. Tras detectar que el aviso al técnico caía en spam, se unificó el remitente con los filtros `wp_mail_from`/`wp_mail_from_name` a `ResolveCore <tecnicos@resolvecore.website>` — el `wordpress@` genérico de WordPress no coincidía con el buzón autenticado del relay y el antispam lo penalizaba. |
 | 2026-05-21 | **Endurecimiento y mejoras**: (1) **Token anti-enumeración** en el seguimiento de tickets — `resolvecore_ticket_token()` deriva un HMAC-SHA256 stateless de `rc_ticket_<id>` con `wp_salt('auth')`; `resolvecore_handle_ticket_status()` lo valida con `hash_equals()`; el token viaja en el correo (`&rc_t=`), en la respuesta AJAX y en el `dataset.token` del enlace, y el JS del modal (`fetchStatus(id, token)`) lo reenvía. Cierra un IDOR de baja gravedad (IDs secuenciales enumerables). (2) **Caché del endpoint público de la flota** — `rc_fleet_get_public_stats()` cachea en transient (`rc_fleet_public_stats`, 5 min), invalidado en cada POST de agente; plugin `rc-fleet` 0.2.1 → **0.2.2**. (3) **Entregabilidad de correo** — nuevo `scripts/server/setup-mail-dkim.sh` (Postfix + OpenDKIM idempotente) y guía `docs/tecnica/correo-dkim.md` con los registros SPF/DKIM/DMARC para Ionos. (4) **Versionado** — `docs/tecnica/versionado.md` unifica los 4 flujos de versión. (5) **Riesgo wkhtmltopdf** — nota de deprecación + plan de migración a DomPDF en cabecera de `generate-report.php`. (6) **Smoke-test de permisos** — checklist por rol añadido a `docs/tecnica/mantis-permisos.md`. Tres docs nuevos indexados en `docs/INDEX.md`. |
+| 2026-05-23 | **Auditoría — quick-wins + CI**: cerrados 9 items pendientes de `docs/defensa/auditoria-mejoras.md`. **E4** `.editorconfig` raíz (UTF-8 + LF globales, CRLF para `.ps1`, indent 2 YAML/JSON, tab Makefile). **E5** `LICENSE` con texto oficial GPL-3.0 (35 149 bytes); GitHub ya detecta la licencia. **D3** nueva sección "Versiones por componente" en README — tabla con 13 componentes (producto, tema, plugin, los 8 scripts diag/optim, escáner CVE, escáner Shodan, schema JSON) y regla de paridad `_meta.version` ≡ versión cabecera de script. **S4** (ya hecho — verificación): los 4 puntos de inyección HTML escapan `</`→`<\/` (`scripts/windows/diagnostico.ps1:820`, `scripts/linux/diagnostico.sh:933`, `scripts/android/diagnostico.sh:522`, `reports/generate-report.php:82`) sobre template `<script type="application/json" id="rc-data">` parseado con `JSON.parse()`. **W3** `strlen`→`mb_strlen` en `RC_Mantis_API::sanitize_summary/description()` (sync ambas copias del plugin: `wordpress/plugins/` + `wp/wp-content/plugins/`). **W4** cabeceras estándar de WP en `rc-mantisbt.php`: `Requires at least: 6.0`, `Tested up to: 6.5`, `Requires PHP: 8.0`, `License URI`, `Domain Path`; license alineada a `GPL-3.0-or-later` (era `GPL-2.0+`). **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en las dos asignaciones `@field_id`/`@anydesk_field_id` de `mantisbt/sql/resolvecore-setup.sql` (evita warnings strict-mode). **C1** `.github/workflows/lint.yml` con 4 jobs paralelos: shellcheck (`ludeeus/action-shellcheck@2.0.0`), PSScriptAnalyzer (Windows runner), phpcs WordPress-Core (`shivammathur/setup-php@v2` + composer WPCS 3.x), ruff + `py_compile` sobre `scripts/common/`. **C2** `.pre-commit-config.yaml` con `pre-commit-hooks@v4.6.0` + `shellcheck-py@v0.10.0.1` + `ruff-pre-commit@v0.5.0` + hook local `phpcs` opcional (skip si no está en PATH). Pendientes diferidos en `auditoria-mejoras.md`: E2 mover zips a GitHub Releases (manual), D4 testar macOS en hardware real, S3 test con hostnames `"\\\n`, S5 modularizar `buscar_vulnerabilidades.py` (solo si crece). |

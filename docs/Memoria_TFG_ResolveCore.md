@@ -1088,7 +1088,7 @@ Mapeo aplicado:
 | `licencia` | Licencia | normal |
 | `otro` | General | low |
 
-Validación de payload: ver [`docs/mantis-integration.md`](mantis-integration.md#validación-de-payload-al-crear-tickets).
+Validación de payload: ver [`docs/mantis-integration.md`](tecnica/mantis-integration.md#validación-de-payload-al-crear-tickets).
 
 #### Fase 3 — Asignación
 
@@ -1119,7 +1119,7 @@ Bypass tolerado: SSH (Linux/macOS) o ADB (Android) si el técnico ya tiene acces
 | **Responsable** | Técnico, vía script |
 | **Input** | Sistema objetivo (Windows / Linux / macOS / Android) |
 | **Herramienta** | `scripts/<os>/diagnostico.{ps1,sh}` + `scripts/buscar_vulnerabilidades.py` |
-| **Output** | JSON conforme a [`docs/schema-diagnostico.md`](schema-diagnostico.md) + opcionalmente HTML/TXT |
+| **Output** | JSON conforme a [`docs/schema-diagnostico.md`](scripting/schema-diagnostico.md) + opcionalmente HTML/TXT |
 | **Persistencia** | `scripts/diagnosticos/diagnostico_<HOST>_<TS>.{json,html}` (gitignored) |
 
 Métricas mínimas por SO:
@@ -1181,7 +1181,7 @@ Si añades, divides o eliminas una fase:
 1. Actualiza el diagrama mermaid (este fichero **y** el README).
 2. Añade/edita la sección de la fase en este documento (responsable, input, output, herramientas, persistencia).
 3. Si afecta al payload entre fases, actualiza la tabla "Datos que viajan entre fases".
-4. Si la fase tiene impacto en el esquema JSON, actualiza [`docs/schema-diagnostico.md`](schema-diagnostico.md).
+4. Si la fase tiene impacto en el esquema JSON, actualiza [`docs/schema-diagnostico.md`](scripting/schema-diagnostico.md).
 5. Si la fase introduce un nuevo módulo, regístralo en `CLAUDE.md` → "Módulos principales".
 
 ---
@@ -1306,7 +1306,7 @@ Dado que MantisBT almacenará datos sensibles (AnyDesk IDs, información de vuln
 *   **RPO (Recovery Point Objective):** Máxima pérdida de datos aceptable de 24 horas (gracias a copias nocturnas automáticas).
 *   **RTO (Recovery Time Objective):** Tiempo de recuperación estimado < 2 horas disponiendo de acceso root al VPS y las copias descargadas de Google Drive/S3.
 
-> Ver también: [`docs/stack-tecnologico.md`](stack-tecnologico.md) para justificación completa de tecnologías.
+> Ver también: [`docs/stack-tecnologico.md`](tecnica/stack-tecnologico.md) para justificación completa de tecnologías.
 
 ### Arquitectura
 
@@ -1566,7 +1566,7 @@ El plugin lee la prioridad del ticket al crearse y calcula la fecha de vencimien
 
 ### Subir el JSON de diagnóstico al ticket
 
-Tras ejecutar `scripts/<os>/diagnostico.*` se obtiene un JSON conforme a [`docs/schema-diagnostico.md`](schema-diagnostico.md). Para asociarlo a un ticket existente:
+Tras ejecutar `scripts/<os>/diagnostico.*` se obtiene un JSON conforme a [`docs/schema-diagnostico.md`](scripting/schema-diagnostico.md). Para asociarlo a un ticket existente:
 
 ```php
 // Desde cualquier hook de WordPress, p.ej. al cerrar la sesión remota
@@ -1655,7 +1655,7 @@ El JSON debe contener al menos:
 }
 ```
 
-Si falta cualquiera de los dos campos `version` o `plataforma`, el helper rechaza la subida con `rc_mantis_schema_invalid`. Esto evita adjuntar JSONs corruptos o de otro origen al ticket. Estructura completa: ver [`docs/schema-diagnostico.md`](schema-diagnostico.md).
+Si falta cualquiera de los dos campos `version` o `plataforma`, el helper rechaza la subida con `rc_mantis_schema_invalid`. Esto evita adjuntar JSONs corruptos o de otro origen al ticket. Estructura completa: ver [`docs/schema-diagnostico.md`](scripting/schema-diagnostico.md).
 
 > Garantiza que los correos de confirmación de ticket (`wp_mail` desde el tema
 > ResolveCore) lleguen a la bandeja de entrada del cliente y no a spam.
@@ -2187,11 +2187,11 @@ Skip-ea los pasos ya completados.
 
 ### 11. Referencias cruzadas
 
-- Configuración detallada MantisBT: [`manual-usuario-mantis.md`](manual-usuario-mantis.md)
-- Integración WP↔Mantis (código + esquema BD): [`mantis-integration.md`](mantis-integration.md)
-- Tutorial WP local (paso previo): [`tutorial-wordpress-manual.md`](tutorial-wordpress-manual.md)
-- Backup / migración: [`backup-entorno-web.md`](backup-entorno-web.md)
-- Stack tecnológico: [`stack-tecnologico.md`](stack-tecnologico.md)
+- Configuración detallada MantisBT: [`manual-usuario-mantis.md`](tecnica/manual-usuario-mantis.md)
+- Integración WP↔Mantis (código + esquema BD): [`mantis-integration.md`](tecnica/mantis-integration.md)
+- Tutorial WP local (paso previo): [`tutorial-wordpress-manual.md`](tecnica/tutorial-wordpress-manual.md)
+- Backup / migración: [`backup-entorno-web.md`](tecnica/backup-entorno-web.md)
+- Stack tecnológico: [`stack-tecnologico.md`](tecnica/stack-tecnologico.md)
 
 # 4. Desarrollo: Scripting y Diagnóstico de Sistemas
 
@@ -4812,11 +4812,11 @@ Marca cada casilla del checklist de defensa antes de la presentación:
 
 ### Referencias
 
-* **Stack tecnológico justificado:** [`docs/stack-tecnologico.md`](stack-tecnologico.md)
-* **Integración detallada con MantisBT:** [`docs/mantis-integration.md`](mantis-integration.md)
-* **Esquema de datos de diagnóstico:** [`docs/schema-diagnostico.md`](schema-diagnostico.md)
-* **Entornos dev / prod / backup:** [`docs/entornos.md`](entornos.md)
-* **Defensa TFG (índice maestro):** [`docs/defensa-tfg.md`](defensa-tfg.md)
+* **Stack tecnológico justificado:** [`docs/stack-tecnologico.md`](tecnica/stack-tecnologico.md)
+* **Integración detallada con MantisBT:** [`docs/mantis-integration.md`](tecnica/mantis-integration.md)
+* **Esquema de datos de diagnóstico:** [`docs/schema-diagnostico.md`](scripting/schema-diagnostico.md)
+* **Entornos dev / prod / backup:** [`docs/entornos.md`](tecnica/entornos.md)
+* **Defensa TFG (índice maestro):** [`docs/defensa-tfg.md`](defensa/defensa-tfg.md)
 
 # 6. Auditoría, Autoría y Defensa
 

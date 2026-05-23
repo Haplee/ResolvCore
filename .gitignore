@@ -47,6 +47,7 @@ scripts/diagnosticos/
 
 # Empaquetados del tema/plugin (distribuir vía GitHub Releases)
 wordpress/*.zip
+builds/*.zip
 
 # Vendor MantisBT (instalar con: bash scripts/server/bootstrap-mantis.sh)
 mantisbt-2.28.1/
@@ -57,3 +58,21 @@ graphify-out/
 # Agent rules de herramientas AI dentro de carpetas de scripts
 scripts/**/.agent/
 .deploy-creds.local.txt
+
+# WordPress local dev (LocalWP). wp-config con credenciales locales y dumps de BD.
+# Cualquier dump completo de WP contiene wp_users (hashes), emails y posibles
+# tokens guardados en wp_options — fuera del repo siempre.
+wp-config.php
+wordpress-db.sql
+wp-content.tar.gz
+
+# Config server PHP — no pertenece al repo de aplicación (documentar valores en docs/).
+/php.ini
+
+# Dumps/concatenados generados de la documentación (los originales viven en docs/).
+docs_dump.txt
+ResolvCore_Documentacion_Unificada.md
+docs/build/
+
+# Snapshot completo del repo para LLMs (~40 MB). Local-only, jamás versionar.
+repomix-output.xml

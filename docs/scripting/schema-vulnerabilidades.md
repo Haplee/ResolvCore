@@ -2,7 +2,7 @@
 
 > Persistencia local de las vulnerabilidades consumidas por `scripts/buscar_vulnerabilidades.py` y consultadas por los scripts de diagnóstico. La sincronización con feeds externos es responsabilidad del scanner CVE; esta tabla solo persiste el estado consolidado.
 >
-> Migración inicial: [`vulnerabilities/migrations/0001_init.sql`](../vulnerabilities/migrations/0001_init.sql).
+> Migración inicial: [`vulnerabilities/migrations/0001_init.sql`](../../vulnerabilities/migrations/0001_init.sql).
 
 ---
 
