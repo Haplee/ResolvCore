@@ -1,13 +1,18 @@
 <?php
 /**
- * Plugin Name: ResolveCore — MantisBT Integration
- * Plugin URI:  https://github.com/Haplee/ResolveCore
- * Description: Integra el formulario de contacto de ResolveCore con MantisBT vía REST API. Crea un ticket automáticamente con cada solicitud de soporte.
- * Version:     1.0.0
- * Author:      Francisco Vidal Mateo
- * Author URI:  https://github.com/Haplee
- * License:     GPL-2.0+
- * Text Domain: rc-mantisbt
+ * Plugin Name:       ResolveCore — MantisBT Integration
+ * Plugin URI:        https://github.com/Haplee/ResolveCore
+ * Description:       Integra el formulario de contacto de ResolveCore con MantisBT vía REST API. Crea un ticket automáticamente con cada solicitud de soporte.
+ * Version:           1.0.0
+ * Requires at least: 6.0
+ * Tested up to:      6.5
+ * Requires PHP:      8.0
+ * Author:            Francisco Vidal Mateo
+ * Author URI:        https://github.com/Haplee
+ * License:           GPL-3.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
+ * Text Domain:       rc-mantisbt
+ * Domain Path:       /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;

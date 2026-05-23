@@ -172,7 +172,7 @@ class RC_Mantis_API {
 
     private function sanitize_summary( string $s ): string {
         $s = wp_check_invalid_utf8( trim( $s ) );
-        if ( strlen( $s ) > self::MAX_SUMMARY ) {
+        if ( mb_strlen( $s ) > self::MAX_SUMMARY ) {
             $s = mb_substr( $s, 0, self::MAX_SUMMARY );
         }
         return $s;
@@ -181,7 +181,7 @@ class RC_Mantis_API {
     private function sanitize_description( string $s ): string {
         $s = wp_check_invalid_utf8( $s );
         $s = trim( $s );
-        if ( strlen( $s ) > self::MAX_DESCRIPTION ) {
+        if ( mb_strlen( $s ) > self::MAX_DESCRIPTION ) {
             $s = mb_substr( $s, 0, self::MAX_DESCRIPTION ) . "\n\n[truncado]";
         }
         return $s;

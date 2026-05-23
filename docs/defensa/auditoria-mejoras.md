@@ -71,30 +71,17 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
   ```
 - [x] Implementado
 
-### `E4` — Añadir `.editorconfig`
+### `E4` — Añadir `.editorconfig`  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: trabajas con PHP + Bash + PowerShell entre Windows y Linux (dual boot). Sin guardia de EOL/charset acabarás mezclando CRLF/LF en scripts críticos.
-- **Plantilla mínima**:
-  ```ini
-  root = true
-  [*]
-  charset = utf-8
-  end_of_line = lf
-  insert_final_newline = true
-  trim_trailing_whitespace = true
-  indent_style = space
-  indent_size = 4
-  [*.{ps1,psm1,psd1}]
-  end_of_line = crlf
-  [*.md]
-  trim_trailing_whitespace = false
-  ```
-- [ ] Implementado
+- **Implementado**: `.editorconfig` en raíz — UTF-8 + LF + indent 4 globales; `crlf` para `.ps1/.psm1/.psd1` (PowerShell ISE espera CRLF); `indent_size=2` para YAML/JSON; `tab` para Makefile; `trim_trailing_whitespace=false` en Markdown (preserva line breaks).
+- [x] Implementado
 
-### `E5` — Añadir `LICENSE` en raíz
+### `E5` — Añadir `LICENSE` en raíz  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: README declara GPL-3.0 pero no hay fichero `LICENSE`. GitHub no detecta licencia y el proyecto queda jurídicamente ambiguo.
-- [ ] Añadir `LICENSE` con el texto oficial GPL-3.0.
+- **Implementado**: `LICENSE` con texto oficial GPL-3.0 (35 149 bytes) descargado de `https://www.gnu.org/licenses/gpl-3.0.txt`. GitHub ya detecta la licencia.
+- [x] Implementado
 
 ---
 
@@ -114,10 +101,11 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
   - [x] Documentar el esquema en `docs/schema-vulnerabilidades.md` (campos, índices, política de upsert, fixtures `CVE-9999-*`).
   - [ ] `0002_seed_dev.sql` con fixtures ficticios — pendiente hasta primera integración real con scanner (sin valor antes).
 
-### `D3` — Tabla de versiones por componente en README
+### `D3` — Tabla de versiones por componente en README  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
-- **Por qué**: README declara `v1.1.0` pero internamente Windows va en `3.2.0`, Linux `3.0.0`, Android `2.0.0`, plugin WP `1.0.0`. Hoy es ambiguo qué número es el de referencia.
-- [ ] Añadir en README (o `docs/defensa-tfg.md`) tabla "Componente → Versión actual" y política de versionado por componente.
+- **Por qué**: README declara `v1.2.0` pero internamente Windows va en `4.1.0`, Linux `3.2.0`, Android `2.2.0`, plugin WP `1.0.0`. Hoy es ambiguo qué número es el de referencia.
+- **Implementado**: nueva sección "Versiones por componente" en README (debajo de "Estado del proyecto") con tabla `componente · path · versión · política`. Cubre producto, tema, plugin, los 8 scripts de diagnóstico/optimización por SO, escáner CVE, escáner Shodan y el schema JSON. Regla de paridad documentada: `_meta.version` del JSON ≡ versión cabecera de script.
+- [x] Implementado
 
 ### `D4` — Confirmar estado real de macOS
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
@@ -169,12 +157,14 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
   - [x] Versiones bumped en `docs/schema-diagnostico.md`.
   - [ ] Test con hostnames/valores que contengan `"`, `\`, `\n` para regresión.
 
-### `S4` — Inyección segura del JSON en `informe.html`
+### `S4` — Inyección segura del JSON en `informe.html`  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `linux/diagnostico.sh:683-705` inyecta el JSON crudo dentro de la plantilla con `head/tail` cortando por la marca `__JSON_DATA__`. Si algún valor contiene `</script>` el HTML revienta.
-- **Acciones**:
-  - [ ] Cambiar plantilla para que el JSON viva en `<script type="application/json" id="rc-data">…</script>` y se lea con `JSON.parse(document.getElementById('rc-data').textContent)`.
-  - [ ] Aplicar en `scripts/informe.html` y en los puntos de inyección de cada SO.
+- **Implementado** (ya hecho en commits previos — verificado 2026-05-23):
+  - `reports/informe.html:72` usa `<script type="application/json" id="rc-data">__JSON_DATA__</script>` y `reports/informe.html:78` parsea con `JSON.parse(document.getElementById('rc-data').textContent)`.
+  - Generadores escapan `</` → `<\/` antes de inyectar: `scripts/windows/diagnostico.ps1:820` (`-replace '</', '<\/'`), `scripts/linux/diagnostico.sh:933` (`sed 's|</|<\\/|g'`), `scripts/android/diagnostico.sh:522` (mismo `sed`), `reports/generate-report.php:82` (`str_replace('</', '<\/', …)`).
+  - macOS sigue stub — no inyecta HTML hasta dejar de ser stub.
+- [x] Implementado
 
 ### `S6` — Mismatch nivel "basico" entre launcher y optimización  ✅
 - **Severidad**: media (UX: la opción 1 del menú revienta) · **Esfuerzo**: bajo · **Reversible**: sí
@@ -227,39 +217,47 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 - **Solución aplicada**: enlace generado con `wp_nonce_url(..., 'rc_mantis_test', 'rc_mantis_nonce')`; handler verifica con `check_admin_referer('rc_mantis_test', 'rc_mantis_nonce')` antes de llamar a `get_projects()`. Resuelto en el mismo commit que W1 (mismo archivo).
 - [x] Implementado.
 
-### `W3` — Strlen vs mb_substr en sanitize_description
+### `W3` — Strlen vs mb_substr en sanitize_description  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `class-mantis-api.php:175-186` mide con `strlen` (bytes) y corta con `mb_substr` (caracteres). En strings con muchos caracteres multibyte cortarás antes del límite real.
-- [ ] Cambiar la condición a `mb_strlen($s) > self::MAX_*` para coherencia.
+- **Implementado**: `strlen` → `mb_strlen` en `sanitize_summary()` (`:175`) y `sanitize_description()` (`:184`). Aplicado en ambas copias: `wordpress/plugins/rc-mantisbt/includes/class-mantis-api.php` y `wp/wp-content/plugins/rc-mantisbt/includes/class-mantis-api.php` (deploy local).
+- [x] Implementado
 
-### `W4` — Cabecera del plugin: declarar requisitos
+### `W4` — Cabecera del plugin: declarar requisitos  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `rc-mantisbt.php:1-11` no declara `Requires at least`, `Tested up to`, `Requires PHP`. Mejora UX en WP-Admin y bloquea instalaciones incompatibles.
-- [ ] Añadir cabeceras estándar de WordPress.
+- **Implementado**: añadidas `Requires at least: 6.0`, `Tested up to: 6.5`, `Requires PHP: 8.0`, `License URI`, `Domain Path`. License migrada de `GPL-2.0+` a `GPL-3.0-or-later` para alinear con `LICENSE` (E5) y badge del README. Aplicado en ambas copias del plugin.
+- [x] Implementado
 
-### `W5` — `INSERT … (SELECT … LIMIT 1)` en SQL Mantis
+### `W5` — `INSERT … (SELECT … LIMIT 1)` en SQL Mantis  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: `mantisbt/sql/resolvecore-setup.sql:55-57` usa subquery con `LIMIT 1` en `INSERT`. Funciona pero MariaDB/MySQL emite warnings según versión.
-- [ ] Sustituir por `SET @anydesk_field_id = (SELECT MAX(id) ...);` o similar.
+- **Implementado**: `SELECT id ... WHERE name = ... LIMIT 1` → `SELECT MAX(id) ... WHERE name = ...` en las dos asignaciones (`@field_id` línea 39, `@anydesk_field_id` línea 56). `MAX(id)` garantiza una sola fila por construcción, sin depender de `LIMIT` (que el optimizador puede ignorar en algunos modos estrictos).
+- [x] Implementado
 
 ---
 
-# 5. CI / tooling (pendiente)
+# 5. CI / tooling
 
-### `C1` — GitHub Actions con linters
+### `C1` — GitHub Actions con linters  ✅
 - **Severidad**: baja · **Esfuerzo**: medio · **Reversible**: sí
-- **Stack sugerido**:
-  - `shellcheck` para `scripts/{linux,macos,android}/*.sh`.
-  - `PSScriptAnalyzer` para `scripts/windows/*.ps1`.
-  - `phpcs` con `WordPress-Core` ruleset para `wordpress/`.
-  - `python -m py_compile` + `ruff` para `scripts/buscar_vulnerabilidades.py`.
-- **Workflow recomendado**: corre en PRs y bloquea merge con errores.
-- [ ] Implementado
+- **Implementado**: `.github/workflows/lint.yml` con 4 jobs paralelos en `push`/`pull_request` a `main`:
+  - **shellcheck** (Ubuntu) — `ludeeus/action-shellcheck@2.0.0` con `SHELLCHECK_OPTS="-e SC1091 -e SC2155"` (SC1091: source no resoluble; SC2155: declare/assign separado), severity warning, scandir `scripts/`.
+  - **PSScriptAnalyzer** (Windows) — instala módulo, analiza `scripts/windows/` recursivamente; falla solo si hay errores (warnings se reportan pero no bloquean).
+  - **phpcs WordPress-Core** (Ubuntu) — `shivammathur/setup-php@v2` PHP 8.2 + composer instala `squizlabs/php_codesniffer`, `wp-coding-standards/wpcs:^3.0`, `phpcompatibility/phpcompatibility-wp`. Ejecuta sobre `wordpress/plugins/rc-mantisbt/` + `wordpress/resolvecore-theme/`, reporta vía `cs2pr`. `continue-on-error: true` mientras se pulen warnings legacy.
+  - **Python** (Ubuntu) — `ruff check scripts/common/ --output-format=github` + `python -m py_compile` recursivo.
+- [x] Implementado
 
-### `C2` — Pre-commit hook local
+### `C2` — Pre-commit hook local  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: atrapa los mismos errores antes del push.
-- [ ] Añadir `.pre-commit-config.yaml` con shellcheck + ruff + phpcs.
+- **Implementado**: `.pre-commit-config.yaml` con:
+  - `pre-commit/pre-commit-hooks@v4.6.0` — `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending` (sólo check, sin auto-fix para no romper `.ps1` CRLF), `check-yaml`, `check-json`, `check-merge-conflict`, `check-added-large-files --maxkb=2048`. Exclude `wp/` y `mantisbt-2.28.1/` (vendor).
+  - `shellcheck-py/shellcheck-py@v0.10.0.1` — same args que CI, scope `scripts/(linux|macos|android|server|setup)/.*\.sh$`.
+  - `astral-sh/ruff-pre-commit@v0.5.0` — `--fix` sobre `scripts/common/.*\.py$`.
+  - **local hook** `phpcs-wordpress` — system hook opcional; si `phpcs` no está en PATH hace skip (no fuerza a instalar la toolchain WP en cada dev).
+- Instalación: `pip install pre-commit && pre-commit install`.
+- [x] Implementado
 
 ---
 
@@ -288,3 +286,4 @@ Por **ROI** (impacto / esfuerzo):
 | 2026-05-09  | S3 (Linux) parcial: jq -n + json_num + fix bug apt grep -c. S6 nuevo y resuelto. |
 | 2026-05-09  | S3 cerrado: Android refactor (2.0.0 → 2.1.0) + macOS stub hardening. Versiones actualizadas en schema-diagnostico.md. |
 | 2026-05-09  | W1 + W2 cerrados: token Mantis externalizable a `RC_MANTIS_TOKEN` (constante > wp_options), nonce CSRF en "Verificar conexión", aviso de duplicado, helpers `rc_mantis_get_*()`. D1 cerrado: `docs/flujo-sistema.md` con 7 fases. D2 parcial: migración 0001 (rc_vulnerabilities + sync) + `docs/schema-vulnerabilidades.md`. S1 + S2 cerrados: shebangs `#!/usr/bin/env bash` en linux/, `set -uo pipefail` en launchers, política Bash documentada en CLAUDE.md, target real PS5.1 alineado en CLAUDE.md/README, fix typo `# Requires` en ResolveCore.ps1. |
+| 2026-05-23  | Bloque quick-wins + CI cerrado: **E4** `.editorconfig` (UTF-8/LF + CRLF para PS1 + idents YAML/Makefile). **E5** `LICENSE` GPL-3.0 oficial. **D3** sección "Versiones por componente" en README con regla de paridad `_meta.version`. **S4** verificado: `<script type="application/json">` + `JSON.parse()` con escape `</`→`<\/` en 4 puntos de inyección (PS1, linux.sh, android.sh, PHP). **W3** `strlen`→`mb_strlen` en `sanitize_summary/description` (sync wordpress/ + wp/). **W4** cabeceras WP `Requires at least/Tested up to/Requires PHP/License URI`, license alineada a GPL-3.0. **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en setup Mantis. **C1** `.github/workflows/lint.yml` con jobs shellcheck/PSScriptAnalyzer/phpcs WP/ruff+py_compile. **C2** `.pre-commit-config.yaml` con pre-commit-hooks + shellcheck-py + ruff + local phpcs opcional. |
