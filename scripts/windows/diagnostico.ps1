@@ -406,7 +406,7 @@ try {
 $drives = Get-PSDrive -PSProvider FileSystem
 $driveList = @()
 foreach ($dr in $drives) {
-    if ($dr.Used -ne $null) {
+    if ($null -ne $dr.Used) {
         $totalGB = [math]::Round(($dr.Used + $dr.Free) / 1GB, 1)
         $freeGB = [math]::Round($dr.Free / 1GB, 1)
         $usedPct = [math]::Round($dr.Used / ($dr.Used + $dr.Free) * 100, 1)
@@ -503,7 +503,8 @@ Write-Host "    ---" -ForegroundColor Gray
 $latMs = $null
 $lossPct = $null
 $pingCount = 4
-$ping1 = Test-Connection -ComputerName 8.8.8.8 -Count $pingCount -ErrorAction SilentlyContinue
+$pingTarget = '8.8.8.8'
+$ping1 = Test-Connection -ComputerName $pingTarget -Count $pingCount -ErrorAction SilentlyContinue
 if ($ping1) {
     $latMs = [math]::Round(($ping1 | Measure-Object ResponseTime -Average).Average, 1)
     $received = ($ping1 | Measure-Object).Count

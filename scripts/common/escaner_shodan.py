@@ -209,7 +209,7 @@ def main() -> int:
             print(f"  Plan activo    : {plan}")
             print(f"  Query credits  : {credits_left} restantes este mes")
             print(f"  Scan credits   : {scan_credits} restantes este mes")
-            print(f"  (1 credito = 1 IP lookup | free tier: 100/mes)")
+            print("  (1 credito = 1 IP lookup | free tier: 100/mes)")
         if not args.ip:
             return 0
 

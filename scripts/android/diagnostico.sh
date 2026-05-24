@@ -177,6 +177,7 @@ ok "CPU: ${cpu_name} — ${cpu_cores} núcleos"
 
 # RAM
 ram_total_kb=$(adb_s grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo '0')
+# shellcheck disable=SC2034
 ram_gb=$(echo "scale=1; ${ram_total_kb:-0} / 1048576" | bc 2>/dev/null || echo '')
 ram_gb_int=$(( (${ram_total_kb:-0} + 524288) / 1048576 ))
 ok "RAM: ${ram_gb_int}GB"
@@ -374,6 +375,7 @@ selinux=$(adb_s getenforce 2>/dev/null | xargs || echo 'unknown')
 ok "SELinux: ${selinux}"
 
 # Bloqueo de pantalla (requiere permisos; intento)
+# shellcheck disable=SC2034
 screen_lock='unknown'
 lock_val=$(adb_s settings get system screen_lock_type 2>/dev/null | xargs || echo '')
 [[ -z "$lock_val" ]] && lock_val=$(adb_s settings get secure lockscreen.password_type 2>/dev/null | xargs || echo '')

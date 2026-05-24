@@ -35,7 +35,7 @@ jobs:
       - name: Analyze scripts
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path scripts/windows -Recurse -Severity Warning,Error
+          $results = Invoke-ScriptAnalyzer -Path scripts/windows -Recurse -Severity Warning,Error -Settings ./PSScriptAnalyzerSettings.psd1
           if ($results) {
             $results | Format-Table -AutoSize
             $errs = $results | Where-Object Severity -eq 'Error'
@@ -56,6 +56,7 @@ jobs:
           tools: cs2pr, composer:v2
       - name: Install PHPCS + WPCS
         run: |
+          composer global config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
           composer global require --dev \
             "squizlabs/php_codesniffer=*" \
             "wp-coding-standards/wpcs:^3.0" \

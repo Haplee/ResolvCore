@@ -106,6 +106,7 @@ DB_MANTIS_USER="rc_mantis"
 DB_MANTIS_PASS=$(openssl rand -base64 24 | tr -d '/+=')
 DB_MANTIS_NAME="resolvecore_mantis"
 WP_ADMIN_PASS=$(openssl rand -base64 16 | tr -d '/+=')
+# shellcheck disable=SC2034
 MANTIS_ADMIN_PASS=$(openssl rand -base64 16 | tr -d '/+=')
 
 # Guardar credenciales en archivo seguro (solo root)
