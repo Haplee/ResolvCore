@@ -25,8 +25,8 @@ OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
 MODE="local"
 SSH_HOST=""
 SSH_USER=""
-# shellcheck disable=SC2034
 SSH_PORT="22"
+export SSH_PORT
 
 usage() {
     cat <<EOF
