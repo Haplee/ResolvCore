@@ -38,6 +38,16 @@ class Service:
         return f"port {self.port}/{self.transport}"
 
 
+@dataclass(frozen=True)
+class AttachmentResult:
+    """Resultado de subir un fichero a un ticket MantisBT."""
+    ok: bool
+    ticket_id: int
+    file_name: str
+    status_code: Optional[int] = None
+    error: Optional[str] = None
+
+
 @dataclass
 class Host:
     """Inventario de exposicion de un host (resultado tipico de Shodan/nmap)."""
