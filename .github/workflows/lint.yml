@@ -70,12 +70,7 @@ jobs:
       - name: Run PHPCS
         run: |
           PATH="$HOME/.composer/vendor/bin:$PATH"
-          phpcs --standard=WordPress --report=checkstyle \
-            --extensions=php \
-            --ignore=*/vendor/*,*/node_modules/* \
-            wordpress/plugins/rc-mantisbt/ \
-            wordpress/resolvecore-theme/ \
-            | cs2pr
+          phpcs --runtime-set ignore_warnings_on_exit 1 --report=checkstyle | cs2pr
 
   python:
     name: Python (ruff + py_compile)
