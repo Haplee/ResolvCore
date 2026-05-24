@@ -20,7 +20,7 @@ import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 def check_nmap_installed() -> bool:
     return shutil.which("nmap") is not None

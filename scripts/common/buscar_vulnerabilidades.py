@@ -13,9 +13,7 @@ Licencia: GPL-3.0 (mismo proyecto)
 
 import argparse
 import base64
-import csv
 import datetime as _dt
-import io
 import json
 import os
 import platform
@@ -709,7 +707,6 @@ class VulnScanner:
             for s in v.get("severity", []) or []:
                 if s.get("type") == "CVSS_V3":
                     txt = s.get("score", "")
-                    m = re.search(r"/AV:.*", txt)
                     sev = "HIGH" if "/I:H" in txt or "/A:H" in txt else "MEDIUM"
             out.append({
                 "cve_id": v.get("id", ""),
@@ -1095,7 +1092,7 @@ class RemediationEngine:
         if cmd_exists("scoop"):
             rc, _, err = safe_run(["scoop", "update", name], timeout=180)
             if rc == 0:
-                return f"CORREGIDO via scoop"
+                return "CORREGIDO via scoop"
         if cmd_exists("choco"):
             if not self.admin:
                 return "OMITIDO (sin permisos admin para choco)"
@@ -2349,7 +2346,6 @@ def main() -> int:
         cprint(f"  [>] Excepciones activas: {len(whitelist)}", C.CY, silent)
 
     cprint("  [>] Consultando NVD + OSV + EPSS...", C.GR, silent)
-    total = min(MAX_SOFTWARE_QUERIES, len(detector.software))
 
     def cb(i, t, n, v):
         progress_line(i, t, n, v, 0, 0, silent)
@@ -2450,7 +2446,7 @@ def main() -> int:
             cprint(f"  Config fallos: {len(cfg_fallos)}", C.Y)
             for c in cfg_fallos:
                 cprint(f"    [{c.get('riesgo', '?')}] {c.get('check')} (actual={c.get('valor_actual')})", C.GR)
-            fix_cfg = ask_yes_no(f"Aplicar correcciones de configuracion?", default=False)
+            fix_cfg = ask_yes_no("Aplicar correcciones de configuracion?", default=False)
 
         if ports_open:
             cprint("", "")
