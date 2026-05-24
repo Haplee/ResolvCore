@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<ruleset name="ResolveCore">
+	<description>Reglas PHPCS para ResolveCore: WPCS sin ruido cosmético.</description>
+
+	<file>wordpress/plugins/rc-mantisbt/</file>
+	<file>wordpress/resolvecore-theme/</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<rule ref="WordPress">
+		<!-- Comentarios estilo Squiz: ruido para proyecto pequeño TFG. -->
+		<exclude name="Squiz.Commenting.InlineComment"/>
+		<exclude name="Squiz.Commenting.FunctionComment"/>
+		<exclude name="Squiz.Commenting.FileComment"/>
+		<exclude name="Squiz.Commenting.VariableComment"/>
+		<exclude name="Squiz.Commenting.ClassComment"/>
+		<exclude name="Generic.Commenting.DocComment"/>
+
+		<!-- Yoda conditions: estilo, no bug. -->
+		<exclude name="WordPress.PHP.YodaConditions"/>
+
+		<!-- error_log() permitido en scripts de diagnóstico/debug. -->
+		<exclude name="WordPress.PHP.DevelopmentFunctions.error_log_error_log"/>
+
+		<!-- Short ternary y silenced errors: aceptables en contextos puntuales. -->
+		<exclude name="Universal.Operators.DisallowShortTernary"/>
+		<exclude name="WordPress.PHP.NoSilencedErrors"/>
+
+		<!-- file_get_contents() local permitido (rendering de templates). -->
+		<exclude name="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents"/>
+
+		<!-- Naming flexibilizado. -->
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+		<exclude name="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase"/>
+		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+
+		<!-- Line endings y precision alignment: CI Windows/Linux mixto. -->
+		<exclude name="Internal.LineEndings"/>
+		<exclude name="Universal.WhiteSpace.PrecisionAlignment"/>
+
+		<!-- WP overrides legítimos para integración Mantis. -->
+		<exclude name="WordPress.WP.GlobalVariablesOverride"/>
+		<exclude name="WordPress.WP.EnqueuedResourceParameters"/>
+		<exclude name="WordPress.WP.Capabilities.RoleFound"/>
+	</rule>
+</ruleset>

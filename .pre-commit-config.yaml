@@ -1,0 +1,48 @@
+# Pre-commit hooks ResolveCore
+# Instalación: pip install pre-commit && pre-commit install
+# Ejecución manual sobre todo el repo: pre-commit run --all-files
+#
+# Convenciones:
+# - shellcheck: scripts Bash (linux/macos/android/server/setup).
+# - ruff: Python (scripts/common/).
+# - PHP_CodeSniffer (WordPress): plugin + tema (vía system hook — requiere phpcs instalado).
+# - Hooks transversales: EOL, trailing whitespace, YAML/JSON válidos.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: ^(LICENSE|wp/|mantisbt-2\.28\.1/)
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|wp/|mantisbt-2\.28\.1/)
+      - id: mixed-line-ending
+        args: [--fix=no]
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [-e, SC1091, -e, SC2155, --severity=warning]
+        files: ^scripts/(linux|macos|android|server|setup)/.*\.sh$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^scripts/common/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: phpcs-wordpress
+        name: phpcs (WordPress) — opcional, requiere phpcs en PATH
+        entry: bash -c 'command -v phpcs >/dev/null && phpcs --standard=WordPress --extensions=php "$@" || echo "phpcs no instalado — skip"' --
+        language: system
+        files: ^wordpress/(plugins|resolvecore-theme)/.*\.php$
+        pass_filenames: true

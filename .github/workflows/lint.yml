@@ -1,0 +1,90 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  shellcheck:
+    name: ShellCheck (Bash)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        env:
+          SHELLCHECK_OPTS: -e SC1091 -e SC2155
+        with:
+          scandir: scripts
+          severity: warning
+          # macOS stub + ResolveCore launcher TUIs use bash-only features
+          # already; ignore *.bats and templates.
+          ignore_paths: scripts/diagnosticos
+
+  psscriptanalyzer:
+    name: PSScriptAnalyzer (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+      - name: Analyze scripts
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path scripts/windows -Recurse -Severity Warning,Error -Settings ./PSScriptAnalyzerSettings.psd1
+          if ($results) {
+            $results | Format-Table -AutoSize
+            $errs = $results | Where-Object Severity -eq 'Error'
+            if ($errs) { Write-Error "PSScriptAnalyzer found errors"; exit 1 }
+          } else {
+            Write-Host "OK — no issues"
+          }
+
+  phpcs:
+    name: PHP_CodeSniffer (WordPress)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: cs2pr, composer:v2
+      - name: Install PHPCS + WPCS
+        run: |
+          composer global config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+          composer global require --dev \
+            "squizlabs/php_codesniffer=*" \
+            "wp-coding-standards/wpcs:^3.0" \
+            "phpcsstandards/phpcsutils:^1.0" \
+            "phpcsstandards/phpcsextra:^1.0" \
+            "phpcompatibility/phpcompatibility-wp:*" \
+            --no-interaction
+          PATH="$HOME/.composer/vendor/bin:$PATH"
+          phpcs --config-set installed_paths \
+            "$HOME/.composer/vendor/wp-coding-standards/wpcs,$HOME/.composer/vendor/phpcsstandards/phpcsutils,$HOME/.composer/vendor/phpcsstandards/phpcsextra,$HOME/.composer/vendor/phpcompatibility/php-compatibility,$HOME/.composer/vendor/phpcompatibility/phpcompatibility-paragonie,$HOME/.composer/vendor/phpcompatibility/phpcompatibility-wp"
+      - name: Run PHPCS
+        run: |
+          PATH="$HOME/.composer/vendor/bin:$PATH"
+          phpcs -q --runtime-set ignore_warnings_on_exit 1 --report=full
+
+  python:
+    name: Python (ruff + py_compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install ruff
+        run: pip install ruff
+      - name: Ruff
+        run: ruff check scripts/common/ --output-format=github
+      - name: py_compile
+        run: |
+          find scripts/common -name '*.py' -print0 \
+            | xargs -0 -n1 python -m py_compile

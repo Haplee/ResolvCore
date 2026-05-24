@@ -12,6 +12,7 @@ SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIAG_FLAGS=()
 OPT_FLAGS=()
 NIVEL_POSITIONAL=""
+# shellcheck disable=SC2034
 PARSE_DONE=false
 ARGS_REMAIN=()
 
@@ -121,7 +122,7 @@ source "$SCRIPT_DIR/../.env" 2>/dev/null
 
 # Colores
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; NC='\033[0m'
+RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; MAGENTA='\033[0;35m'; NC='\033[0m'
 
 show_banner() {
     clear
@@ -150,7 +151,7 @@ show_menu() {
     echo -e "                       - Niveles: Basico, Estandar, Rendimiento"
     echo -e "                       - Incluye limpieza, servicios, kernel"
     echo ""
-    echo -e "    \033[0;35m3.${NC}  [VULNERABILIDADES] - Buscar y corregir CVEs"
+    echo -e "    ${MAGENTA}3.${NC}  [VULNERABILIDADES] - Buscar y corregir CVEs"
     echo -e "                       - Escaneo NVD + CISA KEV + OSV + EPSS"
     echo -e "                       - Audita configuracion y puertos abiertos"
     echo ""
@@ -295,7 +296,7 @@ run_diagnostico() {
     echo -e "  ${YELLOW}Ejecutando diagnostico...${NC}"
     echo ""
 
-    cd "$SCRIPT_DIR"
+    cd "$SCRIPT_DIR" || exit 1
     bash "$SCRIPT_DIR/diagnostico.sh"
 
     echo ""
@@ -345,7 +346,7 @@ run_optimizacion() {
     echo -e "  ${YELLOW}Ejecutando optimizacion...${NC}"
     echo ""
 
-    cd "$SCRIPT_DIR"
+    cd "$SCRIPT_DIR" || exit 1
     bash "$SCRIPT_DIR/optimizacion.sh" "$nivel_opt"
 
     echo ""

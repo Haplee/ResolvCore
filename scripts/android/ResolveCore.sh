@@ -297,7 +297,7 @@ run_diagnostico() {
     echo -e "  ${YELLOW}Ejecutando diagnostico...${NC}"
     echo ""
 
-    cd "$SCRIPT_DIR"
+    cd "$SCRIPT_DIR" || exit 1
     bash "$SCRIPT_DIR/diagnostico.sh"
 
     echo ""
@@ -345,7 +345,7 @@ run_optimizacion() {
     echo -e "  ${YELLOW}Ejecutando optimizacion...${NC}"
     echo ""
 
-    cd "$SCRIPT_DIR"
+    cd "$SCRIPT_DIR" || exit 1
     bash "$SCRIPT_DIR/optimizacion.sh" "$nivel_opt"
 
     echo ""

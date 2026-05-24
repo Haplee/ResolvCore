@@ -1,0 +1,13 @@
+# ResolveCore — logrotate config drop-in
+# Instalar en VPS como symlink:
+#   sudo ln -sf /opt/resolvecore/ops/logrotate-resolvecore /etc/logrotate.d/resolvecore
+/var/log/resolvecore/*.log /var/log/msmtp.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su root root
+}
