@@ -60,11 +60,13 @@ jobs:
           composer global require --dev \
             "squizlabs/php_codesniffer=*" \
             "wp-coding-standards/wpcs:^3.0" \
+            "phpcsstandards/phpcsutils:^1.0" \
+            "phpcsstandards/phpcsextra:^1.0" \
             "phpcompatibility/phpcompatibility-wp:*" \
             --no-interaction
           PATH="$HOME/.composer/vendor/bin:$PATH"
           phpcs --config-set installed_paths \
-            "$HOME/.composer/vendor/wp-coding-standards/wpcs,$HOME/.composer/vendor/phpcompatibility/php-compatibility,$HOME/.composer/vendor/phpcompatibility/phpcompatibility-paragonie,$HOME/.composer/vendor/phpcompatibility/phpcompatibility-wp"
+            "$HOME/.composer/vendor/wp-coding-standards/wpcs,$HOME/.composer/vendor/phpcsstandards/phpcsutils,$HOME/.composer/vendor/phpcsstandards/phpcsextra,$HOME/.composer/vendor/phpcompatibility/php-compatibility,$HOME/.composer/vendor/phpcompatibility/phpcompatibility-paragonie,$HOME/.composer/vendor/phpcompatibility/phpcompatibility-wp"
       - name: Run PHPCS
         run: |
           PATH="$HOME/.composer/vendor/bin:$PATH"
