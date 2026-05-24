@@ -18,8 +18,10 @@
 set -uo pipefail
 
 SCRIPT_VERSION="3.2.0"
+# shellcheck disable=SC2034
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="/var/tmp/resolvecore_optimizacion"
+# shellcheck disable=SC2034
 LOG_FILE="${BACKUP_DIR}/optimizacion.log"
 SYSCTL_BACKUP="${BACKUP_DIR}/sysctl.conf.bak"
 SERVICES_LOG="${BACKUP_DIR}/services_disabled.log"

@@ -172,9 +172,11 @@ fi
 log_step "Permisos"
 if adb_s id 2>/dev/null | grep -q 'uid=0'; then
     log_ok "Acceso root disponible"
+    # shellcheck disable=SC2034
     HAS_ROOT=true
 else
     log_info "Sin root — funciones limitadas (suficiente para limpieza segura)"
+    # shellcheck disable=SC2034
     HAS_ROOT=false
 fi
 

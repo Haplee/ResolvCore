@@ -495,7 +495,7 @@ fi
 
 # Plan de energía (Linux equivalente)
 power_plan="personalizado"
-if [[ -f /sys/class/power_supply/*/status ]]; then
+if compgen -G "/sys/class/power_supply/*/status" >/dev/null; then
     governor=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "")
     case "$governor" in
         performance) power_plan="alto_rendimiento" ;;
@@ -520,7 +520,7 @@ sistema_json="{
 # ═════════════════════════════════════════════════════════════════════════════
 section "Drivers — Módulos del kernel · Estado"
 
-stopped_count=0; unsigned_count=0; stopped_list=""; unsigned_list=""
+stopped_count=0; unsigned_count=0
 
 if command -v lsmod &>/dev/null; then
     total_modules=$(lsmod | tail -n +2 | wc -l)
