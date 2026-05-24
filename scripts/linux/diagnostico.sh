@@ -17,13 +17,18 @@
 #   pciutils     (apt install pciutils)       — detección GPU
 #
 # Autor:   FranVi / ResolveCore
-# Versión: 3.0.0
+# Versión: 3.2.0
+#
+# Cambios 3.2.0 (S4):
+#   - Inyección HTML segura: JSON va dentro de <script type="application/json">
+#     en el template y se parsea con JSON.parse(). Antes el JSON se inyectaba
+#     como JS literal y un valor con </script> rompía el HTML.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
 
 # ── Parseo de argumentos ────────────────────────────────────────────────────
-INSTALL_DEPS=false
+INSTALL_DEPS=true
 AUTO_INSTALL=false
 OUTPUT_DIR=""
 SILENT="false"
@@ -101,7 +106,7 @@ header() {
     [[ "$SILENT" == "true" ]] && return
     echo ""
     echo -e "  ┌─────────────────────────────────────────────────────────────────┐"
-    echo -e "  │   ${CYAN}ResolveCore — Diagnóstico de Sistema Linux — v3.0.0${NC}        │"
+    echo -e "  │   ${CYAN}ResolveCore — Diagnóstico de Sistema Linux — v3.2.0${NC}        │"
     echo -e "  │   $(date '+%Y-%m-%d %H:%M:%S')                                         │"
     echo -e "  └─────────────────────────────────────────────────────────────────┘"
     echo ""
@@ -490,7 +495,7 @@ fi
 
 # Plan de energía (Linux equivalente)
 power_plan="personalizado"
-if [[ -f /sys/class/power_supply/*/status ]]; then
+if compgen -G "/sys/class/power_supply/*/status" >/dev/null; then
     governor=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "")
     case "$governor" in
         performance) power_plan="alto_rendimiento" ;;
@@ -515,7 +520,7 @@ sistema_json="{
 # ═════════════════════════════════════════════════════════════════════════════
 section "Drivers — Módulos del kernel · Estado"
 
-stopped_count=0; unsigned_count=0; stopped_list=""; unsigned_list=""
+stopped_count=0; unsigned_count=0
 
 if command -v lsmod &>/dev/null; then
     total_modules=$(lsmod | tail -n +2 | wc -l)
@@ -849,7 +854,7 @@ hostname_str=$(hostname 2>/dev/null || echo "unknown")
 timestamp=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')
 
 meta_json="{
-    \"version\": \"3.1.0\",
+    \"version\": \"3.2.0\",
     \"plataforma\": \"linux\",
     \"hostname\": \"$(json_escape "$hostname_str")\",
     \"generado_en\": \"$timestamp\",
@@ -915,24 +920,23 @@ if ! jq -n \
 fi
 rm -f /tmp/diagnostico_jq_err.$$
 
-# Generar informe HTML
+# Generar informe HTML.
+# Inyección segura: template tiene <script type="application/json" id="rc-data">
+# __JSON_DATA__</script>. Se sustituye el marker con el JSON crudo previo
+# escape de "</" -> "<\/" para que un valor con "</script>" no cierre el tag.
+# Bash ${var//pattern/repl} no interpreta &, \ ni regex.
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _tmpl="${_script_dir}/../../reports/informe.html"
 _html_file="${out_file%.json}.html"
 if [[ -f "$_tmpl" ]]; then
-    _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
-    if [[ -n "$_split" ]]; then
-        {
-            head -n "$((_split - 1))" "$_tmpl"
-            printf 'const RAW = '
-            cat "$out_file"
-            printf ';\n'
-            tail -n +"$((_split + 1))" "$_tmpl"
-        } > "$_html_file"
+    if grep -q '__JSON_DATA__' "$_tmpl"; then
+        _json_escaped=$(sed 's|</|<\\/|g' "$out_file")
+        _tmpl_content=$(<"$_tmpl")
+        printf '%s\n' "${_tmpl_content//__JSON_DATA__/$_json_escaped}" > "$_html_file"
         # Abrir con navegador (prioriza $BROWSER, luego comunes; xdg-open como último recurso
         # porque el default del sistema puede ser Text Editor).
         _opener=""
-        for _b in "$BROWSER" sensible-browser firefox google-chrome chromium chromium-browser brave-browser; do
+        for _b in "${BROWSER:-}" sensible-browser firefox google-chrome chromium chromium-browser brave-browser; do
             [[ -n "$_b" ]] && command -v "$_b" &>/dev/null && { _opener="$_b"; break; }
         done
         if [[ -n "$_opener" ]]; then
