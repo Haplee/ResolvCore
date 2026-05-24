@@ -1,0 +1,16 @@
+# ResolveCore — cron jobs día-2 VPS
+# Instalar en VPS como symlink:
+#   sudo ln -sf /opt/resolvecore/ops/cron-resolvecore /etc/cron.d/resolvecore
+#
+# Formato: m h dom mon dow user command
+MAILTO=""
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Backup diario 03:00
+0  3 * * *   root  /opt/resolvecore/ops/backup.sh
+
+# Healthcheck cada 10 minutos (envía email vía msmtp si falla)
+*/10 * * * * root  /opt/resolvecore/ops/healthcheck.sh --alert
+
+# Purga de sesiones semanal — domingo 04:30
+30 4 * * 0   root  /opt/resolvecore/ops/purge-sessions.sh

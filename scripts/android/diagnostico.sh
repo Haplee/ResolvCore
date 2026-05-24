@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  ResolveCore — Diagnóstico de dispositivo Android (vía ADB)
-#  Versión: 2.1.0
+#  Versión: 2.2.0
+#
+#  Cambios 2.2.0 (S4):
+#    - Inyección HTML segura: JSON va dentro de <script type="application/json">
+#      y se parsea con JSON.parse(). Antes el JSON se inyectaba como JS literal
+#      y un valor con </script> rompía el HTML.
 #
 #  Genera diagnostico_android_<serial>_<timestamp>.json compatible con ResolveCore.
 #
@@ -19,7 +24,7 @@
 
 set -uo pipefail
 
-SCRIPT_VERSION="2.1.0"
+SCRIPT_VERSION="2.2.0"
 SERIAL=""
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
@@ -172,6 +177,7 @@ ok "CPU: ${cpu_name} — ${cpu_cores} núcleos"
 
 # RAM
 ram_total_kb=$(adb_s grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo '0')
+# shellcheck disable=SC2034
 ram_gb=$(echo "scale=1; ${ram_total_kb:-0} / 1048576" | bc 2>/dev/null || echo '')
 ram_gb_int=$(( (${ram_total_kb:-0} + 524288) / 1048576 ))
 ok "RAM: ${ram_gb_int}GB"
@@ -369,6 +375,7 @@ selinux=$(adb_s getenforce 2>/dev/null | xargs || echo 'unknown')
 ok "SELinux: ${selinux}"
 
 # Bloqueo de pantalla (requiere permisos; intento)
+# shellcheck disable=SC2034
 screen_lock='unknown'
 lock_val=$(adb_s settings get system screen_lock_type 2>/dev/null | xargs || echo '')
 [[ -z "$lock_val" ]] && lock_val=$(adb_s settings get secure lockscreen.password_type 2>/dev/null | xargs || echo '')
@@ -508,19 +515,15 @@ if ! jq -n \
 fi
 rm -f /tmp/diagnostico_android_jq_err.$$
 
-# Generar informe HTML (disponible en el host que ejecute adb)
+# Generar informe HTML (disponible en el host que ejecute adb).
+# Inyección segura: ver scripts/linux/diagnostico.sh para racional (S4).
 _tmpl="${SCRIPT_DIR}/../../reports/informe.html"
 _html_file="${OUTPUT_FILE%.json}.html"
 if [[ -f "$_tmpl" ]]; then
-    _split=$(grep -n '__JSON_DATA__' "$_tmpl" | head -1 | cut -d: -f1)
-    if [[ -n "$_split" ]]; then
-        {
-            head -n "$((_split - 1))" "$_tmpl"
-            printf 'const RAW = '
-            cat "$OUTPUT_FILE"
-            printf ';\n'
-            tail -n +"$((_split + 1))" "$_tmpl"
-        } > "$_html_file"
+    if grep -q '__JSON_DATA__' "$_tmpl"; then
+        _json_escaped=$(sed 's|</|<\\/|g' "$OUTPUT_FILE")
+        _tmpl_content=$(<"$_tmpl")
+        printf '%s\n' "${_tmpl_content//__JSON_DATA__/$_json_escaped}" > "$_html_file"
         command -v xdg-open &>/dev/null && xdg-open "$_html_file" 2>/dev/null &
     fi
 fi

@@ -36,7 +36,9 @@ VALUES
    1, 0, 0, 0, 0);
 
 -- Asignar campo personalizado al proyecto 1
-SET @field_id = (SELECT id FROM mantis_custom_field_table WHERE name = 'Plataforma' LIMIT 1);
+-- MAX(id) garantiza una sola fila (vs. SELECT id ... LIMIT 1 que emite warnings
+-- en MariaDB/MySQL en strict mode si el optimizador detecta posible multi-row).
+SET @field_id = (SELECT MAX(id) FROM mantis_custom_field_table WHERE name = 'Plataforma');
 INSERT IGNORE INTO mantis_custom_field_project_table (field_id, project_id, sequence)
 VALUES (@field_id, 1, 10);
 
@@ -52,6 +54,6 @@ VALUES
    0, 0, 1, 0,
    0, 0, 0, 0, 0);
 
-SET @anydesk_field_id = (SELECT id FROM mantis_custom_field_table WHERE name = 'AnyDesk ID' LIMIT 1);
+SET @anydesk_field_id = (SELECT MAX(id) FROM mantis_custom_field_table WHERE name = 'AnyDesk ID');
 INSERT IGNORE INTO mantis_custom_field_project_table (field_id, project_id, sequence)
 VALUES (@anydesk_field_id, 1, 20);

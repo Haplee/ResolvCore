@@ -1,0 +1,150 @@
+/* rc-tech panel — paleta ResolveCore (#0a0c10 / #00e5a0) */
+
+.rc-tech-wrap { position: relative; }
+
+.rc-tech-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+.rc-tech-kpis .kpi {
+  background: #0a0c10;
+  color: #00e5a0;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.rc-tech-kpis .kpi .num { font-size: 28px; font-weight: 700; line-height: 1.2; }
+.rc-tech-kpis .kpi .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+.rc-tech-kpis .kpi.red { color: #ff5b5b; }
+
+.rc-tech-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0;
+}
+.rc-tech-toolbar input[type="search"] { min-width: 220px; }
+.rc-tech-updated { margin-left: auto; font-size: 12px; color: #666; }
+
+.rc-tech-table th { background: #f1f3f5; }
+.rc-tech-table .sla-overdue { color: #c00; font-weight: 600; }
+.rc-tech-table .sla-warn    { color: #b45309; font-weight: 600; }
+
+.rc-tech-prio {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #fff;
+}
+.rc-tech-prio-red    { background: #c00; }
+.rc-tech-prio-orange { background: #e07b00; }
+.rc-tech-prio-blue   { background: #2563eb; }
+.rc-tech-prio-gray   { background: #6b7280; }
+
+.rc-tech-os {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e5e7eb;
+}
+.rc-tech-os-windows { background: #cfe2ff; }
+.rc-tech-os-linux   { background: #fde68a; }
+.rc-tech-os-macos   { background: #e5e7eb; }
+.rc-tech-os-android { background: #c8e6c9; }
+
+.rc-tech-score {
+  display: inline-block;
+  width: 32px; height: 32px; line-height: 32px;
+  text-align: center;
+  border-radius: 50%;
+  color: #fff; font-weight: 700;
+}
+.rc-tech-score-green  { background: #00a36a; }
+.rc-tech-score-yellow { background: #d4a017; }
+.rc-tech-score-red    { background: #c00; }
+.rc-tech-score-gray   { background: #9ca3af; }
+
+.rc-tech-actions { white-space: nowrap; }
+.rc-tech-actions .button { margin-right: 2px; }
+
+.rc-tech-row-flash-ok    { background: #ecfdf5 !important; transition: background 0.6s; }
+.rc-tech-row-flash-fade  { opacity: 0; transition: opacity 0.6s; }
+
+.rc-tech-sidebar {
+  position: fixed;
+  top: 32px; right: 0; bottom: 0;
+  width: 420px;
+  background: #fff;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.12);
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 999;
+}
+.rc-tech-sidebar-close {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: 0; font-size: 24px; cursor: pointer;
+}
+.rc-tech-tabs { display: flex; gap: 8px; margin: 12px 0; border-bottom: 1px solid #ddd; }
+.rc-tech-tabs button {
+  background: none; border: 0; padding: 8px 12px; cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.rc-tech-tabs button.active { border-color: #00e5a0; color: #0a0c10; font-weight: 600; }
+
+.rc-tech-timeline-event {
+  border-left: 3px solid #ddd;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.rc-tech-timeline-event.mantis { border-color: #2563eb; }
+.rc-tech-timeline-event.fleet  { border-color: #00a36a; }
+.rc-tech-timeline-event .ts { font-size: 11px; color: #666; }
+.rc-tech-timeline-event .actor { font-size: 11px; color: #999; }
+
+.rc-tech-toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: #0a0c10; color: #00e5a0;
+  padding: 12px 18px; border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 9999;
+}
+.rc-tech-toast.error { color: #ff5b5b; }
+
+/* Kanban */
+.rc-tech-kanban {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.rc-tech-kanban .lane {
+  background: #f6f7f8;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 200px;
+}
+.rc-tech-kanban .lane h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #555;
+}
+.rc-tech-kanban .card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.rc-tech-kanban .card.sla-overdue { border-left: 4px solid #c00; }
+.rc-tech-kanban .card.sla-warn    { border-left: 4px solid #b45309; }
+.rc-tech-kanban .card .id { font-weight: 700; color: #2563eb; }
