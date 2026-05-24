@@ -106,6 +106,7 @@ DB_MANTIS_USER="rc_mantis"
 DB_MANTIS_PASS=$(openssl rand -base64 24 | tr -d '/+=')
 DB_MANTIS_NAME="resolvecore_mantis"
 WP_ADMIN_PASS=$(openssl rand -base64 16 | tr -d '/+=')
+# shellcheck disable=SC2034
 MANTIS_ADMIN_PASS=$(openssl rand -base64 16 | tr -d '/+=')
 
 # Guardar credenciales en archivo seguro (solo root)
@@ -171,8 +172,21 @@ apt-get install -y -qq mariadb-server mariadb-client
 systemctl enable --now mariadb
 
 # Asegurar MariaDB (equivalente a mysql_secure_installation)
-mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';"
-mysql -u root -p"${DB_ROOT_PASS}" <<SQL
+# Credenciales via defaults-file temporal — evita exponerlas en `ps aux`.
+TMPCNF=$(mktemp)
+chmod 600 "$TMPCNF"
+trap 'rm -f "$TMPCNF"' EXIT
+printf '[client]\nuser=root\n' > "$TMPCNF"
+
+# Pasamos la sentencia ALTER via stdin para no exponer el password como argumento (`ps -ef`).
+mysql --defaults-file="$TMPCNF" <<SQL
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
+SQL
+
+# A partir de aquí ya hay password — añadirla al defaults-file.
+printf 'password=%s\n' "$DB_ROOT_PASS" >> "$TMPCNF"
+
+mysql --defaults-file="$TMPCNF" <<SQL
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost','127.0.0.1','::1');
 DROP DATABASE IF EXISTS test;
@@ -188,6 +202,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE,INDEX,CREATE,ALTER,DROP ON ${DB_MANTIS_NAME}.*
 
 FLUSH PRIVILEGES;
 SQL
+
+rm -f "$TMPCNF"
+trap - EXIT
 ok "MariaDB instalado y bases de datos creadas"
 
 # ============================================================
@@ -382,7 +399,7 @@ else
 fi
 
 # Alias global para el técnico
-echo "alias resolvecore='pwsh ${SCRIPTS_DIR}/linux/diagnostico.sh'" >> /etc/bash.bashrc
+echo "alias resolvecore='bash ${SCRIPTS_DIR}/linux/diagnostico.sh'" >> /etc/bash.bashrc
 chmod +x "$SCRIPTS_DIR"/linux/*.sh 2>/dev/null || true
 ok "Scripts instalados en $SCRIPTS_DIR"
 

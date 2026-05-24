@@ -26,6 +26,7 @@ MODE="local"
 SSH_HOST=""
 SSH_USER=""
 SSH_PORT="22"
+export SSH_PORT
 
 usage() {
     cat <<EOF
