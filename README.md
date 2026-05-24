@@ -18,6 +18,7 @@
 [![Status](https://img.shields.io/badge/status-beta-orange?style=flat-square)](#estado-del-proyecto)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](#licencia)
 [![TFG](https://img.shields.io/badge/TFG-ASIR_2025--26-3B82F6?style=flat-square)](docs/defensa/defensa-tfg.md)
+[![CI](https://img.shields.io/github/actions/workflow/status/Haplee/ResolvCore/lint.yml?branch=main&label=lint&style=flat-square)](.github/workflows/lint.yml)
 
 <br/>
 
@@ -143,12 +144,13 @@ ResolveCore/
 │   ├── macos/                      Equivalente Linux para macOS
 │   ├── android/                    Diagnóstico + optimización vía ADB
 │   ├── common/                     Python — Hexagonal Architecture
-│   │   ├── domain/                 Modelos: Host, Vulnerability, Service
-│   │   ├── ports/                  Interfaces: HostIntelSource
-│   │   ├── adapters/               Implementaciones: shodan_rest.py
+│   │   ├── domain/                 Modelos: Host, Vulnerability, Service, AttachmentResult
+│   │   ├── ports/                  Interfaces: HostIntelSource, MantisAttachmentSink
+│   │   ├── adapters/               Implementaciones: shodan_rest.py, mantis_rest.py
 │   │   ├── buscar_vulnerabilidades.py  Motor CVE multi-feed (NVD/KEV/OSV/EPSS)
 │   │   ├── escaner_shodan.py       Auditoría exposición pública (Shodan API)
-│   │   └── escaner_nmap.py         Escáner de puertos (Nmap wrapper)
+│   │   ├── escaner_nmap.py         Escáner de puertos (Nmap wrapper)
+│   │   └── adjuntar_informe_mantis.py  CLI fase 2 — sube PDF a ticket vía API REST
 │   ├── setup/                      Setup entorno técnico (Linux + Windows)
 │   ├── server/                     Bootstrap VPS (post-install.sh, bootstrap-mantis.sh)
 │   └── diagnosticos/               Salidas JSON + HTML generadas (gitignored)
@@ -327,6 +329,22 @@ Cliente REST para MantisBT 2.x. Cuando el usuario envía el formulario de contac
 
 Panel de configuración en **Ajustes → MantisBT**: URL, API Token, ID de proyecto.
 
+### 4b. Adjuntador de informes MantisBT (fase 2)
+
+CLI Python hexagonal que sube el PDF generado al ticket correspondiente vía `POST /api/rest/issues/{id}/files`. Stdlib-only (sin `requests`), credenciales por entorno:
+
+```bash
+export MANTIS_URL=https://mantis.tu-dominio.tld
+export MANTIS_TOKEN=xxxxxxxxxxxxxxxx
+python3 scripts/common/adjuntar_informe_mantis.py --ticket 42 --pdf informe_42.pdf
+```
+
+Ver [`docs/defensa/mantisbt-api-integracion.md`](docs/defensa/mantisbt-api-integracion.md).
+
+### 4c. Plugin Fleet Panel (rc-fleet)
+
+Agentes diagnóstico publican su JSON vía `POST /wp-json/rc/v1/fleet` (Bearer). Endpoint público agregado `GET /wp-json/rc/v1/fleet/stats` y página **Estado de la flota** muestran score medio, distribución de salud y recuento por SO — sin emails, hostnames ni IPs.
+
 ### 5. Tema WordPress: resolvecore-theme
 
 Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. Páginas incluidas: landing, documentación, changelog, contacto. Responsive, AJAX nativo.
@@ -367,9 +385,9 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 
 | Versión | Objetivo |
 |---|---|
-| **v1.2** (próxima) | Generación PDF automática (wkhtmltopdf + plantilla HTML) |
+| **v1.2** ✅ | Generación PDF automática (wkhtmltopdf) + adjuntador MantisBT API REST + Fleet Panel + despliegue VPS (deploy-ionos.sh, Let's Encrypt, hardening) |
 | **v1.3** | Sincronización NVD → tabla `rc_vulnerabilities` (cron semanal) |
-| **v1.4** | Despliegue VPS productivo + dominio + Let's Encrypt |
+| **v1.4** | Migración wkhtmltopdf → DomPDF (wkhtmltopdf deprecado upstream) |
 | **v2.0** | Facturación: pago por servicio + suscripción (cron) |
 | **v3.0** | App nativa Android (Kotlin + Jetpack Compose + Material 3) |
 
@@ -382,13 +400,15 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Versión | **1.2.0-beta** |
 | Entrega TFG | **5 de junio de 2026** |
 | Plataformas | Windows · Linux · macOS · Android |
-| Web beta | Operativa en WordPress.com |
-| MantisBT | Docker local operativo · VPS pendiente |
+| Web | Desplegada en VPS Ionos (nginx + PHP-FPM 8.3 + MariaDB + Let's Encrypt) |
+| MantisBT | Docker local ✅ · VPS productivo ✅ |
 | Flujo end-to-end | Formulario WP → ticket MantisBT ✅ |
 | Informe HTML | Generado por scripts ✅ |
-| Informe PDF | En desarrollo |
+| Informe PDF | Generado (wkhtmltopdf) + adjuntado al ticket vía API REST ✅ |
+| Fleet Panel | Endpoint REST + página pública agregada ✅ |
 | Escáner CVE | NVD · CISA KEV · OSV · EPSS · Shodan ✅ |
-| Última actualización | 20 de mayo de 2026 |
+| CI lint | shellcheck · PSScriptAnalyzer · PHPCS WPCS · ruff (4/4 verde, bloqueante) |
+| Última actualización | 24 de mayo de 2026 |
 
 ### Versiones por componente
 
