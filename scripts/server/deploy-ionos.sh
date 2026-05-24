@@ -74,8 +74,10 @@ err()  { printf '\e[1;31m[x]\e[0m %s\n' "$*" >&2; }
 ask_pass() {
     local var="$1" prompt="$2"
     if [[ -z "${!var:-}" ]]; then
+        # shellcheck disable=SC2229,SC2163
         read -rsp "$prompt: " "$var"
         echo
+        # shellcheck disable=SC2163
         export "$var"
     fi
 }
@@ -177,7 +179,7 @@ SQL
 if [[ ! -f "$WP_DIR/wp-settings.php" ]]; then
     log "Descargando WordPress core..."
     mkdir -p "$WP_DIR"
-    cd /tmp
+    cd /tmp || exit 1
     wget -q "https://wordpress.org/${WP_VERSION}.tar.gz" -O wordpress.tar.gz
     tar -xzf wordpress.tar.gz
     cp -a wordpress/. "$WP_DIR/"
@@ -256,7 +258,7 @@ chmod 640 "$WP_DIR/wp-config.php"
 if [[ ! -f "$MANTIS_DIR/admin/install.php" ]]; then
     log "Descargando MantisBT ${MANTIS_VERSION}..."
     mkdir -p "$MANTIS_DIR"
-    cd /tmp
+    cd /tmp || exit 1
     wget -q "https://github.com/mantisbt/mantisbt/releases/download/${MANTIS_VERSION}/mantisbt-${MANTIS_VERSION}.tar.gz"
     tar -xzf "mantisbt-${MANTIS_VERSION}.tar.gz"
     cp -a "mantisbt-${MANTIS_VERSION}/." "$MANTIS_DIR/"
