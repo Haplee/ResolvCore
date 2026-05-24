@@ -70,7 +70,7 @@ jobs:
       - name: Run PHPCS
         run: |
           PATH="$HOME/.composer/vendor/bin:$PATH"
-          phpcs --runtime-set ignore_warnings_on_exit 1 --report=checkstyle | cs2pr
+          phpcs -q --runtime-set ignore_warnings_on_exit 1 --report=full
 
   python:
     name: Python (ruff + py_compile)
