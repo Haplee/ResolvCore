@@ -73,8 +73,7 @@ jobs:
             --ignore=*/vendor/*,*/node_modules/* \
             wordpress/plugins/rc-mantisbt/ \
             wordpress/resolvecore-theme/ \
-            | cs2pr || true
-        continue-on-error: true
+            | cs2pr
 
   python:
     name: Python (ruff + py_compile)
