@@ -4,6 +4,6 @@ No importa de adapters/ ni ports/. Sin IO, sin red, sin filesystem.
 Testeable sin fixtures externos.
 """
 
-from .models import Host, Service, Vulnerability
+from .models import AttachmentResult, Host, Service, Vulnerability
 
-__all__ = ["Host", "Service", "Vulnerability"]
+__all__ = ["AttachmentResult", "Host", "Service", "Vulnerability"]

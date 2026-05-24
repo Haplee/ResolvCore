@@ -5,5 +5,6 @@ implementacion concreta. Adapters cumplen estos contratos.
 """
 
 from .host_intel_source import HostIntelSource
+from .mantis_attachment_sink import MantisAttachmentSink
 
-__all__ = ["HostIntelSource"]
+__all__ = ["HostIntelSource", "MantisAttachmentSink"]
