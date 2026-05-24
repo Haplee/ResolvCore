@@ -25,6 +25,7 @@ OUTPUT_DIR="${SCRIPT_DIR}/../diagnosticos"
 MODE="local"
 SSH_HOST=""
 SSH_USER=""
+# shellcheck disable=SC2034
 SSH_PORT="22"
 
 usage() {
@@ -73,7 +74,6 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --host)        MODE="remote"; SSH_HOST="${2:-}"; shift 2 ;;
         --user)        SSH_USER="${2:-}"; shift 2 ;;
-        # shellcheck disable=SC2034
         --port)        SSH_PORT="${2:-22}"; shift 2 ;;
         -O|--output)   OUTPUT_DIR="${2:-}"; shift 2 ;;
         --local)       MODE="local"; shift ;;
