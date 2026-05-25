@@ -14,8 +14,70 @@
   --mono:'Space Mono','Courier New',monospace;
   --sans:'DM Sans',system-ui,sans-serif;
 }
+body.theme-light{
+  --bg:#fafbfc;--surface:#fff;--surface2:#f3f5f8;--border:#e1e5eb;
+  --accent:#00a674;--accent-d:rgba(0,166,116,.1);
+  --text:#1a1d24;--muted:#5a6271;
+  --red:#d92742;--yellow:#c98a00;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:2rem 2.5rem}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:2rem 2.5rem 4rem;transition:background .2s,color .2s}
+/* Toolbar */
+.tbar{position:fixed;top:1rem;right:1rem;display:flex;gap:.5rem;z-index:200;font-family:var(--mono);font-size:.72rem}
+.tbar button{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.5rem .85rem;cursor:pointer;border-radius:4px;letter-spacing:.05em;transition:all .15s;font-family:inherit;font-size:inherit}
+.tbar button:hover{border-color:var(--accent);color:var(--accent)}
+/* TOC */
+.toc{position:fixed;left:1.5rem;top:50%;transform:translateY(-50%);z-index:150;font-family:var(--mono);font-size:.7rem;background:var(--surface);border:1px solid var(--border);padding:1rem 1rem 1rem 1.2rem;border-radius:6px;max-width:170px}
+.toc-lbl{color:var(--muted);font-size:.62rem;letter-spacing:.12em;margin-bottom:.5rem;text-transform:uppercase}
+.toc a{display:block;color:var(--muted);text-decoration:none;padding:.25rem 0;border-left:2px solid transparent;padding-left:.5rem;margin-left:-.7rem;transition:all .15s}
+.toc a:hover,.toc a.active{color:var(--accent);border-left-color:var(--accent)}
+@media (max-width:1280px){.toc{display:none}}
+/* Veredicto grande */
+.verdict{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:8px;padding:1.5rem 2rem;margin-bottom:2rem;display:flex;justify-content:space-between;align-items:center;gap:2rem;flex-wrap:wrap}
+.verdict.warn{border-left-color:var(--yellow)}
+.verdict.crit{border-left-color:var(--red)}
+.verdict-main{font-family:var(--mono);font-size:1.5rem;font-weight:700;letter-spacing:.02em}
+.verdict-score{font-family:var(--mono);font-size:3rem;font-weight:700;line-height:1}
+.verdict-desc{font-size:.85rem;color:var(--muted);margin-top:.35rem;line-height:1.5;max-width:480px}
+/* Resumen ejecutivo */
+.exec-summary{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;margin-bottom:2rem}
+.exec-summary h3{font-family:var(--mono);font-size:.75rem;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.8rem}
+.exec-summary ul{list-style:none;padding-left:0}
+.exec-summary li{padding:.4rem 0;font-size:.88rem;display:flex;gap:.7rem;align-items:flex-start;border-bottom:1px dashed var(--border)}
+.exec-summary li:last-child{border-bottom:none}
+.exec-summary li::before{content:'▸';color:var(--accent);font-weight:700;flex-shrink:0}
+.exec-summary li.crit::before{color:var(--red)}
+.exec-summary li.warn::before{color:var(--yellow)}
+/* CVE table */
+.cve-tbl{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.83rem}
+.cve-tbl th{background:var(--surface2);text-align:left;padding:.65rem 1rem;font-family:var(--mono);font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)}
+.cve-tbl td{padding:.55rem 1rem;border-bottom:1px solid var(--border);vertical-align:top}
+.cve-tbl tr:last-child td{border-bottom:none}
+.cve-tbl .cvss{font-family:var(--mono);font-weight:700;text-align:center;width:60px}
+.cve-tbl .cvss.crit{color:var(--red)}.cve-tbl .cvss.warn{color:var(--yellow)}
+.cve-tbl .cve-id{font-family:var(--mono);font-size:.78rem}
+.cve-tbl .cve-id a{color:var(--accent);text-decoration:none}
+.cve-tbl .cve-id a:hover{text-decoration:underline}
+/* Checklist recommendations */
+.rec-checkbox{width:18px;height:18px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;margin-top:.1rem}
+/* Footer ampliado */
+.ftr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;padding:1.5rem 0;border-top:1px solid var(--border);margin-top:2rem;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.ftr-grid h4{color:var(--accent);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem}
+@media (max-width:768px){.ftr-grid{grid-template-columns:1fr}}
+/* Print rules */
+@media print{
+  body{background:#fff!important;color:#000!important;padding:0!important;font-size:11pt}
+  .tbar,.toc{display:none!important}
+  .card,.recs,.score-card,.verdict,.exec-summary,.cve-tbl{break-inside:avoid;page-break-inside:avoid;background:#fff!important;border:1px solid #ccc!important;color:#000!important}
+  .sec-lbl{page-break-after:avoid;color:#000!important}
+  .ftr-grid{break-before:always}
+  body *{color:#000!important;background:#fff!important;border-color:#ccc!important}
+  .badge.crit,.rec-icon.crit,.cvss.crit{color:#a00!important}
+  .badge.warn,.rec-icon.warn,.cvss.warn{color:#a06000!important}
+  .badge.ok,.rec-icon.ok{color:#005a3a!important}
+  a{color:#000!important;text-decoration:underline}
+  .gauge svg circle:nth-child(2){stroke:#000!important}
+}
 /* Header */
 .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
 .logo{font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--accent);letter-spacing:.08em}
@@ -68,6 +130,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 </style>
 </head>
 <body>
+<div class="tbar" id="rc-tbar" role="toolbar" aria-label="Acciones del informe">
+  <button id="rc-print" title="Imprimir o guardar como PDF">⎙ Imprimir / PDF</button>
+  <button id="rc-theme" title="Cambiar tema claro/oscuro">◐ Tema</button>
+</div>
+<nav class="toc" id="rc-toc" aria-label="Tabla de contenidos"></nav>
 <div id="app"><div style="text-align:center;padding:4rem;font-family:var(--mono);color:var(--muted)">Cargando informe...</div></div>
 <script type="application/json" id="rc-data">__JSON_DATA__</script>
 <script>
@@ -311,43 +378,157 @@ function render(){
 
   const gpuCard=n.gpu?`<div class="card"><div class="card-head">◈ GPU</div><div class="card-body">${rowHtml('Modelo',n.gpu)}</div></div>`:'';
 
-  /* Recommendations */
+  /* Recommendations (checklist) */
   const icons={crit:'✗',warn:'!',ok:'✓'};
   const recsHtml=recs.map(r=>`<div class="rec-item">
+    <div class="rec-checkbox"></div>
     <div class="rec-icon ${r.lvl}">${icons[r.lvl]}</div>
     <div><div class="rec-title">${r.t}</div><div class="rec-desc">${r.d}</div></div>
   </div>`).join('');
 
   const critCount=recs.filter(r=>r.lvl==='crit').length;
   const warnCount=recs.filter(r=>r.lvl==='warn').length;
-  const recsLabel=`// RECOMENDACIONES${critCount?' · '+critCount+' CRÍTICAS':''}${warnCount?' · '+warnCount+' ADVERTENCIAS':''}`;
+  const recsLabel=`// PLAN DE ACCIONES${critCount?' · '+critCount+' CRÍTICAS':''}${warnCount?' · '+warnCount+' ADVERTENCIAS':''}`;
+
+  /* Veredicto */
+  let verdictTxt='SISTEMA SALUDABLE',verdictCls='',verdictDesc='El equipo opera dentro de parámetros normales. Mantener mantenimiento preventivo periódico.';
+  if(score<60){verdictCls='crit';verdictTxt='INTERVENCIÓN URGENTE';verdictDesc='Detectadas incidencias críticas que requieren acción inmediata. Revisar la lista de recomendaciones marcadas como CRÍTICAS.'}
+  else if(score<80){verdictCls='warn';verdictTxt='REVISIÓN RECOMENDADA';verdictDesc='El sistema funciona pero presenta puntos de mejora. Aplicar las recomendaciones para optimizar el rendimiento y la seguridad.'}
+  const verdictColor=score>=80?'#00e5a0':score>=60?'#ffc107':'#ff4757';
+
+  /* Resumen ejecutivo: top 3 hallazgos por severidad */
+  const topFindings=recs.filter(r=>r.lvl!=='ok').slice(0,3);
+  const summaryHtml=topFindings.length?
+    `<ul>${topFindings.map(r=>`<li class="${r.lvl}"><div><strong>${r.t}.</strong> ${r.d}</div></li>`).join('')}</ul>`:
+    '<p style="color:var(--muted);font-size:.88rem">No se detectaron incidencias relevantes. El sistema está en buen estado.</p>';
+
+  /* CVEs si el JSON viene enriquecido por buscar_vulnerabilidades.py */
+  const cves = (RAW.vulnerabilidades && Array.isArray(RAW.vulnerabilidades)) ? RAW.vulnerabilidades :
+               (RAW.cves && Array.isArray(RAW.cves)) ? RAW.cves : [];
+  const cveSection = cves.length ? (() => {
+    const sorted = [...cves].sort((a,b) => (b.cvss||0) - (a.cvss||0)).slice(0,15);
+    const rows = sorted.map(c => {
+      const sc = parseFloat(c.cvss||0);
+      const cls = sc>=9?'crit':sc>=7?'warn':'';
+      const id  = c.cve_id||c.cve||'?';
+      const sw  = c.software||c.producto||'';
+      const ver = c.version||'';
+      const desc= (c.descripcion||c.summary||'').substring(0,140);
+      const link = id.startsWith('CVE-') ? `<a href="https://nvd.nist.gov/vuln/detail/${id}" target="_blank" rel="noopener">${id}</a>` : id;
+      return `<tr>
+        <td class="cvss ${cls}">${sc.toFixed(1)}</td>
+        <td class="cve-id">${link}</td>
+        <td>${sw}${ver?' <span style="color:var(--muted)">'+ver+'</span>':''}</td>
+        <td style="color:var(--muted);font-size:.78rem">${desc}</td>
+      </tr>`;
+    }).join('');
+    const extra = cves.length>15 ? `<div style="text-align:center;padding:.5rem;color:var(--muted);font-size:.78rem">… y ${cves.length-15} CVEs más en el JSON adjunto</div>` : '';
+    return `<div class="sec-lbl" id="sec-cves">// VULNERABILIDADES DETECTADAS · ${cves.length} CVEs</div>
+      <table class="cve-tbl">
+        <thead><tr><th>CVSS</th><th>CVE</th><th>Software</th><th>Descripción</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>${extra}`;
+  })() : '';
+
+  /* Meta extra del informe */
+  const meta = RAW._meta||{};
+  const tecnico = meta.tecnico || meta.operador || '—';
+  const ticket  = meta.ticket || meta.ticket_id || null;
+  const adminTxt = n.admin ? 'Sí' : 'No';
 
   document.getElementById('app').innerHTML=`
   <div class="hdr">
     <div>
       <div class="logo">RESOLVE<span>CORE</span></div>
-      <div class="logo-sub">// INFORME DE DIAGNÓSTICO DEL SISTEMA</div>
+      <div class="logo-sub">// INFORME TÉCNICO DE DIAGNÓSTICO</div>
     </div>
     <div class="host-box">
       <div class="host-name">${platIcon} ${n.hostname}</div>
-      <div class="host-meta">${n.plataforma.toUpperCase()} · Generado: ${ts}</div>
-      <div class="host-meta">${n.os}</div>
+      <div class="host-meta">${n.plataforma.toUpperCase()} · ${n.os}</div>
+      <div class="host-meta">Generado: ${ts}</div>
+      ${ticket?`<div class="host-meta">Ticket: <strong style="color:var(--accent)">#${ticket}</strong></div>`:''}
     </div>
   </div>
 
-  <div class="sec-lbl">// PUNTUACIONES DE SALUD</div>
+  <div class="verdict ${verdictCls}" id="sec-verdict">
+    <div>
+      <div class="verdict-main">${verdictTxt}</div>
+      <div class="verdict-desc">${verdictDesc}</div>
+    </div>
+    <div class="verdict-score" style="color:${verdictColor}">${score}<span style="font-size:1rem;color:var(--muted)">/100</span></div>
+  </div>
+
+  <div class="exec-summary" id="sec-summary">
+    <h3>// Resumen ejecutivo</h3>
+    ${summaryHtml}
+  </div>
+
+  <div class="sec-lbl" id="sec-scores">// Puntuaciones de salud</div>
   <div class="scores">${scoresHtml}</div>
 
-  <div class="sec-lbl">// HARDWARE Y SISTEMA</div>
+  <div class="sec-lbl" id="sec-hw">// Hardware y sistema</div>
   <div class="grid">${sysCard}${cpuCard}${ramCard}${discoCard}${batCard}${redCard}${segCard}${gpuCard}</div>
 
-  <div class="sec-lbl">${recsLabel}</div>
+  ${cveSection}
+
+  <div class="sec-lbl" id="sec-recs">${recsLabel}</div>
   <div class="recs">${recsHtml}</div>
 
-  <div class="ftr">RESOLVECORE v1.0.0 · ${n.hostname} · ${ts}</div>
+  <div class="ftr-grid">
+    <div>
+      <h4>// Sistema auditado</h4>
+      Equipo: ${n.hostname}<br>
+      SO: ${n.os}<br>
+      Privilegios admin: ${adminTxt}
+    </div>
+    <div>
+      <h4>// Generación</h4>
+      Técnico: ${tecnico}<br>
+      Fecha: ${ts}<br>
+      ${ticket?'Ticket: #'+ticket+'<br>':''}
+      ResolveCore v1.0.0
+    </div>
+    <div>
+      <h4>// Soporte</h4>
+      Distribuido bajo GPL-3.0<br>
+      <a style="color:var(--accent)" href="https://github.com/Haplee/ResolveCore" target="_blank">github.com/Haplee/ResolveCore</a>
+    </div>
+  </div>
   `;
+
+  /* TOC dinámico */
+  const tocItems = [
+    ['sec-verdict','Veredicto'],
+    ['sec-summary','Resumen'],
+    ['sec-scores','Salud'],
+    ['sec-hw','Hardware'],
+    cves.length?['sec-cves','CVEs ('+cves.length+')']:null,
+    ['sec-recs','Acciones'+(critCount?' ('+critCount+'!)':'' )],
+  ].filter(Boolean);
+  document.getElementById('rc-toc').innerHTML =
+    '<div class="toc-lbl">// Índice</div>' +
+    tocItems.map(([id,lbl])=>`<a href="#${id}">${lbl}</a>`).join('');
+
+  /* TOC scroll-spy */
+  const links = document.querySelectorAll('#rc-toc a');
+  window.addEventListener('scroll', () => {
+    let active = null;
+    tocItems.forEach(([id]) => {
+      const el = document.getElementById(id);
+      if(el && el.getBoundingClientRect().top < 120) active = id;
+    });
+    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#'+active));
+  });
 }
 render();
+
+/* Toolbar handlers */
+document.getElementById('rc-print').addEventListener('click', () => window.print());
+document.getElementById('rc-theme').addEventListener('click', () => {
+  document.body.classList.toggle('theme-light');
+  try { localStorage.setItem('rc-theme', document.body.classList.contains('theme-light')?'light':'dark'); } catch(e){}
+});
+try { if(localStorage.getItem('rc-theme')==='light') document.body.classList.add('theme-light'); } catch(e){}
 </script>
 </body>
 </html>
