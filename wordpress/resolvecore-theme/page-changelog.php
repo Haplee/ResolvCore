@@ -49,7 +49,7 @@ get_header();
 			<li>Sprint web: páginas legales del sitio (aviso legal, privacidad, cookies) y página de contacto</li>
 			<li>Plugin <code>rc-mantisbt</code>: integración del formulario de contacto con MantisBT vía REST API — cada solicitud crea un ticket automáticamente</li>
 			<li>Diagnóstico Windows v4.0.0: datos de hardware unificados bajo la clave <code>hardware{}</code> del esquema JSON</li>
-			<li>Módulo de reconocimiento de red en Python (Nmap + Shodan) con arquitectura Hexagonal</li>
+			<li>Módulo de reconocimiento de red en Python (Nmap) con arquitectura Hexagonal</li>
 			<li>Mejoras de accesibilidad y SEO: landmarks ARIA, skip-link, <code>:focus-visible</code>, <code>prefers-reduced-motion</code>, Schema.org JSON-LD</li>
 			<li>Cabeceras de seguridad HTTP: X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options</li>
 			<li>Corrección de seguridad: inyección JSON en el informe, modo <code>--dry-run</code> y reglas udev</li>
