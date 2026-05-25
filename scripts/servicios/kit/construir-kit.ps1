@@ -4,64 +4,190 @@
     ResolveCore - Constructor del kit de implantacion en cliente
 
 .DESCRIPTION
-    Empaqueta el "kit de implantacion en cliente" que ResolveCore entrega a los
-    clientes con suscripcion: una carpeta autocontenida con AnyDesk portable, las
-    instrucciones para el cliente y los scripts de diagnostico.
+    Empaqueta el kit de implantacion en cliente: una carpeta autocontenida con
+    AnyDesk portable (freeware), los scripts de diagnostico y un README.
 
-    Estructura del kit (segun docs/tecnica/servicios-adicionales.md, seccion 3):
+    Estructura:
       resolvecore-kit/
       |-- anydesk-portable.exe
-      |-- README-cliente.pdf
+      |-- README-cliente.txt
       \-- scripts/
           |-- diagnostico-windows.ps1
           \-- diagnostico-linux.sh
 
-    --- STUB / NO IMPLEMENTADO ---
-    Este script es scaffolding. La logica se implementa siguiendo:
-      docs/tareas/implementar-servicios-adicionales.md
-
-    Exit codes (contrato previsto):
-      0  ok
-      1  error de empaquetado
-      2  AnyDesk portable no encontrado
+    Salida: resolvecore-kit.zip empaquetado con Compress-Archive (built-in PS).
 
 .PARAMETER AnyDeskPath
-    Ruta al ejecutable AnyDesk portable que se incluira en el kit.
+    Ruta al ejecutable AnyDesk portable.
+    Default: ./anydesk.exe en el directorio actual.
 
 .PARAMETER OutputDir
     Directorio donde se generara resolvecore-kit/ y resolvecore-kit.zip
     (default: ./dist).
 
+.PARAMETER ContactoTecnico
+    Nombre + telefono / email del tecnico para el README del cliente.
+
 .PARAMETER IncludeScripts
-    Incluir los scripts de diagnostico en el kit (default: $true).
+    Incluir los scripts de diagnostico (default: $true).
 
 .EXAMPLE
     .\construir-kit.ps1 -AnyDeskPath .\anydesk.exe
-    .\construir-kit.ps1 -AnyDeskPath .\anydesk.exe -OutputDir C:\kits
+    .\construir-kit.ps1 -AnyDeskPath .\anydesk.exe -OutputDir C:\kits -ContactoTecnico "Fran Vidal - tecnicos@resolvecore.website"
+
+.NOTES
+    Exit codes:
+      0  ok
+      1  error de empaquetado
+      2  AnyDesk portable no encontrado
 #>
 
 [CmdletBinding()]
 param(
-    [string]$AnyDeskPath,
+    [string]$AnyDeskPath = './anydesk.exe',
     [Alias('O')][string]$OutputDir = './dist',
+    [string]$ContactoTecnico = 'tecnicos@resolvecore.website',
     [bool]$IncludeScripts = $true,
     [Alias('h')][switch]$Help
 )
 
-# =============================================================================
-# TODO(otro-dia): implementar segun docs/tareas/implementar-servicios-adicionales.md
-#
-#   - Validar que -AnyDeskPath existe || exit 2.
-#   - Crear el arbol resolvecore-kit/ dentro de -OutputDir.
-#   - Copiar AnyDesk portable como anydesk-portable.exe.
-#   - Si -IncludeScripts: copiar scripts/windows/diagnostico.ps1 y
-#     scripts/linux/diagnostico.sh como diagnostico-windows.ps1 /
-#     diagnostico-linux.sh.
-#   - Generar README-cliente.pdf (plantilla de instrucciones de una pagina).
-#   - Comprimir el arbol a resolvecore-kit.zip con Compress-Archive.
-#   - try/catch + exit codes del contrato (.DESCRIPTION).
-# =============================================================================
+if ($Help) { Get-Help $PSCommandPath -Full; exit 0 }
 
-Write-Warning 'construir-kit.ps1: STUB no implementado.'
-Write-Host    'Ver docs/tareas/implementar-servicios-adicionales.md'
-exit 1
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+function Write-Info($m) { Write-Host "[->] $m" -ForegroundColor Cyan }
+function Write-Ok($m)   { Write-Host "[OK] $m" -ForegroundColor Green }
+function Write-Warn($m) { Write-Host "[!]  $m" -ForegroundColor Yellow }
+function Write-Fail($m) { Write-Host "[X]  $m" -ForegroundColor Red; exit 1 }
+
+# ── Validar AnyDesk ─────────────────────────────────────────────────────────
+if (-not (Test-Path $AnyDeskPath)) {
+    Write-Warn "AnyDesk portable no encontrado: $AnyDeskPath"
+    Write-Host "  Descarga desde: https://anydesk.com/downloads/windows" -ForegroundColor Gray
+    Write-Host "  Selecciona 'Portable' y pasa la ruta con -AnyDeskPath" -ForegroundColor Gray
+    exit 2
+}
+
+# ── Ubicacion del repo (un nivel arriba de scripts/) ────────────────────────
+$repoRoot   = Resolve-Path (Join-Path $PSScriptRoot '../../..') | Select-Object -ExpandProperty Path
+$diagWin    = Join-Path $repoRoot 'scripts/windows/diagnostico.ps1'
+$diagLinux  = Join-Path $repoRoot 'scripts/linux/diagnostico.sh'
+
+# ── Preparar arbol del kit ──────────────────────────────────────────────────
+$kitName   = 'resolvecore-kit'
+$outDirAbs = (New-Item -ItemType Directory -Force -Path $OutputDir).FullName
+$kitDir    = Join-Path $outDirAbs $kitName
+
+if (Test-Path $kitDir) {
+    Write-Info "Limpiando $kitDir anterior..."
+    Remove-Item -Recurse -Force $kitDir
+}
+New-Item -ItemType Directory -Force -Path $kitDir | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $kitDir 'scripts') | Out-Null
+
+# ── Copiar AnyDesk ──────────────────────────────────────────────────────────
+$anyDeskDest = Join-Path $kitDir 'anydesk-portable.exe'
+Copy-Item $AnyDeskPath $anyDeskDest
+Write-Ok "AnyDesk portable copiado"
+
+# ── Copiar scripts ──────────────────────────────────────────────────────────
+if ($IncludeScripts) {
+    if (Test-Path $diagWin) {
+        Copy-Item $diagWin (Join-Path $kitDir 'scripts/diagnostico-windows.ps1')
+        Write-Ok "diagnostico-windows.ps1 copiado"
+    } else {
+        Write-Warn "No encontrado: $diagWin"
+    }
+    if (Test-Path $diagLinux) {
+        Copy-Item $diagLinux (Join-Path $kitDir 'scripts/diagnostico-linux.sh')
+        Write-Ok "diagnostico-linux.sh copiado"
+    } else {
+        Write-Warn "No encontrado: $diagLinux"
+    }
+}
+
+# ── README-cliente.txt ──────────────────────────────────────────────────────
+$readmePath = Join-Path $kitDir 'README-cliente.txt'
+$fechaGen   = Get-Date -Format 'yyyy-MM-dd HH:mm'
+
+$readme = @"
+=============================================================
+ RESOLVECORE - KIT DE SOPORTE TECNICO PARA CLIENTES
+=============================================================
+ Generado: $fechaGen
+ Contacto tecnico: $ContactoTecnico
+
+CONTENIDO DEL KIT
+-----------------
+  - anydesk-portable.exe   Acceso remoto del tecnico (no instala, ejecuta y ya).
+  - scripts/               Herramientas de diagnostico opcional.
+    - diagnostico-windows.ps1
+    - diagnostico-linux.sh
+  - README-cliente.txt     Este fichero.
+
+COMO USAR
+---------
+ 1. CONEXION REMOTA con el tecnico:
+    - Haz doble clic en anydesk-portable.exe (Windows) o en su equivalente Linux.
+    - Aparecera tu ID AnyDesk (numero de 9-10 digitos).
+    - Comparte ese ID con el tecnico por telefono o email.
+    - Cuando el tecnico solicite conectar, ACEPTA la peticion.
+    - Para finalizar: cierra la ventana de AnyDesk.
+
+ 2. DIAGNOSTICO automatico (si el tecnico te lo pide):
+    Windows:
+      - Clic derecho sobre diagnostico-windows.ps1 -> Ejecutar con PowerShell.
+      - Si pide permisos de administrador, acepta.
+    Linux:
+      - Abre terminal en la carpeta scripts/
+      - Ejecuta: bash diagnostico-linux.sh
+
+    El script genera un informe JSON + HTML que el tecnico necesitara.
+
+PRIVACIDAD
+----------
+  - AnyDesk solo concede acceso CUANDO TU ACEPTAS la peticion.
+  - Los scripts NO envian datos por internet — solo generan ficheros locales.
+  - El tecnico se ajusta al RGPD: tus datos se tratan unicamente para resolver
+    tu incidencia.
+
+CONTACTO
+--------
+  $ContactoTecnico
+  https://github.com/Haplee/ResolveCore
+
+=============================================================
+ ResolveCore - Solucion a tus problemas informaticos.
+=============================================================
+"@
+Set-Content -Path $readmePath -Value $readme -Encoding UTF8
+Write-Ok "README-cliente.txt creado"
+
+# ── Empaquetar ZIP ──────────────────────────────────────────────────────────
+$zipPath = Join-Path $outDirAbs "$kitName.zip"
+if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+
+try {
+    Compress-Archive -Path "$kitDir/*" -DestinationPath $zipPath -CompressionLevel Optimal
+    Write-Ok "Kit empaquetado: $zipPath"
+} catch {
+    Write-Fail "Error empaquetando: $($_.Exception.Message)"
+}
+
+# ── Resumen ─────────────────────────────────────────────────────────────────
+$zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+Write-Host ""
+Write-Host "  =========================================" -ForegroundColor Cyan
+Write-Host "    Kit listo"                                -ForegroundColor Cyan
+Write-Host "  =========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Directorio: $kitDir"
+Write-Host "  ZIP:        $zipPath ($zipSize MB)"
+Write-Host ""
+Write-Host "  Entrega al cliente:" -ForegroundColor Yellow
+Write-Host "    - Email con $kitName.zip adjunto"
+Write-Host "    - Pendrive con la carpeta $kitName/"
+Write-Host ""
+
+exit 0

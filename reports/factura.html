@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ResolveCore — Factura</title>
+<style>
+:root{
+  --bg:#0a0c10;--surface:#0f1117;--surface2:#141720;--border:#1e2330;
+  --accent:#00e5a0;--text:#e8eaf0;--muted:#7a7f8e;
+  --red:#ff4757;--mono:'Space Mono','Courier New',monospace;
+  --sans:'DM Sans',system-ui,sans-serif;
+}
+body.theme-light{
+  --bg:#fff;--surface:#fff;--surface2:#f3f5f8;--border:#d1d5db;
+  --accent:#00a674;--text:#0d1117;--muted:#4b5563;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:2.5rem 3rem;transition:background .2s,color .2s}
+.tbar{position:fixed;top:1rem;right:1rem;display:flex;gap:.5rem;z-index:100;font-family:var(--mono);font-size:.72rem}
+.tbar button{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.5rem .9rem;cursor:pointer;border-radius:4px;font-family:inherit}
+.tbar button:hover{border-color:var(--accent);color:var(--accent)}
+
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:1.5rem;border-bottom:2px solid var(--accent);margin-bottom:2rem}
+.logo{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--accent);letter-spacing:.05em}
+.logo span{color:var(--muted)}
+.logo-sub{font-size:.78rem;color:var(--muted);margin-top:.3rem;font-family:var(--mono)}
+.fac-meta{text-align:right;font-family:var(--mono);font-size:.85rem}
+.fac-meta .num{font-size:1.6rem;font-weight:700;color:var(--accent);letter-spacing:.08em}
+.fac-meta .lbl{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;margin-top:.3rem}
+
+.bloques{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem}
+.bloque{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.4rem}
+.bloque h3{font-family:var(--mono);font-size:.72rem;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem}
+.bloque .nombre{font-size:1.1rem;font-weight:600;margin-bottom:.2rem}
+.bloque .linea{font-size:.85rem;color:var(--muted);margin-top:.2rem;font-family:var(--mono)}
+
+.ticket-box{background:var(--surface2);border-left:3px solid var(--accent);padding:.8rem 1.2rem;margin-bottom:1.5rem;font-family:var(--mono);font-size:.85rem}
+.ticket-box strong{color:var(--accent)}
+
+table.items{width:100%;border-collapse:collapse;margin-bottom:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+table.items th{background:var(--surface2);color:var(--accent);font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:.75rem 1rem;border-bottom:1px solid var(--border)}
+table.items th.num{text-align:right;width:120px}
+table.items td{padding:.7rem 1rem;border-bottom:1px solid var(--border);font-size:.92rem}
+table.items td.num{text-align:right;font-family:var(--mono)}
+table.items tr:last-child td{border-bottom:none}
+table.items tr.subt td{background:var(--surface2);font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--muted)}
+table.items tr.total td{background:var(--surface2);font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--accent)}
+
+.notas{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.1rem 1.3rem;margin-bottom:1.5rem;font-size:.85rem;color:var(--muted);line-height:1.6;white-space:pre-wrap}
+.notas h3{font-family:var(--mono);font-size:.72rem;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem}
+
+.ftr{margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--border);font-family:var(--mono);font-size:.7rem;color:var(--muted);text-align:center;line-height:1.7}
+.ftr strong{color:var(--accent)}
+
+@media print{
+  body{background:#fff!important;color:#000!important;padding:1.5cm!important}
+  .tbar{display:none!important}
+  body *{color:#000!important;background:#fff!important;border-color:#999!important}
+  .accent,.logo,.fac-meta .num,.ticket-box strong,table.items th,table.items tr.total td,.bloque h3,.notas h3,.ftr strong{color:#0a6b4f!important}
+  .hdr{border-bottom-color:#0a6b4f!important}
+  .ticket-box{border-left-color:#0a6b4f!important}
+}
+</style>
+</head>
+<body>
+<div class="tbar">
+  <button onclick="window.print()">⎙ Imprimir / PDF</button>
+  <button onclick="document.body.classList.toggle('theme-light')">◐ Tema</button>
+</div>
+<div id="app"></div>
+<script type="application/json" id="rc-fac">__JSON_DATA__</script>
+<script>
+const F = JSON.parse(document.getElementById('rc-fac').textContent);
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function eur(n){return Number(n).toLocaleString('es-ES',{style:'currency',currency:'EUR'});}
+
+const items = Array.isArray(F.items) ? F.items : [];
+const subtotal = items.reduce((s,i)=>s + (Number(i.cantidad)||0)*(Number(i.precio_unitario)||0), 0);
+const iva_pct  = Number(F.iva_pct ?? 21);
+const iva      = subtotal * iva_pct / 100;
+const total    = subtotal + iva;
+
+const itemsRows = items.map(i => {
+    const subt = (Number(i.cantidad)||0) * (Number(i.precio_unitario)||0);
+    return `<tr>
+      <td>${esc(i.descripcion||'')}</td>
+      <td class="num">${i.cantidad ?? 1}</td>
+      <td class="num">${eur(i.precio_unitario ?? 0)}</td>
+      <td class="num">${eur(subt)}</td>
+    </tr>`;
+}).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem">Sin conceptos</td></tr>`;
+
+document.getElementById('app').innerHTML = `
+<div class="hdr">
+  <div>
+    <div class="logo">RESOLVE<span>CORE</span></div>
+    <div class="logo-sub">// Solución a tus problemas informáticos</div>
+  </div>
+  <div class="fac-meta">
+    <div class="num">FACTURA ${esc(F.numero||'#')}</div>
+    <div class="lbl">Fecha: ${esc(F.fecha||'')}</div>
+    ${F.fecha_vencimiento?`<div class="lbl">Vencimiento: ${esc(F.fecha_vencimiento)}</div>`:''}
+  </div>
+</div>
+
+<div class="bloques">
+  <div class="bloque">
+    <h3>// Emisor (técnico)</h3>
+    <div class="nombre">${esc(F.tecnico_nombre||'—')}</div>
+    ${F.tecnico_nif?    `<div class="linea">NIF: ${esc(F.tecnico_nif)}</div>`:''}
+    ${F.tecnico_email?  `<div class="linea">${esc(F.tecnico_email)}</div>`:''}
+    ${F.tecnico_tel?    `<div class="linea">Tel: ${esc(F.tecnico_tel)}</div>`:''}
+  </div>
+  <div class="bloque">
+    <h3>// Cliente</h3>
+    <div class="nombre">${esc(F.cliente_nombre||'—')}</div>
+    ${F.cliente_nif?    `<div class="linea">NIF: ${esc(F.cliente_nif)}</div>`:''}
+    ${F.cliente_email?  `<div class="linea">${esc(F.cliente_email)}</div>`:''}
+    ${F.cliente_direccion?`<div class="linea">${esc(F.cliente_direccion)}</div>`:''}
+  </div>
+</div>
+
+${F.ticket_id?`<div class="ticket-box">Incidencia asociada: <strong>Ticket MantisBT #${esc(F.ticket_id)}</strong></div>`:''}
+
+<table class="items">
+  <thead><tr>
+    <th>Descripción del servicio</th>
+    <th class="num">Cant.</th>
+    <th class="num">Precio</th>
+    <th class="num">Subtotal</th>
+  </tr></thead>
+  <tbody>
+    ${itemsRows}
+    <tr class="subt"><td colspan="3">Subtotal</td><td class="num">${eur(subtotal)}</td></tr>
+    <tr class="subt"><td colspan="3">IVA (${iva_pct}%)</td><td class="num">${eur(iva)}</td></tr>
+    <tr class="total"><td colspan="3">TOTAL</td><td class="num">${eur(total)}</td></tr>
+  </tbody>
+</table>
+
+${F.notas?`<div class="notas"><h3>// Notas técnicas</h3>${esc(F.notas)}</div>`:''}
+
+<div class="ftr">
+  <strong>ResolveCore</strong> · Factura generada el ${esc(F.fecha||'')}<br>
+  ${F.metodo_pago?`Método de pago: ${esc(F.metodo_pago)} · `:''}Documento sin valor fiscal — modelo ficticio TFG ASIR<br>
+  Generado por el sistema ResolveCore v1.0.0
+</div>
+`;
+</script>
+</body>
+</html>
