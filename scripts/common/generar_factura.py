@@ -2,35 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 ResolveCore - generar_factura.py
-Generador interactivo de facturas (HTML + PDF) con integración MantisBT y email.
+Generador de facturas (HTML + PDF) con integración MantisBT y email.
 
-Flujo del técnico:
-    1. Prompts interactivos: datos del cliente, técnico, conceptos, precios.
-    2. Genera factura HTML (reports/factura.html).
-    3. Convierte a PDF con wkhtmltopdf (opcional).
-    4. Sube el PDF al ticket MantisBT (opcional).
-    5. Envía email al cliente con la factura adjunta (opcional, cuando se
-       marca el ticket como resuelto).
-
-Uso:
-    # Interactivo (técnico introduce los valores)
-    python3 generar_factura.py
-
-    # Desde un JSON pre-rellenado
-    python3 generar_factura.py --datos factura-borrador.json --pdf --send-email
-
-    # Para CI/testing: --no-interactive
-    python3 generar_factura.py --datos factura.json --no-interactive --pdf
-
-Variables de entorno:
-    MANTIS_URL          — URL base MantisBT (subir factura)
-    MANTIS_TOKEN        — token API REST MantisBT
-    SMTP_HOST           — servidor SMTP saliente
-    SMTP_PORT           — puerto (default 587)
-    SMTP_USER           — usuario SMTP
-    SMTP_PASSWORD       — contraseña SMTP
-    SMTP_FROM           — remitente (default: SMTP_USER)
-    SMTP_FROM_NAME      — nombre del remitente (default: ResolveCore)
+Mejoras v1.1.0:
+  - Persistencia del técnico (~/.resolvecore/tecnico.json).
+  - Catálogo de servicios reutilizable (~/.resolvecore/servicios.json).
+  - Numeración automática por año (~/.resolvecore/contador.json).
+  - Modo --batch CSV para múltiples facturas en una pasada.
+  - Registro contable JSONL (~/.resolvecore/facturas.jsonl) + --listar / --marcar-pagada / --resumen.
+  - Plantilla de email configurable (~/.resolvecore/email-template.txt).
 
 Política: stdlib only. Sin dependencias pip.
 
@@ -38,6 +18,7 @@ Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
 """
 
 import argparse
+import csv
 import json
 import os
 import re
@@ -46,7 +27,7 @@ import smtplib
 import subprocess
 import sys
 import webbrowser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -54,11 +35,214 @@ from email import encoders
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-SCRIPT_VERSION = '1.0.0'
+SCRIPT_VERSION = '1.1.0'
 
 _HERE = Path(__file__).resolve().parent
 _TEMPLATE = _HERE.parent.parent / 'reports' / 'factura.html'
 _OUTPUT_DIR = _HERE.parent / 'diagnosticos'
+
+_CONFIG_DIR = Path.home() / '.resolvecore'
+_TECNICO_FILE   = _CONFIG_DIR / 'tecnico.json'
+_SERVICIOS_FILE = _CONFIG_DIR / 'servicios.json'
+_CONTADOR_FILE  = _CONFIG_DIR / 'contador.json'
+_REGISTRO_FILE  = _CONFIG_DIR / 'facturas.jsonl'
+_EMAIL_TPL_FILE = _CONFIG_DIR / 'email-template.txt'
+
+
+# ---------------------------------------------------------------------------
+# Persistencia (config dir)
+# ---------------------------------------------------------------------------
+
+def _ensure_config_dir() -> None:
+    _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _read_json(path: Path, default: Any) -> Any:
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def _write_json(path: Path, data: Any) -> None:
+    _ensure_config_dir()
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+# ---------------------------------------------------------------------------
+# Numeración automática (C)
+# ---------------------------------------------------------------------------
+
+def next_invoice_number() -> str:
+    """Devuelve siguiente número RC-YYYY-NNNN. Persiste contador."""
+    year = datetime.now().year
+    data = _read_json(_CONTADOR_FILE, {})
+    last = int(data.get(str(year), 0))
+    nxt = last + 1
+    data[str(year)] = nxt
+    _write_json(_CONTADOR_FILE, data)
+    return f'RC-{year}-{nxt:04d}'
+
+
+# ---------------------------------------------------------------------------
+# Técnico persistente (A)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_TECNICO = {
+    'nombre': 'Francisco Vidal Mateo',
+    'nif': '',
+    'email': 'tecnicos@resolvecore.website',
+    'tel': '',
+}
+
+
+def load_tecnico() -> Dict[str, str]:
+    data = _read_json(_TECNICO_FILE, None)
+    if isinstance(data, dict):
+        return {**_DEFAULT_TECNICO, **data}
+    return dict(_DEFAULT_TECNICO)
+
+
+def save_tecnico(tec: Dict[str, str]) -> None:
+    _write_json(_TECNICO_FILE, tec)
+
+
+# ---------------------------------------------------------------------------
+# Catálogo de servicios (B)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_SERVICIOS = [
+    {'codigo': 'DIAG',  'descripcion': 'Diagnóstico remoto AnyDesk (1h)', 'precio': 35.00},
+    {'codigo': 'OPTIM', 'descripcion': 'Optimización del sistema',         'precio': 45.00},
+    {'codigo': 'MALW',  'descripcion': 'Limpieza de malware',              'precio': 60.00},
+    {'codigo': 'CVE',   'descripcion': 'Revisión de vulnerabilidades + parches', 'precio': 50.00},
+    {'codigo': 'BACKUP','descripcion': 'Configuración de copia de seguridad',    'precio': 40.00},
+    {'codigo': 'CLON',  'descripcion': 'Clonación / restauración de equipo',     'precio': 80.00},
+    {'codigo': 'INSTALL','descripcion':'Instalación/configuración de software',  'precio': 30.00},
+    {'codigo': 'HORA',  'descripcion': 'Hora adicional de soporte técnico',      'precio': 30.00},
+]
+
+
+def load_servicios() -> List[Dict[str, Any]]:
+    data = _read_json(_SERVICIOS_FILE, None)
+    if isinstance(data, list) and data:
+        return data
+    _write_json(_SERVICIOS_FILE, _DEFAULT_SERVICIOS)
+    return list(_DEFAULT_SERVICIOS)
+
+
+# ---------------------------------------------------------------------------
+# Registro contable (F)
+# ---------------------------------------------------------------------------
+
+def _registry_append(entry: Dict[str, Any]) -> None:
+    _ensure_config_dir()
+    with _REGISTRO_FILE.open('a', encoding='utf-8') as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+
+
+def _registry_read() -> List[Dict[str, Any]]:
+    if not _REGISTRO_FILE.exists():
+        return []
+    out = []
+    for line in _REGISTRO_FILE.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def registrar_factura(data: Dict[str, Any], html_path: Path, pdf_path: Optional[Path]) -> None:
+    total = _compute_total(data)
+    entry = {
+        'numero': data.get('numero'),
+        'fecha': data.get('fecha'),
+        'cliente': data.get('cliente_nombre'),
+        'cliente_email': data.get('cliente_email'),
+        'ticket_id': data.get('ticket_id'),
+        'subtotal': round(total['subtotal'], 2),
+        'iva_pct': total['iva_pct'],
+        'iva_importe': round(total['iva_importe'], 2),
+        'total': round(total['total'], 2),
+        'estado': 'emitida',
+        'html': str(html_path),
+        'pdf':  str(pdf_path) if pdf_path else None,
+        'creada_en': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+    _registry_append(entry)
+
+
+def marcar_estado(numero: str, nuevo_estado: str) -> bool:
+    rows = _registry_read()
+    found = False
+    for r in rows:
+        if r.get('numero') == numero:
+            r['estado'] = nuevo_estado
+            r['actualizada_en'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            found = True
+    if not found:
+        return False
+    _ensure_config_dir()
+    with _REGISTRO_FILE.open('w', encoding='utf-8') as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + '\n')
+    return True
+
+
+def listar_facturas(estado: Optional[str] = None) -> None:
+    rows = _registry_read()
+    if estado:
+        rows = [r for r in rows if r.get('estado') == estado]
+    if not rows:
+        print('(sin facturas)')
+        return
+    print(f'{"NUMERO":<18} {"FECHA":<11} {"CLIENTE":<24} {"TOTAL":>10}  ESTADO')
+    print('-' * 78)
+    for r in rows:
+        print(f'{r.get("numero",""):<18} {r.get("fecha",""):<11} '
+              f'{(r.get("cliente") or "")[:24]:<24} '
+              f'{r.get("total",0):>8.2f} €  {r.get("estado","")}')
+
+
+def resumen_periodo(periodo: str) -> None:
+    """periodo: 'YYYY' o 'YYYY-MM'."""
+    rows = _registry_read()
+    rows = [r for r in rows if str(r.get('fecha', '')).startswith(periodo)]
+    if not rows:
+        print(f'(sin facturas en {periodo})')
+        return
+    base   = sum(r.get('subtotal', 0) for r in rows)
+    iva    = sum(r.get('iva_importe', 0) for r in rows)
+    total  = sum(r.get('total', 0) for r in rows)
+    pagadas = sum(1 for r in rows if r.get('estado') == 'pagada')
+    print(f'Resumen {periodo}')
+    print('-' * 40)
+    print(f'  Facturas:        {len(rows)}')
+    print(f'    pagadas:       {pagadas}')
+    print(f'    pendientes:    {len(rows) - pagadas}')
+    print(f'  Base imponible:  {base:>10.2f} €')
+    print(f'  IVA repercutido: {iva:>10.2f} €')
+    print(f'  TOTAL facturado: {total:>10.2f} €')
+
+
+# ---------------------------------------------------------------------------
+# Cálculo totales
+# ---------------------------------------------------------------------------
+
+def _compute_total(data: Dict[str, Any]) -> Dict[str, float]:
+    items = data.get('items', [])
+    subtotal = sum(float(i.get('cantidad', 0)) * float(i.get('precio_unitario', 0)) for i in items)
+    iva_pct = float(data.get('iva_pct', 21))
+    iva_importe = subtotal * iva_pct / 100
+    total = subtotal + iva_importe
+    return {'subtotal': subtotal, 'iva_pct': iva_pct,
+            'iva_importe': iva_importe, 'total': total}
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +250,6 @@ _OUTPUT_DIR = _HERE.parent / 'diagnosticos'
 # ---------------------------------------------------------------------------
 
 def _prompt(label: str, default: str = '', required: bool = False) -> str:
-    """Prompt con valor por defecto. Repite si requerido y vacío."""
     while True:
         suffix = f' [{default}]' if default else ''
         val = input(f'  {label}{suffix}: ').strip()
@@ -108,19 +291,52 @@ def _prompt_yes(label: str, default: bool = True) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Selección de servicio desde catálogo (B)
+# ---------------------------------------------------------------------------
+
+def _print_catalogo(catalogo: List[Dict[str, Any]]) -> None:
+    print('')
+    print('  Catálogo de servicios disponibles:')
+    for idx, s in enumerate(catalogo, 1):
+        print(f'    {idx:>2}. [{s.get("codigo",""):<7}] {s.get("descripcion","")} '
+              f'— {float(s.get("precio",0)):.2f} €')
+    print('     0. (introducir concepto libre)')
+
+
+def _pick_servicio(catalogo: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    raw = input('    Nº catálogo / código / ENTER libre: ').strip()
+    if not raw:
+        return None
+    # Por número
+    if raw.isdigit():
+        n = int(raw)
+        if n == 0:
+            return None
+        if 1 <= n <= len(catalogo):
+            return dict(catalogo[n - 1])
+    # Por código
+    for s in catalogo:
+        if s.get('codigo', '').lower() == raw.lower():
+            return dict(s)
+    print('    [!] No reconocido, se introducirá manual')
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Construcción de los datos de la factura
 # ---------------------------------------------------------------------------
 
 def build_invoice_data_interactive() -> Dict[str, Any]:
-    """Pregunta al técnico todos los datos necesarios."""
     print('')
     print('  ═══════════════════════════════════════════════')
     print('   ResolveCore — Generador de factura')
     print('  ═══════════════════════════════════════════════')
     print('')
 
+    tecnico_saved = load_tecnico()
+    catalogo = load_servicios()
     today = datetime.now()
-    numero_default = f'RC-{today.strftime("%Y%m%d")}-{os.getpid() % 1000:03d}'
+    numero_default = next_invoice_number()
 
     print('  --- Datos generales ---')
     numero = _prompt('Número de factura', default=numero_default, required=True)
@@ -131,11 +347,16 @@ def build_invoice_data_interactive() -> Dict[str, Any]:
 
     print('')
     print('  --- Datos del técnico (emisor) ---')
-    tec_default_email = os.getenv('SMTP_FROM', 'tecnicos@resolvecore.website')
-    tecnico_nombre = _prompt('Nombre técnico', default='Francisco Vidal Mateo', required=True)
-    tecnico_nif    = _prompt('NIF/DNI técnico', default='')
-    tecnico_email  = _prompt('Email técnico', default=tec_default_email)
-    tecnico_tel    = _prompt('Teléfono técnico', default='')
+    print('  (Enter para usar el valor guardado en ~/.resolvecore/tecnico.json)')
+    tecnico_nombre = _prompt('Nombre técnico', default=tecnico_saved['nombre'], required=True)
+    tecnico_nif    = _prompt('NIF/DNI técnico', default=tecnico_saved['nif'])
+    tecnico_email  = _prompt('Email técnico', default=tecnico_saved['email'])
+    tecnico_tel    = _prompt('Teléfono técnico', default=tecnico_saved['tel'])
+    nuevo_tec = {'nombre': tecnico_nombre, 'nif': tecnico_nif,
+                 'email': tecnico_email, 'tel': tecnico_tel}
+    if nuevo_tec != tecnico_saved:
+        save_tecnico(nuevo_tec)
+        print('  [✓] Datos del técnico actualizados')
 
     print('')
     print('  --- Datos del cliente ---')
@@ -146,25 +367,29 @@ def build_invoice_data_interactive() -> Dict[str, Any]:
 
     print('')
     print('  --- Conceptos facturados ---')
+    _print_catalogo(catalogo)
     print('  (deja descripción vacía para terminar)')
     items: List[Dict[str, Any]] = []
     n = 1
     while True:
-        print(f'')
+        print('')
         print(f'  Concepto #{n}:')
-        desc = input('    Descripción: ').strip()
-        if not desc:
-            if not items:
-                print('    [!] Añade al menos un concepto')
-                continue
-            break
-        cant = _prompt_int('    Cantidad', default=1)
-        precio = _prompt_float('    Precio unitario (€)', default=0.0)
-        items.append({
-            'descripcion': desc,
-            'cantidad': cant,
-            'precio_unitario': precio,
-        })
+        srv = _pick_servicio(catalogo)
+        if srv is None:
+            desc = input('    Descripción libre: ').strip()
+            if not desc:
+                if not items:
+                    print('    [!] Añade al menos un concepto')
+                    continue
+                break
+            cant = _prompt_int('    Cantidad', default=1)
+            precio = _prompt_float('    Precio unitario (€)', default=0.0)
+        else:
+            print(f'    → {srv["descripcion"]} ({srv["precio"]:.2f} €)')
+            cant = _prompt_int('    Cantidad', default=1)
+            precio = _prompt_float('    Precio unitario (€)', default=float(srv['precio']))
+            desc = srv['descripcion']
+        items.append({'descripcion': desc, 'cantidad': cant, 'precio_unitario': precio})
         n += 1
 
     print('')
@@ -190,7 +415,7 @@ def build_invoice_data_interactive() -> Dict[str, Any]:
         'metodo_pago': metodo_pago,
         'notas': notas,
         '_meta': {
-            'generado_en': datetime.utcnow().isoformat() + 'Z',
+            'generado_en': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'version_generador': SCRIPT_VERSION,
         },
     }
@@ -252,7 +477,7 @@ def html_to_pdf(html_path: Path, pdf_path: Optional[Path] = None) -> Optional[Pa
 
 
 # ---------------------------------------------------------------------------
-# Subir a MantisBT (via adjuntar_informe_mantis.py)
+# Subir a MantisBT
 # ---------------------------------------------------------------------------
 
 def upload_to_mantis(pdf_path: Path, ticket_id: int) -> bool:
@@ -275,70 +500,103 @@ def upload_to_mantis(pdf_path: Path, ticket_id: int) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Envío por email
+# Plantilla de email (K)
 # ---------------------------------------------------------------------------
 
-def send_invoice_email(
-    pdf_path: Path,
-    data: Dict[str, Any],
-    smtp_host: Optional[str] = None,
-    smtp_port: int = 587,
-    smtp_user: Optional[str] = None,
-    smtp_password: Optional[str] = None,
-    smtp_from: Optional[str] = None,
-    smtp_from_name: str = 'ResolveCore',
-) -> bool:
-    """Envía la factura PDF al cliente vía SMTP."""
-    to_addr = data.get('cliente_email', '').strip()
-    if not to_addr:
-        print('[!] Sin email del cliente — no se envía', file=sys.stderr)
-        return False
+_DEFAULT_EMAIL_TEMPLATE = """Asunto: ResolveCore — Factura {numero} {ticket_ref}
 
-    smtp_host = smtp_host or os.getenv('SMTP_HOST', '')
-    smtp_user = smtp_user or os.getenv('SMTP_USER', '')
-    smtp_password = smtp_password or os.getenv('SMTP_PASSWORD', '')
-    smtp_from = smtp_from or os.getenv('SMTP_FROM', smtp_user)
-    smtp_from_name = os.getenv('SMTP_FROM_NAME', smtp_from_name)
+Hola {cliente_nombre},
 
-    if not smtp_host or not smtp_user or not smtp_password:
-        print('[!] SMTP no configurado (SMTP_HOST/SMTP_USER/SMTP_PASSWORD)', file=sys.stderr)
-        return False
-
-    # Calcular total para el cuerpo del email
-    items = data.get('items', [])
-    subtotal = sum((float(i.get('cantidad', 0)) * float(i.get('precio_unitario', 0))) for i in items)
-    iva_pct = float(data.get('iva_pct', 21))
-    total = subtotal * (1 + iva_pct / 100)
-
-    msg = MIMEMultipart('mixed')
-    msg['From'] = f'{smtp_from_name} <{smtp_from}>'
-    msg['To'] = to_addr
-    msg['Subject'] = f'ResolveCore — Factura {data.get("numero","")} (Ticket #{data.get("ticket_id","-")})'
-
-    cuerpo = f"""Hola {data.get('cliente_nombre','')},
-
-Adjuntamos la factura {data.get('numero','')} por el servicio técnico
-realizado{f" en relación al ticket #{data['ticket_id']}" if data.get('ticket_id') else ''}.
+Adjuntamos la factura {numero} por el servicio técnico realizado{ticket_inline}.
 
   Resumen del trabajo:
-{(data.get('notas') or '  (sin notas)').strip()}
+{notas}
 
-  Importe total: {total:.2f} €  (IVA {iva_pct:.0f}% incluido)
-  Fecha emisión: {data.get('fecha','')}
-  Vencimiento:   {data.get('fecha_vencimiento','')}
-  Método de pago: {data.get('metodo_pago','')}
+  Base imponible: {subtotal:.2f} €
+  IVA ({iva_pct:.0f}%): {iva_importe:.2f} €
+  TOTAL:          {total:.2f} €
+
+  Fecha emisión: {fecha}
+  Vencimiento:   {fecha_vencimiento}
+  Método de pago: {metodo_pago}
 
 Encontrarás el detalle completo en el PDF adjunto.
 
 Gracias por confiar en ResolveCore.
 
-— {data.get('tecnico_nombre','ResolveCore')}
-  {data.get('tecnico_email','')}
+— {tecnico_nombre}
+  {tecnico_email}
 """
 
-    msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
 
-    # Adjuntar PDF
+def _ensure_email_template() -> str:
+    if not _EMAIL_TPL_FILE.exists():
+        _ensure_config_dir()
+        _EMAIL_TPL_FILE.write_text(_DEFAULT_EMAIL_TEMPLATE, encoding='utf-8')
+        return _DEFAULT_EMAIL_TEMPLATE
+    return _EMAIL_TPL_FILE.read_text(encoding='utf-8')
+
+
+def _render_email(data: Dict[str, Any]) -> Dict[str, str]:
+    tpl = _ensure_email_template()
+    totals = _compute_total(data)
+    ctx = {
+        'numero': data.get('numero', ''),
+        'fecha': data.get('fecha', ''),
+        'fecha_vencimiento': data.get('fecha_vencimiento', ''),
+        'cliente_nombre': data.get('cliente_nombre', ''),
+        'cliente_email': data.get('cliente_email', ''),
+        'tecnico_nombre': data.get('tecnico_nombre', 'ResolveCore'),
+        'tecnico_email': data.get('tecnico_email', ''),
+        'metodo_pago': data.get('metodo_pago', ''),
+        'notas': (data.get('notas') or '  (sin notas)').strip(),
+        'ticket_id': data.get('ticket_id') or '',
+        'ticket_ref': f'(Ticket #{data["ticket_id"]})' if data.get('ticket_id') else '',
+        'ticket_inline': f' en relación al ticket #{data["ticket_id"]}' if data.get('ticket_id') else '',
+        'subtotal': totals['subtotal'],
+        'iva_pct': totals['iva_pct'],
+        'iva_importe': totals['iva_importe'],
+        'total': totals['total'],
+    }
+    rendered = tpl.format(**ctx)
+    # Primera línea con "Asunto:" es opcional
+    subject = f'ResolveCore — Factura {ctx["numero"]} {ctx["ticket_ref"]}'.strip()
+    body = rendered
+    if rendered.lower().startswith('asunto:'):
+        first_nl = rendered.find('\n')
+        subject = rendered[len('asunto:'):first_nl].strip()
+        body = rendered[first_nl + 1:].lstrip('\n')
+    return {'subject': subject, 'body': body}
+
+
+# ---------------------------------------------------------------------------
+# Envío por email
+# ---------------------------------------------------------------------------
+
+def send_invoice_email(pdf_path: Path, data: Dict[str, Any]) -> bool:
+    to_addr = (data.get('cliente_email') or '').strip()
+    if not to_addr:
+        print('[!] Sin email del cliente — no se envía', file=sys.stderr)
+        return False
+
+    smtp_host = os.getenv('SMTP_HOST', '')
+    smtp_port = int(os.getenv('SMTP_PORT', '587') or '587')
+    smtp_user = os.getenv('SMTP_USER', '')
+    smtp_password = os.getenv('SMTP_PASSWORD', '')
+    smtp_from = os.getenv('SMTP_FROM', smtp_user)
+    smtp_from_name = os.getenv('SMTP_FROM_NAME', 'ResolveCore')
+
+    if not smtp_host or not smtp_user or not smtp_password:
+        print('[!] SMTP no configurado (SMTP_HOST/SMTP_USER/SMTP_PASSWORD)', file=sys.stderr)
+        return False
+
+    rendered = _render_email(data)
+    msg = MIMEMultipart('mixed')
+    msg['From'] = f'{smtp_from_name} <{smtp_from}>'
+    msg['To'] = to_addr
+    msg['Subject'] = rendered['subject']
+    msg.attach(MIMEText(rendered['body'], 'plain', 'utf-8'))
+
     with open(pdf_path, 'rb') as f:
         part = MIMEBase('application', 'pdf')
         part.set_payload(f.read())
@@ -353,6 +611,7 @@ Gracias por confiar en ResolveCore.
             s.login(smtp_user, smtp_password)
             s.send_message(msg)
         print(f'[✓] Factura enviada por email a {to_addr}')
+        marcar_estado(data.get('numero', ''), 'enviada')
         return True
     except Exception as exc:
         print(f'[!] Error enviando email: {exc}', file=sys.stderr)
@@ -360,11 +619,88 @@ Gracias por confiar en ResolveCore.
 
 
 # ---------------------------------------------------------------------------
+# Modo batch CSV (E)
+# ---------------------------------------------------------------------------
+
+# CSV esperado (cabecera obligatoria):
+#   cliente_nombre,cliente_email,cliente_nif,ticket_id,descripcion,cantidad,precio_unitario,iva_pct,notas
+# Una fila por concepto. Facturas se agrupan por (cliente_nombre + ticket_id).
+
+def procesar_batch(csv_path: Path, do_pdf: bool, do_upload: bool, do_email: bool) -> int:
+    if not csv_path.exists():
+        print(f'[X] CSV no encontrado: {csv_path}', file=sys.stderr)
+        return 1
+    tecnico = load_tecnico()
+    today = datetime.now().strftime('%Y-%m-%d')
+    venc  = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+
+    grupos: Dict[str, Dict[str, Any]] = {}
+    with csv_path.open(encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            key = f'{(row.get("cliente_nombre") or "").strip()}|{(row.get("ticket_id") or "").strip()}'
+            g = grupos.setdefault(key, {
+                'cliente_nombre': row.get('cliente_nombre', '').strip(),
+                'cliente_email':  row.get('cliente_email', '').strip(),
+                'cliente_nif':    row.get('cliente_nif', '').strip(),
+                'cliente_direccion': row.get('cliente_direccion', '').strip(),
+                'ticket_id':      (row.get('ticket_id') or '').strip() or None,
+                'items': [],
+                'iva_pct': float(row.get('iva_pct') or 21),
+                'notas': (row.get('notas') or '').strip(),
+            })
+            g['items'].append({
+                'descripcion': row.get('descripcion', '').strip(),
+                'cantidad': int(row.get('cantidad') or 1),
+                'precio_unitario': float((row.get('precio_unitario') or '0').replace(',', '.')),
+            })
+
+    if not grupos:
+        print('[!] CSV vacío o sin filas', file=sys.stderr)
+        return 1
+
+    errores = 0
+    for key, g in grupos.items():
+        data = {
+            'numero': next_invoice_number(),
+            'fecha': today,
+            'fecha_vencimiento': venc,
+            'tecnico_nombre': tecnico['nombre'],
+            'tecnico_nif':    tecnico['nif'],
+            'tecnico_email':  tecnico['email'],
+            'tecnico_tel':    tecnico['tel'],
+            'metodo_pago': 'Transferencia bancaria',
+            **g,
+            '_meta': {
+                'generado_en': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'version_generador': SCRIPT_VERSION,
+                'origen': 'batch-csv',
+            },
+        }
+        try:
+            html_path = generate_html(data)
+            pdf_path = html_to_pdf(html_path) if (do_pdf or do_upload or do_email) else None
+            registrar_factura(data, html_path, pdf_path)
+            print(f'[✓] {data["numero"]} — {data["cliente_nombre"]} '
+                  f'({_compute_total(data)["total"]:.2f} €)')
+            if do_upload and pdf_path and data.get('ticket_id') and str(data['ticket_id']).isdigit():
+                upload_to_mantis(pdf_path, int(data['ticket_id']))
+            if do_email and pdf_path:
+                send_invoice_email(pdf_path, data)
+        except Exception as exc:
+            print(f'[X] Error en factura {key}: {exc}', file=sys.stderr)
+            errores += 1
+
+    print('')
+    print(f'Batch terminado. Facturas: {len(grupos)} — errores: {errores}')
+    return 0 if errores == 0 else 2
+
+
+# ---------------------------------------------------------------------------
 # Carga de .env opcional
 # ---------------------------------------------------------------------------
 
 def _load_dotenv() -> None:
-    """Carga ~/.resolvecore/.env si existe (no sobreescribe variables ya seteadas)."""
     candidates = [
         Path.home() / '.resolvecore' / '.env',
         _HERE.parent.parent / '.env',
@@ -392,25 +728,70 @@ def _load_dotenv() -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog='generar_factura.py',
-        description='ResolveCore — Generador interactivo de facturas',
+        description='ResolveCore — Generador de facturas (interactivo / batch / registro)',
     )
     p.add_argument('--datos', metavar='JSON',
-                   help='Cargar datos de factura desde fichero JSON (en lugar de prompts)')
+                   help='Cargar datos de factura desde fichero JSON')
     p.add_argument('--out', metavar='RUTA',
-                   help='Ruta de salida del HTML (default: diagnosticos/factura_<n>_<cliente>.html)')
-    p.add_argument('--pdf', action='store_true',
-                   help='Generar PDF además del HTML')
-    p.add_argument('--upload', action='store_true',
-                   help='Subir el PDF al ticket MantisBT (requiere --pdf y ticket_id)')
-    p.add_argument('--send-email', action='store_true',
-                   help='Enviar la factura por email al cliente (requiere SMTP_*)')
-    p.add_argument('--open', action='store_true',
-                   help='Abrir el HTML en el navegador al terminar')
+                   help='Ruta de salida del HTML')
+    p.add_argument('--pdf', action='store_true', help='Generar PDF además del HTML')
+    p.add_argument('--upload', action='store_true', help='Subir el PDF al ticket MantisBT')
+    p.add_argument('--send-email', action='store_true', help='Enviar factura al cliente')
+    p.add_argument('--open', action='store_true', help='Abrir HTML en navegador')
     p.add_argument('--no-interactive', action='store_true',
                    help='No usar prompts (requiere --datos)')
     p.add_argument('--save-json', metavar='RUTA',
-                   help='Guardar los datos introducidos como JSON (útil para reutilizar)')
+                   help='Guardar los datos introducidos como JSON')
+
+    # Batch
+    p.add_argument('--batch', metavar='CSV',
+                   help='Procesar lote de facturas desde CSV (ver cabeceras en docstring)')
+
+    # Registro / contabilidad
+    p.add_argument('--listar', action='store_true', help='Listar facturas registradas')
+    p.add_argument('--estado', metavar='ESTADO',
+                   help='Filtrar --listar por estado (emitida|enviada|pagada|cancelada)')
+    p.add_argument('--marcar', nargs=2, metavar=('NUMERO', 'ESTADO'),
+                   help='Cambiar estado de una factura (ej: --marcar RC-2026-0001 pagada)')
+    p.add_argument('--resumen', metavar='PERIODO',
+                   help='Resumen de un periodo (YYYY o YYYY-MM)')
+
+    # Email enviado manualmente desde registro (L: webhook)
+    p.add_argument('--enviar-numero', metavar='NUMERO',
+                   help='Reenviar factura ya emitida (busca PDF en registro)')
+
     return p.parse_args()
+
+
+def _enviar_por_numero(numero: str) -> int:
+    rows = _registry_read()
+    target = next((r for r in rows if r.get('numero') == numero), None)
+    if not target:
+        print(f'[X] Factura {numero} no encontrada en registro', file=sys.stderr)
+        return 1
+    pdf = target.get('pdf')
+    if not pdf or not Path(pdf).exists():
+        print(f'[X] PDF no disponible para {numero}', file=sys.stderr)
+        return 1
+    json_path = Path(pdf).with_suffix('.json')
+    if json_path.exists():
+        try:
+            data = json.loads(json_path.read_text(encoding='utf-8'))
+        except Exception:
+            data = None
+    else:
+        data = None
+    if not data:
+        data = {
+            'numero': target.get('numero'),
+            'cliente_nombre': target.get('cliente'),
+            'cliente_email':  target.get('cliente_email'),
+            'ticket_id':      target.get('ticket_id'),
+            'fecha':          target.get('fecha'),
+            'items': [], 'iva_pct': target.get('iva_pct', 21),
+        }
+    ok = send_invoice_email(Path(pdf), data)
+    return 0 if ok else 1
 
 
 def main() -> int:
@@ -423,6 +804,28 @@ def main() -> int:
     _load_dotenv()
     args = parse_args()
 
+    # Acciones de registro (no requieren datos)
+    if args.listar:
+        listar_facturas(args.estado)
+        return 0
+    if args.marcar:
+        numero, nuevo = args.marcar
+        if marcar_estado(numero, nuevo):
+            print(f'[✓] {numero} → estado={nuevo}')
+            return 0
+        print(f'[X] {numero} no encontrada', file=sys.stderr)
+        return 1
+    if args.resumen:
+        resumen_periodo(args.resumen)
+        return 0
+    if args.enviar_numero:
+        return _enviar_por_numero(args.enviar_numero)
+
+    # Modo batch
+    if args.batch:
+        return procesar_batch(Path(args.batch), args.pdf, args.upload, args.send_email)
+
+    # Origen de datos
     if args.datos:
         try:
             with open(args.datos, encoding='utf-8') as f:
@@ -444,7 +847,7 @@ def main() -> int:
         except OSError as exc:
             print(f'[!] No se pudo guardar JSON: {exc}', file=sys.stderr)
 
-    # Generar HTML
+    # HTML
     out_html = Path(args.out) if args.out else None
     try:
         html_path = generate_html(data, out_html)
@@ -453,7 +856,13 @@ def main() -> int:
         print(f'[X] {exc}', file=sys.stderr)
         return 1
 
-    # Abrir en navegador opcional
+    # Guardar JSON al lado del HTML (necesario para --enviar-numero y webhook)
+    try:
+        html_path.with_suffix('.json').write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    except OSError:
+        pass
+
     if args.open:
         try:
             webbrowser.open(html_path.resolve().as_uri())
@@ -468,7 +877,12 @@ def main() -> int:
         else:
             print('[!] No se generó PDF — se omiten upload/email', file=sys.stderr)
 
-    # Subir a MantisBT
+    # Registrar en libro contable
+    try:
+        registrar_factura(data, html_path, pdf_path)
+    except Exception as exc:
+        print(f'[!] No se pudo registrar en libro: {exc}', file=sys.stderr)
+
     if args.upload and pdf_path:
         tk = data.get('ticket_id')
         if tk and str(tk).isdigit():
@@ -476,7 +890,6 @@ def main() -> int:
         else:
             print('[!] Sin ticket_id válido — no se sube a MantisBT', file=sys.stderr)
 
-    # Enviar email
     if args.send_email and pdf_path:
         send_invoice_email(pdf_path, data)
 
