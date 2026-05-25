@@ -94,7 +94,7 @@ flowchart LR
 | Scripts Windows | PowerShell | 5.1+ | Diagnóstico, optimización, informes |
 | Scripts Linux/macOS | Bash | 4+ | Diagnóstico, optimización |
 | Scripts Android | Bash (ADB) | — | Diagnóstico remoto vía ADB |
-| Escáner vulns/red | Python | 3.8+ stdlib | NVD, CISA KEV, OSV, EPSS, Shodan, Nmap |
+| Escáner vulns/red | Python | 3.8+ stdlib | NVD, CISA KEV, OSV, EPSS, Nmap |
 | Informe técnico | HTML → PDF | — | wkhtmltopdf / DomPDF (en desarrollo) |
 | Base de datos | MariaDB / MySQL | 10.4+ / 8.0+ | MantisBT + vulnerabilidades |
 | Acceso remoto | AnyDesk | — | Conexión al equipo del cliente |
@@ -146,9 +146,8 @@ ResolveCore/
 │   ├── common/                     Python — Hexagonal Architecture
 │   │   ├── domain/                 Modelos: Host, Vulnerability, Service, AttachmentResult
 │   │   ├── ports/                  Interfaces: HostIntelSource, MantisAttachmentSink
-│   │   ├── adapters/               Implementaciones: shodan_rest.py, mantis_rest.py
+│   │   ├── adapters/               Implementaciones: mantis_rest.py
 │   │   ├── buscar_vulnerabilidades.py  Motor CVE multi-feed (NVD/KEV/OSV/EPSS)
-│   │   ├── escaner_shodan.py       Auditoría exposición pública (Shodan API)
 │   │   ├── escaner_nmap.py         Escáner de puertos (Nmap wrapper)
 │   │   └── adjuntar_informe_mantis.py  CLI fase 2 — sube PDF a ticket vía API REST
 │   ├── setup/                      Setup entorno técnico (Linux + Windows)
@@ -222,7 +221,7 @@ git clone https://github.com/Haplee/ResolveCore.git
 cd ResolveCore
 
 # Variables de entorno para Python (opcional)
-cp .env.example .env   # añadir SHODAN_API_KEY, NVD_API_KEY
+cp .env.example .env   # añadir NVD_API_KEY si se quiere mayor rate limit
 ```
 
 ---
@@ -279,9 +278,6 @@ bash ./scripts/linux/optimizacion.sh --undo
 # CVE multi-feed (NVD + CISA KEV + OSV + EPSS)
 python3 scripts/common/buscar_vulnerabilidades.py --output json
 
-# Auditoría exposición pública (Shodan)
-python3 scripts/common/escaner_shodan.py
-
 # Escáner de puertos (requiere nmap instalado)
 python3 scripts/common/escaner_nmap.py
 ```
@@ -316,7 +312,6 @@ Todos generan JSON estructurado + HTML visual con inyección segura (`<script ty
 | Módulo | Feed / Herramienta | Salida |
 |---|---|---|
 | `buscar_vulnerabilidades.py` | NVD (NIST), CISA KEV, OSV, EPSS-FIRST | JSON, HTML, texto |
-| `escaner_shodan.py` | Shodan REST API | Puertos, CVEs, org, país |
 | `escaner_nmap.py` | Nmap (wrapper) | Puertos, servicios, OS |
 
 Sin dependencias `pip` — solo Python 3.8+ stdlib.
@@ -406,7 +401,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Informe HTML | Generado por scripts ✅ |
 | Informe PDF | Generado (wkhtmltopdf) + adjuntado al ticket vía API REST ✅ |
 | Fleet Panel | Endpoint REST + página pública agregada ✅ |
-| Escáner CVE | NVD · CISA KEV · OSV · EPSS · Shodan ✅ |
+| Escáner CVE | NVD · CISA KEV · OSV · EPSS ✅ |
 | CI lint | shellcheck · PSScriptAnalyzer · PHPCS WPCS · ruff (4/4 verde, bloqueante) |
 | Última actualización | 24 de mayo de 2026 |
 
@@ -428,7 +423,6 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Diagnóstico Android | `scripts/android/diagnostico.sh` | `2.2.0` | SemVer; **major** rompe schema JSON |
 | Optimización Android | `scripts/android/optimizacion.sh` | `3.1.0` | SemVer |
 | Escáner CVE (Python) | `scripts/common/buscar_vulnerabilidades.py` | `1.0.0` | SemVer; **major** cambia feeds o salida JSON |
-| Escáner Shodan | `scripts/common/escaner_shodan.py` | `2.0.0` | SemVer |
 | Schema JSON diagnóstico | `docs/scripting/schema-diagnostico.md` | trackea SO con menor versión | Bump al añadir/quitar campos obligatorios |
 
 **Regla de paridad**: el `_meta.version` del JSON emitido por cada script de diagnóstico **debe coincidir** con la versión declarada en cabecera. Si modificas el schema, bump major y actualiza `docs/scripting/schema-diagnostico.md` (CLAUDE.md lo exige).
@@ -439,7 +433,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 
 Distribuido bajo licencia **GNU General Public License v3.0**.
 
-El escáner de vulnerabilidades y los scripts de diagnóstico son software libre. Las APIs consumidas (NVD, CISA KEV, OSV, EPSS-FIRST, Shodan) son públicas y auditables.
+El escáner de vulnerabilidades y los scripts de diagnóstico son software libre. Las APIs consumidas (NVD, CISA KEV, OSV, EPSS-FIRST) son públicas y auditables.
 
 ---
 

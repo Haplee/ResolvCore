@@ -9,12 +9,15 @@
     (WordPress / MantisBT / Nginx — eso es scripts/server/windows/setup.ps1).
 
     Componentes instalados:
-      - Python 3            (buscar_vulnerabilidades.py)
+      - Python 3            (buscar_vulnerabilidades.py, generar_informe.py)
       - Git                 (control de versiones / actualizar scripts)
       - ADB                 (diagnóstico Android)
-      - smartmontools        (S.M.A.R.T. extendido en diagnostico.ps1)
+      - smartmontools       (S.M.A.R.T. extendido en diagnostico.ps1)
+      - Nmap                (escaner_nmap.py - escaneo LAN)
+      - wkhtmltopdf         (generar_informe.py --pdf)
       - AnyDesk             (acceso remoto al equipo del cliente)
-      - Herramientas opcionales: LibreHardwareMonitor, Nmap, Speedtest CLI
+      - Herramientas opcionales: LibreHardwareMonitor, Speedtest CLI
+      - Plantilla .env con MANTIS_URL, MANTIS_TOKEN, NVD_API_KEY
 
 .EXAMPLE
     # Ejecutar como Administrador:
@@ -216,7 +219,25 @@ if (-not $anydeskInstalled) {
     Write-Ok "AnyDesk ya presente"
 }
 
-# ── 7. Herramientas opcionales ────────────────────────────────────────────────
+# ── 7. Nmap (escaner_nmap.py) ─────────────────────────────────────────────────
+Write-Info "Verificando Nmap..."
+if (-not (Get-Command nmap -ErrorAction SilentlyContinue)) {
+    Install-ChocoPackage -Package "nmap" -Label "Nmap"
+    $env:PATH += ";${env:ProgramFiles(x86)}\Nmap;${env:ProgramFiles}\Nmap"
+} else {
+    Write-Ok "Nmap ya presente"
+}
+
+# ── 8. wkhtmltopdf (generar_informe.py --pdf) ─────────────────────────────────
+Write-Info "Verificando wkhtmltopdf..."
+if (-not (Get-Command wkhtmltopdf -ErrorAction SilentlyContinue)) {
+    Install-ChocoPackage -Package "wkhtmltopdf" -Label "wkhtmltopdf"
+    $env:PATH += ";${env:ProgramFiles}\wkhtmltopdf\bin"
+} else {
+    Write-Ok "wkhtmltopdf ya presente"
+}
+
+# ── 9. Herramientas opcionales ────────────────────────────────────────────────
 if (-not $SkipOptional) {
     Write-Host ""
     Write-Host "  [Opcionales]" -ForegroundColor Gray
@@ -227,19 +248,13 @@ if (-not $SkipOptional) {
             -Label "LibreHardwareMonitor" -Optional
     } else { Write-Ok "LibreHardwareMonitor ya presente" }
 
-    # Nmap — escaneo de puertos
-    if (-not (Get-Command nmap -ErrorAction SilentlyContinue)) {
-        Install-ChocoPackage -Package "nmap" -Label "Nmap" -Optional
-        $env:PATH += ";${env:ProgramFiles(x86)}\Nmap"
-    } else { Write-Ok "Nmap ya presente" }
-
     # Speedtest CLI
     if (-not (Get-Command speedtest -ErrorAction SilentlyContinue)) {
         Install-ChocoPackage -Package "speedtest" -Label "Speedtest CLI" -Optional
     } else { Write-Ok "Speedtest CLI ya presente" }
 }
 
-# ── 8. Scripts ResolveCore ────────────────────────────────────────────────────
+# ── 10. Scripts ResolveCore ───────────────────────────────────────────────────
 $scriptsDir = "$env:USERPROFILE\.resolvecore"
 Write-Info "Instalando scripts ResolveCore en $scriptsDir..."
 try {
@@ -262,7 +277,37 @@ if ($userPath -notlike "*$winScriptsDir*" -and (Test-Path $winScriptsDir)) {
     Write-Ok "Scripts añadidos al PATH del usuario"
 }
 
-# ── 9. Atajo en el escritorio ─────────────────────────────────────────────────
+# ── 11. Plantilla .env para credenciales Mantis/NVD ──────────────────────────
+$envFile = "$scriptsDir\.env"
+if (-not (Test-Path $envFile)) {
+    Write-Info "Creando plantilla .env en $envFile..."
+    $envContent = @"
+# ── ResolveCore — credenciales del técnico ──
+# Rellena los valores con los datos reales y guarda. NUNCA subas este fichero al repo.
+
+# MantisBT REST API — necesario para adjuntar informes PDF a tickets
+MANTIS_URL=https://support.resolvecore.com
+MANTIS_TOKEN=
+
+# NVD NIST API — opcional, sube el rate limit de 5 a 50 req/30s
+# Registro gratuito: https://nvd.nist.gov/developers/request-an-api-key
+NVD_API_KEY=
+
+# SMTP — envío de facturas al cliente desde generar_factura.py
+SMTP_HOST=smtp.ionos.es
+SMTP_PORT=587
+SMTP_USER=tecnicos@resolvecore.website
+SMTP_PASSWORD=
+SMTP_FROM=tecnicos@resolvecore.website
+SMTP_FROM_NAME=ResolveCore
+"@
+    Set-Content -Path $envFile -Value $envContent -Encoding UTF8
+    Write-Ok ".env creado. Editalo con: notepad $envFile"
+} else {
+    Write-Ok ".env ya presente en $envFile"
+}
+
+# ── 12. Atajo en el escritorio ────────────────────────────────────────────────
 $shortcutPath = "$env:USERPROFILE\Desktop\ResolveCore.lnk"
 if (-not (Test-Path $shortcutPath) -and (Test-Path "$scriptsDir\scripts\windows\ResolveCore.ps1")) {
     try {
@@ -280,7 +325,7 @@ if (-not (Test-Path $shortcutPath) -and (Test-Path "$scriptsDir\scripts\windows\
     }
 }
 
-# ── 10. Verificación final ────────────────────────────────────────────────────
+# ── 13. Verificación final ────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host "    Verificacion del entorno" -ForegroundColor Cyan
@@ -308,11 +353,40 @@ function Test-Tool {
     }
 }
 
-Test-Tool "Python 3"       "python"    "--version"
-Test-Tool "Git"            "git"       "--version"
-Test-Tool "ADB"            "adb"       "--version"
-Test-Tool "smartctl"       "smartctl"  "--version"
-Test-Tool "AnyDesk"        "anydesk"   "--version"
+Test-Tool "Python 3"       "python"      "--version"
+Test-Tool "Git"            "git"         "--version"
+Test-Tool "ADB"            "adb"         "--version"
+Test-Tool "smartctl"       "smartctl"    "--version"
+Test-Tool "Nmap"           "nmap"        "--version"
+Test-Tool "wkhtmltopdf"    "wkhtmltopdf" "--version"
+Test-Tool "AnyDesk"        "anydesk"     "--version"
+
+# Verificar scripts Python de ResolveCore
+Write-Host ""
+Write-Host "  Scripts Python:" -ForegroundColor Gray
+$pyExe = (Get-Command python -ErrorAction SilentlyContinue).Source
+if ($pyExe) {
+    $checks = @(
+        @{ N='generar_informe.py';        P="$scriptsDir\scripts\common\generar_informe.py" },
+        @{ N='buscar_vulnerabilidades.py';P="$scriptsDir\scripts\common\buscar_vulnerabilidades.py" },
+        @{ N='escaner_nmap.py';           P="$scriptsDir\scripts\common\escaner_nmap.py" },
+        @{ N='adjuntar_informe_mantis.py';P="$scriptsDir\scripts\common\adjuntar_informe_mantis.py" }
+    )
+    foreach ($c in $checks) {
+        if (Test-Path $c.P) {
+            try {
+                & $pyExe $c.P --help *> $null
+                Write-Host "    " -NoNewline; Write-Host "[OK]" -ForegroundColor Green -NoNewline; Write-Host " $($c.N)"
+                $ok++
+            } catch {
+                Write-Host "    " -NoNewline; Write-Host "[!]" -ForegroundColor Yellow -NoNewline; Write-Host " $($c.N) (no se pudo ejecutar)"
+            }
+        } else {
+            Write-Host "    " -NoNewline; Write-Host "[X]" -ForegroundColor Red -NoNewline; Write-Host " $($c.N) NO encontrado"
+            $fail++
+        }
+    }
+}
 
 Write-Host ""
 Write-Host "  Resultado: " -NoNewline
@@ -323,7 +397,12 @@ Write-Host ""
 
 if ($fail -eq 0) {
     Write-Host "  [OK] Entorno listo." -ForegroundColor Green
-    Write-Host "  Ejecuta: " -NoNewline
+    Write-Host ""
+    Write-Host "  Siguientes pasos:" -ForegroundColor Cyan
+    Write-Host "    1. Edita las credenciales en: " -NoNewline
+    Write-Host "$scriptsDir\.env" -ForegroundColor Yellow
+    Write-Host "    2. Reinicia la consola para aplicar cambios al PATH"
+    Write-Host "    3. Ejecuta: " -NoNewline
     Write-Host "ResolveCore.ps1" -ForegroundColor Cyan
 } else {
     Write-Warn "Algunos componentes no se instalaron. Revisa los errores arriba."

@@ -78,17 +78,13 @@ Facturación: pago por servicio o suscripción mensual
 - `scripts/macos/optimizacion.sh` — brew cleanup, caché sistema
 - `scripts/android/optimizacion.sh` — limpieza vía ADB
 
-### 3.2 Escáner de vulnerabilidades y exposición (NVD / Shodan) ✅
+### 3.2 Escáner de vulnerabilidades (NVD / Nmap) ✅
 
 **Vulnerabilidades locales** (`scripts/common/buscar_vulnerabilidades.py`):
 - Motor Python unificado (stdlib) sin dependencias externas (`pip`).
 - Consulta APIs públicas (NVD, OSV, CISA KEV, EPSS).
 - Audita puertos, logs y configuración local de forma agnóstica al SO.
 - Salida JSON, HTML y texto plano.
-
-**Auditoría pública** (`scripts/common/escaner_shodan.py`):
-- Módulo en Python puro para interrogar la API REST de Shodan.
-- Descubre puertos abiertos y CVEs públicos asociados a la IP del cliente.
 
 **Informe HTML generado:** `scripts/informe.html` (prueba real sobre el equipo del alumno)
 
@@ -145,9 +141,9 @@ Script de instalación: `mantisbt/plugins/install.sh`
 
 - `docs/defensa-tfg.md` — documento maestro de defensa con FAQs del tribunal.
 - `docs/mantis-integration.md` — guía completa de integración WordPress ↔ MantisBT.
-- `docs/stack-tecnologico.md` — justificación técnica de WordPress Business, MantisBT, Shodan y servicios (ampliada semana 16-20 mayo).
+- `docs/stack-tecnologico.md` — justificación técnica de WordPress Business, MantisBT y servicios (ampliada semana 16-20 mayo).
 - `docs/servicios-adicionales.md` — despliegue por imágenes, clonación y congelación justificados.
-- `docs/entornos.md` — separación de Dev (LocalWP) y Prod (WordPress.com + VPS) y políticas de Backup.
+- `docs/entornos.md` — separación de Dev (LocalWP) y Prod (VPS IONOS) y políticas de Backup.
 - `docs/arquitectura-scripting.md` — diagrama de módulos: diagnóstico → JSON → informe HTML → PDF.
 
 ### 3.8 Mejoras semana 16–20 mayo ✅
@@ -173,9 +169,9 @@ Script de instalación: `mantisbt/plugins/install.sh`
 - `mantisbt/config/config_inc.php` configurado con BD local, SMTP y API token.
 - Accesible en `http://localhost:8989` durante la demo local.
 
-**Pendiente para producción:**
-- WordPress en producción: WordPress.com (plan Business) — URL pública ya operativa.
-- MantisBT en producción: requiere VPS o subdominio propio (`mantis.resolvecore.com`).
+**Entorno productivo implementado:**
+- WordPress en producción: VPS IONOS (Plan S+) — URL pública ya operativa.
+- MantisBT en producción: VPS IONOS (`mantis.resolvecore.website`).
 
 **Pregunta para el tutor:** ¿Es suficiente MantisBT local Docker para la demo de defensa o se requiere URL pública accesible por el tribunal?
 
