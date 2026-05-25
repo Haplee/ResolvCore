@@ -33,10 +33,12 @@ DESCRIPTION
     Componentes instalados:
       · Herramientas base:  git, curl, wget, unzip, jq, bc
       · Diagnóstico:        smartmontools, lm-sensors, pciutils, iproute2,
-                            iputils-ping, ufw
+                            iputils-ping, ufw, nmap
       · Android:            adb (Android Debug Bridge)
       · Vulnerabilidades:   python3
+      · Informe PDF:        wkhtmltopdf (generar_informe.py --pdf)
       · Acceso remoto:      AnyDesk
+      · Plantilla .env con MANTIS_URL, MANTIS_TOKEN, NVD_API_KEY
 
 REQUISITOS
     - Ubuntu/Debian, Fedora/RHEL/CentOS, Arch/Manjaro o openSUSE.
@@ -140,7 +142,8 @@ install_pkg \
     "$(pkg iproute2       iproute        iproute2       iproute2)"      \
     "$(pkg iputils-ping   iputils        iputils        iputils)"       \
     "$(pkg ufw            ufw            ufw            ufw)"           \
-    "$(pkg nmap           nmap           nmap           nmap)"
+    "$(pkg nmap           nmap           nmap           nmap)"          \
+    "$(pkg wkhtmltopdf    wkhtmltopdf    wkhtmltopdf    wkhtmltopdf)"
 
 # sensors-detect en modo automático para registrar los sensores disponibles
 if command -v sensors-detect &>/dev/null; then
@@ -281,7 +284,38 @@ else
     ok "Aliases ya presentes en ~/.bashrc"
 fi
 
-# ── 9. Verificación final ─────────────────────────────────────────────────────
+# ── 9. Plantilla .env para credenciales Mantis/NVD ───────────────────────────
+ENV_FILE="$SCRIPTS_DIR/.env"
+if [[ ! -f "$ENV_FILE" ]]; then
+    info "Creando plantilla .env en $ENV_FILE..."
+    mkdir -p "$SCRIPTS_DIR"
+    cat > "$ENV_FILE" <<'ENVEOF'
+# ── ResolveCore — credenciales del técnico ──
+# Rellena los valores reales. NUNCA subas este fichero al repo.
+
+# MantisBT REST API — necesario para adjuntar informes PDF a tickets
+MANTIS_URL=https://support.resolvecore.com
+MANTIS_TOKEN=
+
+# NVD NIST API — opcional, sube el rate limit de 5 a 50 req/30s
+# Registro gratuito: https://nvd.nist.gov/developers/request-an-api-key
+NVD_API_KEY=
+
+# SMTP — envío de facturas al cliente desde generar_factura.py
+SMTP_HOST=smtp.ionos.es
+SMTP_PORT=587
+SMTP_USER=tecnicos@resolvecore.website
+SMTP_PASSWORD=
+SMTP_FROM=tecnicos@resolvecore.website
+SMTP_FROM_NAME=ResolveCore
+ENVEOF
+    chmod 600 "$ENV_FILE"
+    ok ".env creado. Editalo con: nano $ENV_FILE"
+else
+    ok ".env ya presente en $ENV_FILE"
+fi
+
+# ── 10. Verificación final ────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${CYAN}══════════════════════════════════════════"
 echo "  Verificación del entorno"
@@ -310,17 +344,38 @@ check "sensors"       sensors    "sensors --version"
 check "lspci"         lspci      "lspci --version"
 check "adb"           adb        "adb --version"
 check "nmap"          nmap       "nmap --version"
+check "wkhtmltopdf"   wkhtmltopdf "wkhtmltopdf --version"
 check "anydesk"       anydesk    "anydesk --version"
 check "curl"          curl
 check "wget"          wget
+
+# Verificar scripts Python ResolveCore
+echo ""
+echo -e "  ${BOLD}Scripts Python:${NC}"
+for s in generar_informe.py buscar_vulnerabilidades.py escaner_nmap.py adjuntar_informe_mantis.py; do
+    sp="$SCRIPTS_DIR/scripts/common/$s"
+    if [[ -f "$sp" ]] && python3 "$sp" --help &>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} $s"
+        _ok=$((_ok + 1))
+    elif [[ -f "$sp" ]]; then
+        echo -e "  ${YELLOW}⚠${NC} $s (encontrado pero falla --help)"
+    else
+        echo -e "  ${RED}✗${NC} $s NO encontrado"
+        _fail=$((_fail + 1))
+    fi
+done
 
 echo ""
 echo -e "  Resultado: ${GREEN}$_ok ok${NC} / ${RED}$_fail fallo(s)${NC}"
 echo ""
 
 if [[ $_fail -eq 0 ]]; then
-    echo -e "${GREEN}${BOLD}  ✓ Entorno listo. Ejecuta: source ~/.bashrc${NC}"
-    echo -e "  Luego: ${CYAN}resolvecore${NC}"
+    echo -e "${GREEN}${BOLD}  ✓ Entorno listo${NC}"
+    echo ""
+    echo -e "  ${CYAN}Siguientes pasos:${NC}"
+    echo -e "    1. Edita credenciales: ${YELLOW}nano $ENV_FILE${NC}"
+    echo -e "    2. Recarga aliases:    ${YELLOW}source ~/.bashrc${NC}"
+    echo -e "    3. Ejecuta:            ${CYAN}resolvecore${NC}"
 else
     warn "Algunos componentes no se instalaron. Revisa los errores arriba."
 fi
