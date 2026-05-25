@@ -240,8 +240,8 @@ Write-Host "    Zona horaria: UTC $([math]::Round($os.CurrentTimeZone / 60, 1))"
 Write-Host "    Idioma: $($os.MUILanguages)" -ForegroundColor Gray
 Write-Host "    Directorio: $($os.WindowsDirectory)" -ForegroundColor Gray
 Write-Host "    Parches instalados: $($hotfixes.Count)" -ForegroundColor Gray
-Write-Host "    Memoria libre: $([math]::Round($os.FreePhysicalMemory / 1MB, 0)) MB" -ForegroundColor Gray
-Write-Host "    Virtual libre: $([math]::Round($os.FreeVirtualMemory / 1MB, 0)) MB" -ForegroundColor Gray
+Write-Host "    Memoria libre: $([math]::Round($os.FreePhysicalMemory / 1024, 0)) MB" -ForegroundColor Gray
+Write-Host "    Virtual libre: $([math]::Round($os.FreeVirtualMemory / 1024, 0)) MB" -ForegroundColor Gray
 
 $report['sistema'] = [ordered]@{
     nombre = $os.Caption.Trim()
@@ -258,8 +258,8 @@ $report['sistema'] = [ordered]@{
     timezone = $os.CurrentTimeZone
     serial_number = $os.SerialNumber
     installation_type = $os.InstallationType
-    free_physical_mb = [int]($os.FreePhysicalMemory / 1MB)
-    free_virtual_mb = [int]($os.FreeVirtualMemory / 1MB)
+    free_physical_mb = [int]($os.FreePhysicalMemory / 1024)
+    free_virtual_mb = [int]($os.FreeVirtualMemory / 1024)
     parches_count = $hotfixes.Count
 }
 
