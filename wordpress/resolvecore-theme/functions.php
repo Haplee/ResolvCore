@@ -548,24 +548,50 @@ function resolvecore_handle_ticket_status() {
 		array(
 			'phase' => 1,
 			'label' => 'Recibido',
-			'desc'  => 'Ticket creado y en cola de revisión.',
+			'desc'  => 'Ticket creado y en cola de revisión. En menos de 2 horas un técnico revisará la incidencia.',
 		),
 		array(
 			'phase' => 2,
 			'label' => 'En diagnóstico',
-			'desc'  => 'Técnico analizando el problema.',
+			'desc'  => 'Técnico analizando el problema. Se recopilan datos del sistema para identificar la causa raíz.',
 		),
 		array(
 			'phase' => 3,
 			'label' => 'En resolución',
-			'desc'  => 'Trabajando en la solución (AnyDesk).',
+			'desc'  => 'Trabajando en la solución vía AnyDesk. El técnico aplica los cambios necesarios en tu equipo.',
 		),
 		array(
 			'phase' => 4,
 			'label' => 'Resuelto',
-			'desc'  => 'Ticket cerrado. Resumen técnico en la nota del ticket.',
+			'desc'  => 'Incidencia cerrada. El informe técnico está adjunto al ticket en MantisBT.',
 		),
 	);
+
+	// Datos extra para el panel ampliado
+	$summary  = (string) ( $issue['summary'] ?? '' );
+	$category = (string) ( $issue['category']['name'] ?? '' );
+	$priority = (string) ( $issue['priority']['name'] ?? '' );
+	$handler  = (string) ( $issue['handler']['real_name'] ?? $issue['handler']['name'] ?? '' );
+	$reporter = (string) ( $issue['reporter']['real_name'] ?? $issue['reporter']['name'] ?? '' );
+
+	// Última nota pública del ticket (si existe)
+	$last_note = '';
+	$notes_raw = $issue['notes'] ?? array();
+	if ( is_array( $notes_raw ) ) {
+		// Las notas vienen en orden ascendente; tomar la última pública del técnico
+		$pub_notes = array_filter(
+			$notes_raw,
+			static fn( $n ) => isset( $n['view_state']['name'] ) && 'public' === $n['view_state']['name']
+		);
+		if ( $pub_notes ) {
+			$last = end( $pub_notes );
+			$last_note = (string) ( $last['text'] ?? '' );
+			// Truncar a 300 caracteres para el modal
+			if ( mb_strlen( $last_note ) > 300 ) {
+				$last_note = mb_substr( $last_note, 0, 297 ) . '…';
+			}
+		}
+	}
 
 	wp_send_json_success(
 		array(
@@ -574,6 +600,12 @@ function resolvecore_handle_ticket_status() {
 			'status_id'  => $status_id,
 			'phase'      => $phase,
 			'events'     => $events,
+			'summary'    => $summary,
+			'category'   => $category,
+			'priority'   => $priority,
+			'handler'    => $handler,
+			'reporter'   => $reporter,
+			'last_note'  => $last_note,
 			'created_at' => $issue['created_at'] ?? null,
 			'updated_at' => $issue['updated_at'] ?? null,
 		)

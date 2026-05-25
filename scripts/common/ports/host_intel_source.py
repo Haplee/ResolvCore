@@ -2,8 +2,7 @@
 """Port: fuente de inteligencia de exposicion de host.
 
 Cualquier servicio que devuelva inventario de puertos/servicios/CVEs por IP
-cumple este contrato. Implementaciones actuales: Shodan REST.
-Implementaciones futuras posibles: Censys, BinaryEdge, ZoomEye, scan nmap local.
+cumple este contrato. Implementaciones: Nmap local, APIs externas.
 """
 
 from typing import Protocol, runtime_checkable
@@ -13,10 +12,10 @@ from ..domain import Host
 
 @runtime_checkable
 class HostIntelSource(Protocol):
-    """Contrato para fuentes de inteligencia de host por IP publica.
+    """Contrato para fuentes de inteligencia de host por IP.
 
-    Defensa TFG: el dominio depende de esta abstraccion, no de Shodan.
-    Esto permite testear el dominio con un FakeHostIntelSource sin red.
+    El dominio depende de esta abstraccion, no de ninguna API concreta.
+    Permite testear con FakeHostIntelSource sin red.
     """
 
     def get_host_info(self, ip: str) -> Host:

@@ -10,9 +10,9 @@ Este directorio agrupa los scripts de los servicios que ResolveCore presta
 
 | Subcarpeta | Servicio | Plataformas | Estado |
 |------------|----------|-------------|--------|
-| `congelacion/` | Congelación de sistemas (estado de referencia restaurable) | Windows + Linux | Scaffolding |
-| `clonacion/`   | Clonación de sistemas (registro y verificación de imágenes) | Multiplataforma | Scaffolding |
-| `kit/`         | Kit de implantación en cliente (paquete de acceso remoto) | Windows | Scaffolding |
+| `congelacion/` | Congelación de sistemas (estado de referencia restaurable) | Windows + Linux | Implementado |
+| `clonacion/`   | Clonación de sistemas (registro y verificación de imágenes) | Multiplataforma | Implementado |
+| `kit/`         | Kit de implantación en cliente (paquete de acceso remoto) | Windows | Implementado |
 
 ## Estado
 

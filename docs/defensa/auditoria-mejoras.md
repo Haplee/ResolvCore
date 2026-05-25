@@ -104,7 +104,7 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 ### `D3` — Tabla de versiones por componente en README  ✅
 - **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
 - **Por qué**: README declara `v1.2.0` pero internamente Windows va en `4.1.0`, Linux `3.2.0`, Android `2.2.0`, plugin WP `1.0.0`. Hoy es ambiguo qué número es el de referencia.
-- **Implementado**: nueva sección "Versiones por componente" en README (debajo de "Estado del proyecto") con tabla `componente · path · versión · política`. Cubre producto, tema, plugin, los 8 scripts de diagnóstico/optimización por SO, escáner CVE, escáner Shodan y el schema JSON. Regla de paridad documentada: `_meta.version` del JSON ≡ versión cabecera de script.
+- **Implementado**: nueva sección "Versiones por componente" en README (debajo de "Estado del proyecto") con tabla `componente · path · versión · política`. Cubre producto, tema, plugin, los 8 scripts de diagnóstico/optimización por SO, escáner CVE y el schema JSON. Regla de paridad documentada: `_meta.version` del JSON ≡ versión cabecera de script.
 - [x] Implementado
 
 ### `D4` — Confirmar estado real de macOS

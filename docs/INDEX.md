@@ -26,7 +26,7 @@
 |---------|-------------|
 | [ResolveCore_Documentacion_Tecnica.md](tecnica/ResolveCore_Documentacion_Tecnica.md) | Documentación técnica completa del proyecto |
 | [stack-tecnologico.md](tecnica/stack-tecnologico.md) | Justificación del stack: WordPress, MantisBT, AnyDesk, herramientas |
-| [entornos.md](tecnica/entornos.md) | Entornos dev (LocalWP) y prod (WordPress.com + VPS) + política de backup |
+| [entornos.md](tecnica/entornos.md) | Entornos dev (LocalWP) y prod (VPS IONOS) + política de backup |
 | [flujo-sistema.md](tecnica/flujo-sistema.md) | Diagrama del flujo completo: formulario → ticket → diagnóstico → informe |
 | [mantis-integration.md](tecnica/mantis-integration.md) | Integración WordPress ↔ MantisBT vía REST API |
 | [manual-usuario-mantis.md](tecnica/manual-usuario-mantis.md) | Manual técnico de configuración, BD, workflow y permisos de MantisBT |

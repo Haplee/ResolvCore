@@ -32,13 +32,13 @@ Esto garantiza que el generador de informes en PDF funcione igual independientem
 **Propósito:** Escaneo y cruce de datos contra bases de datos globales de inteligencia de amenazas.
 **Justificación técnica:** Python facilita enormemente las peticiones HTTP concurrentes a APIs REST y el manejo de estructuras JSON complejas.
 **Acciones de alto nivel:**
-- **Shodan API:** Análisis de puertos expuestos de forma pasiva sobre la IP pública del cliente.
+- **Nmap:** Análisis de puertos abiertos en la red local del cliente.
 - **NVD / CISA KEV:** Cruce de las versiones del software extraído (por PowerShell/Bash) contra bases de datos de vulnerabilidades conocidas (CVEs).
 
 ## 3. Flujo Lógico de Ejecución
 
 1. **Launcher TUI (Text User Interface):** El técnico inicia `ResolveCore.ps1` (o `.sh`). Aparece un menú de opciones.
-2. **Orquestación Local:** El script detecta el OS, extrae las credenciales o parámetros de entorno (ej. Tokens API para Shodan).
+2. **Orquestación Local:** El script detecta el OS y extrae las credenciales o parámetros de entorno (ej. Token MantisBT, NVD API Key).
 3. **Ejecución del Motor (Engine):** PowerShell o Bash recaban los datos de hardware, procesos y red.
 4. **Análisis Secundario:** El script base llama al binario de Python (`python3 buscar_vulnerabilidades.py`) pasándole el listado de software recolectado.
 5. **Consolidación JSON:** Todos los datos se unen en un único archivo estructurado (`diagnostico_cliente.json`).
