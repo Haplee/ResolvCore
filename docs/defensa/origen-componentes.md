@@ -17,7 +17,7 @@ asistente de programación, de forma análoga a como se usa Stack Overflow, la
 documentación oficial o un compañero más experimentado. El rol de la IA ha sido:
 
 - Sugerir estructuras y detectar errores en el código escrito por el alumno.
-- Explicar APIs y comportamientos de herramientas (MantisBT REST, Shodan API, udev).
+- Explicar APIs y comportamientos de herramientas (MantisBT REST, NVD API, udev).
 - Revisar y refactorizar scripts que el alumno había escrito previamente.
 
 **Todo el código ha sido comprendido, revisado, probado y adaptado por el alumno.**
@@ -82,7 +82,7 @@ visual del proyecto). Los archivos de config personalizados están en
 | Licencia | GPL-2.0 |
 | Fuente | https://wordpress.org |
 
-Se usa WordPress.com Business como entorno de producción (SaaS) y
+Se usa un VPS Linux en IONOS (Plan S+) como entorno de producción y
 LocalWP como entorno de desarrollo local. No se ha modificado el core de WordPress.
 
 ### Tema ResolveCore (`wordpress/resolvecore-theme/`)
@@ -216,10 +216,6 @@ Consulta en tiempo real NVD (NIST), CISA KEV, OSV y EPSS-FIRST.
 No almacena base de datos local — cada ejecución obtiene datos frescos.
 Salida: JSON, HTML con chips de severidad, texto plano.
 
-### `escaner_shodan.py` (adapter `adapters/shodan_rest.py`)
-Cliente REST puro para la API de Shodan. Sin dependencia `pip install shodan`.
-Descubre puertos abiertos y CVEs asociados a una IP pública.
-
 ### `escaner_nmap.py`
 Wrapper sobre Nmap (debe estar instalado en el sistema).
 Parsea salida XML de Nmap y la convierte a la estructura de dominio de ResolveCore.
@@ -228,7 +224,7 @@ Parsea salida XML de Nmap y la convierte a la estructura de dominio de ResolveCo
 ```
 domain/         → modelos (Host, Vulnerability, Service) — sin dependencias externas
 ports/          → interfaces abstractas (HostIntelSource)
-adapters/       → implementaciones concretas (shodan_rest.py, nmap_adapter.py)
+adapters/       → implementaciones concretas (mantis_rest.py)
 ```
 Esta arquitectura permite añadir nuevas fuentes (VirusTotal, Censys) sin modificar
 el dominio, siguiendo el patrón Strangler Fig (migración incremental).
@@ -297,7 +293,6 @@ de secciones técnicas que el alumno ya había esbozado.
 | diagnostico.sh (Linux/macOS) | **Propio** | Revisión |
 | diagnostico.sh (Android/ADB) | **Propio** | Revisión |
 | buscar_vulnerabilidades.py | **Propio** | Revisión |
-| escaner_shodan.py | **Propio** | Revisión |
 | informe.html | **Propio** | Revisión |
 | docker-compose.yml | **Propio** | Mínima |
 | Documentación | **Propia** | Revisión |

@@ -23,7 +23,7 @@ class Vulnerability:
 
 @dataclass(frozen=True)
 class Service:
-    """Servicio expuesto en un puerto (banner Shodan, nmap, etc)."""
+    """Servicio expuesto en un puerto (nmap, etc)."""
     port: int
     transport: str = "tcp"
     product: str = ""
@@ -50,7 +50,7 @@ class AttachmentResult:
 
 @dataclass
 class Host:
-    """Inventario de exposicion de un host (resultado tipico de Shodan/nmap)."""
+    """Inventario de exposicion de un host (resultado tipico de nmap)."""
     ip: str
     hostnames: List[str] = field(default_factory=list)
     org: str = ""
