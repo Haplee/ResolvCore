@@ -6,8 +6,8 @@ Tareas que quedaron sin completar al final de la sesión del 25-05-2026.
 
 ## 1. Deploy VPS (prioridad alta)
 
-- [ ] Conectar al VPS y clonar / hacer pull del repo
-- [ ] Ejecutar el script de setup del directorio de descargas:
+- [x] Conectar al VPS y clonar / hacer pull del repo
+- [x] Ejecutar el script de setup del directorio de descargas:
   ```bash
   sudo bash scripts/server/setup-downloads-dir.sh
   ```
@@ -25,40 +25,40 @@ Tareas que quedaron sin completar al final de la sesión del 25-05-2026.
 
 ## 2. Construir y subir el kit cliente (prioridad alta)
 
-- [ ] Ejecutar en Windows (desde raíz del repo):
+- [x] Ejecutar en Windows (desde raíz del repo):
   ```powershell
   pwsh scripts/servicios/kit/construir-kit.ps1 -AnyDeskPath .\anydesk.exe
   ```
   - Si no tienes `anydesk.exe`, el script lo descarga automáticamente de `download.anydesk.com`
   - Genera `resolvecore-kit.zip` con MANIFEST.txt + checksums SHA-256
 
-- [ ] Subir `resolvecore-kit.zip` al VPS:
+- [x] Subir `resolvecore-kit.zip` al VPS:
   ```bash
-  scp resolvecore-kit.zip user@vps:/opt/resolvecore-downloads/
+  scp dist\resolvecore-kit.zip root@resolvecore.website:/opt/resolvecore-downloads/
   ```
 
 ---
 
 ## 3. WordPress — Página de técnicos (prioridad alta)
 
-- [ ] En WP Admin → Pages → Add New:
+- [x] En WP Admin → Pages → Add New:
   - Título: `Área de Técnicos`
   - Slug: `tecnicos`
   - Template: seleccionar **"Área de Técnicos"** (registrado en `functions.php`)
   - Publicar
-- [ ] Añadir `/tecnicos/` al menú de navegación (nav principal o menú de admin)
-- [ ] Asignar rol `Editor` a las cuentas WP de los técnicos que necesiten acceso
+- [x] Añadir `/tecnicos/` al menú de navegación (nav principal o menú de admin)
+- [x] Asignar rol `Editor` a las cuentas WP de los técnicos que necesiten acceso
 
 ---
 
 ## 4. Pruebas end-to-end (prioridad alta)
 
 ### Portal de técnicos
-- [ ] Login con cuenta de técnico (rol Editor) → verificar acceso a `/tecnicos/`
-- [ ] Click en **Descargar para Windows** → recibir `install-servicios.ps1`
-- [ ] Click en **Descargar para Linux** → recibir `install-servicios.sh`
-- [ ] Click en **Descargar Kit** → recibir `resolvecore-kit.zip`
-- [ ] Verificar que sin login (o con rol Subscriber) → redirige a `/wp-login.php`
+- [x] Login con cuenta de técnico (rol Editor) → verificar acceso a `/tecnicos/`
+- [x] Click en **Descargar para Windows** → recibir `install-servicios.ps1`
+- [x] Click en **Descargar para Linux** → recibir `install-servicios.sh`
+- [x] Click en **Descargar Kit** → recibir `resolvecore-kit.zip`
+- [x] Verificar que sin login (o con rol Subscriber) → redirige a `/wp-login.php` (302 confirmado)
 
 ### Scripts de instalación
 - [ ] Ejecutar `install.ps1` en máquina Windows limpia (sin Chocolatey):
@@ -66,7 +66,7 @@ Tareas que quedaron sin completar al final de la sesión del 25-05-2026.
   Set-ExecutionPolicy Bypass -Scope Process -Force
   .\install-servicios.ps1
   ```
-  - Verifica: Chocolatey instalado, WSL activado, AnyDesk descargado, RRRx instalado
+  - Verifica: Chocolatey instalado, WSL activado, AnyDesk descargado
 - [ ] Ejecutar `install.sh` en máquina Linux limpia:
   ```bash
   bash install-servicios.sh
@@ -101,10 +101,10 @@ Tareas que quedaron sin completar al final de la sesión del 25-05-2026.
 
 ## 5. Documentación pendiente (prioridad media)
 
-- [ ] Actualizar `docs/defensa/defensa-tfg.md` sección 18 (guía de demo):
+- [x] Actualizar `docs/defensa/defensa-tfg.md` sección 18 (guía de demo):
   - Añadir pasos de demo para servicios adicionales (congelación + clonación + kit)
-  - Incluir captura de pantalla del portal de técnicos
-- [ ] Actualizar `README.md`:
+  - Guion ampliado a 20 min con pasos 8-10 nuevos
+- [x] Actualizar `README.md`:
   - Añadir "Servicios adicionales" en la tabla de módulos
   - Añadir comandos de los nuevos scripts en la sección de uso
 - [ ] Verificar que `docs/scripting/schema-servicios-adicionales.md` refleja la salida JSON real de cada script (tras las pruebas)
@@ -113,15 +113,15 @@ Tareas que quedaron sin completar al final de la sesión del 25-05-2026.
 
 ## 6. Seguridad y configuración (prioridad media)
 
-- [ ] Configurar `.env` en el VPS con:
+- [x] Configurar `.env` en el VPS con:
   ```
   MANTIS_URL=https://mantis.resolvecore.website
   MANTIS_TOKEN=<token_api_mantis>
   RRRX_DOWNLOAD_URL=https://resolvecore.website/downloads/RebootRestoreRx-Setup.exe
   ```
   - El `.env` debe estar fuera del docroot y con permisos `600`
-- [ ] Verificar que `wp-config.php` tiene `RC_DOWNLOADS_PATH` correctamente definido
-- [ ] Comprobar permisos nginx: `/opt/resolvecore-downloads/` solo accesible con htpasswd
+- [x] Verificar que `wp-config.php` tiene `RC_DOWNLOADS_PATH` correctamente definido
+- [x] Comprobar permisos nginx: `/opt/resolvecore-downloads/` solo accesible con htpasswd
 
 ---
 
