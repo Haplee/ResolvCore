@@ -121,6 +121,7 @@ if [[ ! -t 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICIOS_DIR="$(dirname "$SCRIPT_DIR")/servicios"
 source "$SCRIPT_DIR/../.env" 2>/dev/null
 
 # Colores
@@ -166,9 +167,12 @@ show_menu() {
     echo -e "                       - Asistente interactivo: tecnico, cliente, items"
     echo -e "                       - Sube a Mantis y envia email al cliente"
     echo ""
-    echo -e "    ${CYAN}6.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo -e "    ${WHITE}6.${NC}  [SERVICIOS]     - Congelacion / Clonacion de sistemas"
+    echo -e "                       - Snapper/BTRFS, registro de imagenes"
     echo ""
-    echo -e "    ${RED}7.${NC}  [SALIR]         - Salir del programa"
+    echo -e "    ${CYAN}7.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo ""
+    echo -e "    ${RED}8.${NC}  [SALIR]         - Salir del programa"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
     echo ""
@@ -439,6 +443,168 @@ run_factura() {
     read -p "  Presiona ENTER para continuar..."
 }
 
+# ── Servicios adicionales ────────────────────────────────────────────────────
+
+ensure_congelacion_deps() {
+    local missing=()
+    command -v btrfs    &>/dev/null || missing+=("btrfs-progs")
+    command -v snapper  &>/dev/null || missing+=("snapper")
+    command -v jq       &>/dev/null || missing+=("jq")
+    [[ ${#missing[@]} -eq 0 ]] && return 0
+
+    echo -e "  ${YELLOW}[!] Instalando dependencias: ${missing[*]}...${NC}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y -qq "${missing[@]}" 2>/dev/null
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y -q "${missing[@]}" 2>/dev/null
+    elif command -v pacman &>/dev/null; then
+        # btrfs-progs se llama igual; snapper igual; jq igual
+        sudo pacman -Sy --noconfirm "${missing[@]}" 2>/dev/null
+    else
+        echo -e "  ${RED}[X] Gestor de paquetes no detectado. Instala manualmente: ${missing[*]}${NC}"
+        return 1
+    fi
+
+    # Verificar
+    local still_missing=()
+    command -v btrfs   &>/dev/null || still_missing+=("btrfs-progs")
+    command -v snapper &>/dev/null || still_missing+=("snapper")
+    command -v jq      &>/dev/null || still_missing+=("jq")
+    if [[ ${#still_missing[@]} -gt 0 ]]; then
+        echo -e "  ${RED}[X] No se pudo instalar: ${still_missing[*]}${NC}"
+        return 1
+    fi
+    echo -e "  ${GREEN}[OK] Dependencias instaladas${NC}"
+}
+
+ensure_clonacion_deps() {
+    command -v jq &>/dev/null && return 0
+    echo -e "  ${YELLOW}[!] Instalando jq...${NC}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y -qq jq 2>/dev/null
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y -q jq 2>/dev/null
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -Sy --noconfirm jq 2>/dev/null
+    elif command -v brew &>/dev/null; then
+        brew install jq 2>/dev/null
+    fi
+    command -v jq &>/dev/null || { echo -e "  ${RED}[X] No se pudo instalar jq${NC}"; return 1; }
+    echo -e "  ${GREEN}[OK] jq instalado${NC}"
+}
+
+run_congelacion() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}CONGELACION DE SISTEMAS (Linux - BTRFS/snapper)${NC}              |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+    if ! ensure_congelacion_deps; then
+        read -rp "  Presiona ENTER..." _; return
+    fi
+
+    local s="$SERVICIOS_DIR/congelacion/congelacion-linux.sh"
+    if [[ ! -f "$s" ]]; then
+        echo -e "  ${RED}[X] Script no encontrado: $s${NC}"
+        read -rp "  Presiona ENTER..." _; return
+    fi
+
+    echo -e "    ${CYAN}1.${NC}  Estado actual (status)"
+    echo -e "    ${CYAN}2.${NC}  Configurar snapper (configure)  [root]"
+    echo -e "    ${CYAN}3.${NC}  Crear snapshot del estado limpio (snapshot)"
+    echo -e "    ${YELLOW}4.${NC}  ROLLBACK — restaurar estado anterior  [root, destructivo]"
+    echo -e "    ${GRAY}5.${NC}  Volver"
+    echo ""
+    read -rp "  Selecciona (1-5): " op
+    case "$op" in
+        1) bash "$s" --action status ;;
+        2) sudo bash "$s" --action configure ;;
+        3)
+            read -rp "  Etiqueta del snapshot (ENTER = 'estado-limpio'): " etq
+            [[ -z "$etq" ]] && etq="estado-limpio"
+            sudo bash "$s" --action snapshot --etiqueta "$etq"
+            ;;
+        4)
+            echo -e "  ${YELLOW}[!] ROLLBACK descarta el estado actual del sistema.${NC}"
+            read -rp "  Escribe 'SI' para confirmar: " conf
+            [[ "$conf" == "SI" ]] && sudo bash "$s" --action rollback --confirm
+            ;;
+        5) return ;;
+        *) echo -e "  ${RED}Opcion no valida${NC}" ;;
+    esac
+    echo ""
+    read -rp "  Presiona ENTER..." _
+}
+
+run_clonacion() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}CLONACION DE SISTEMAS${NC}                                         |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+    if ! ensure_clonacion_deps; then
+        read -rp "  Presiona ENTER..." _; return
+    fi
+
+    local reg="$SERVICIOS_DIR/clonacion/registrar-imagen.sh"
+    local ver="$SERVICIOS_DIR/clonacion/verificar-imagen.sh"
+
+    echo -e "    ${CYAN}1.${NC}  Registrar imagen en manifiesto"
+    echo -e "    ${CYAN}2.${NC}  Verificar integridad de imagen"
+    echo -e "    ${GRAY}3.${NC}  Volver"
+    echo ""
+    read -rp "  Selecciona (1-3): " op
+    case "$op" in
+        1)
+            read -rp "  Ruta imagen o carpeta Clonezilla: " img
+            read -rp "  Nombre del equipo (ej: pc-cliente-01): " equipo
+            read -rp "  SO (windows|linux|macos): " so
+            read -rp "  Estado (limpio|post-instalacion|produccion): " estado
+            read -rp "  Notas (ENTER = ninguna): " notas
+            echo ""
+            echo -e "  ${YELLOW}Calculando SHA-256...${NC}"
+            bash "$reg" --imagen "$img" --equipo "$equipo" --so "$so" \
+                        --estado "$estado" --notas "$notas"
+            ;;
+        2)
+            read -rp "  Ruta imagen (o ENTER para buscar por ID): " img
+            if [[ -n "$img" ]]; then
+                bash "$ver" --imagen "$img"
+            else
+                read -rp "  ID del manifiesto: " id
+                bash "$ver" --id "$id"
+            fi
+            ;;
+        3) return ;;
+        *) echo -e "  ${RED}Opcion no valida${NC}" ;;
+    esac
+    echo ""
+    read -rp "  Presiona ENTER..." _
+}
+
+run_servicios() {
+    while true; do
+        show_banner
+        echo -e "  +---------------------------------------------------------------+"
+        echo -e "  |  ${WHITE}SERVICIOS ADICIONALES${NC}                                         |"
+        echo -e "  +---------------------------------------------------------------+"
+        echo ""
+        echo -e "    ${CYAN}1.${NC}  [CONGELACION]  - Estado de referencia con BTRFS/snapper"
+        echo -e "    ${CYAN}2.${NC}  [CLONACION]    - Registrar / verificar imagen de disco"
+        echo -e "    ${GRAY}3.${NC}  [VOLVER]       - Menu principal"
+        echo ""
+        echo -e "  +---------------------------------------------------------------+"
+        echo ""
+        read -rp "  Selecciona (1-3): " op
+        case "$op" in
+            1) run_congelacion ;;
+            2) run_clonacion ;;
+            3) return ;;
+            *) echo -e "  ${RED}Opcion no valida${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
 run_diagnostico() {
     echo ""
     echo -e "  ${YELLOW}Ejecutando diagnostico...${NC}"
@@ -513,7 +679,7 @@ while true; do
     show_banner
     show_menu
 
-    read -p "  Selecciona una opcion (1-7): " opcion
+    read -rp "  Selecciona una opcion (1-8): " opcion
     [[ -z "$opcion" ]] && { echo ""; exit 0; }
 
     case $opcion in
@@ -522,8 +688,9 @@ while true; do
         3) run_vulnerabilidades ;;
         4) run_informe ;;
         5) run_factura ;;
-        6) show_help ;;
-        7)
+        6) run_servicios ;;
+        7) show_help ;;
+        8)
             echo ""
             echo -e "  ${GREEN}Hasta luego!${NC}"
             echo ""
@@ -532,7 +699,7 @@ while true; do
         *)
             echo ""
             echo -e "  ${RED}Opcion no valida${NC}"
-            read -p "  Presiona ENTER para continuar..."
+            read -rp "  Presiona ENTER para continuar..." _
             ;;
     esac
 done

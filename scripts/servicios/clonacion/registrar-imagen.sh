@@ -42,6 +42,7 @@ SO=""
 ESTADO=""
 MANIFEST="./imagenes-manifest.json"
 NOTAS=""
+TICKET=""
 
 show_help() {
     sed -n '2,33p' "$0" | sed 's/^# \?//'
@@ -56,6 +57,7 @@ while [[ $# -gt 0 ]]; do
         --estado)   ESTADO="${2:-}";   shift 2 ;;
         --manifest) MANIFEST="${2:-}"; shift 2 ;;
         --notas)    NOTAS="${2:-}";    shift 2 ;;
+        --ticket)   TICKET="${2:-}"; shift 2 ;;
         -h|--help)  show_help ;;
         *) echo "Argumento desconocido: $1" >&2; exit 1 ;;
     esac
@@ -77,9 +79,16 @@ case "$ESTADO" in
     *) echo "Valor de --estado inválido: $ESTADO" >&2; exit 1 ;;
 esac
 
+# Auto-install jq si falta
 if ! command -v jq &>/dev/null; then
-    echo "jq no instalado. Instala con: sudo apt install jq (o brew install jq)" >&2
-    exit 1
+    echo "[->] Instalando jq..."
+    if command -v apt-get &>/dev/null;  then sudo apt-get install -y -qq jq 2>/dev/null
+    elif command -v dnf &>/dev/null;    then sudo dnf install -y -q jq 2>/dev/null
+    elif command -v pacman &>/dev/null; then sudo pacman -Sy --noconfirm jq 2>/dev/null
+    elif command -v brew &>/dev/null;   then brew install jq 2>/dev/null
+    fi
+    command -v jq &>/dev/null || { echo "[X] No se pudo instalar jq" >&2; exit 1; }
+    echo "[OK] jq instalado"
 fi
 
 SHA_CMD=""
@@ -96,6 +105,26 @@ if [[ ! -e "$IMAGEN" ]]; then
     echo "Imagen no encontrada: $IMAGEN" >&2
     exit 2
 fi
+
+mantis_note() {
+    local ticket="$1" text="$2"
+    [[ -z "$ticket" ]] && return
+    local env_file url="" tok=""
+    for env_file in "$(dirname "$0")/../../../scripts/common/.env" \
+                    "$(dirname "$0")/../../../.env.example"; do
+        [[ -f "$env_file" ]] || continue
+        url=$(grep '^MANTIS_URL=' "$env_file" | head -1 | cut -d= -f2- | tr -d "'\"")
+        tok=$(grep '^MANTIS_TOKEN=' "$env_file" | head -1 | cut -d= -f2- | tr -d "'\"")
+        break
+    done
+    [[ -z "$url" || -z "$tok" ]] && return
+    curl -s -X POST "$url/api/rest/issues/$ticket/notes" \
+        -H "Authorization: Bearer $tok" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"$text\"}" &>/dev/null \
+        && echo "[OK] Nota creada en ticket #$ticket" \
+        || echo "[!] No se pudo crear nota en MantisBT"
+}
 
 # ── SHA-256 de fichero o de árbol (carpeta Clonezilla) ──────────────────────
 sha256_of() {
@@ -138,7 +167,7 @@ if ! jq empty "$MANIFEST" 2>/dev/null; then
 fi
 
 # ── Añadir entrada con jq (sin concatenar strings — regresión 2026-05-09) ───
-TMP=$(mktemp)
+TMP=$(mktemp "${MANIFEST}.tmp.XXXXXX")
 trap 'rm -f "$TMP"' EXIT
 
 jq \
@@ -161,6 +190,11 @@ jq \
         notas:           $notas
     }]' "$MANIFEST" > "$TMP" || { echo "Fallo al actualizar manifiesto" >&2; exit 1; }
 
+if ! jq empty "$TMP" 2>/dev/null; then
+    echo "Manifiesto temporal corrupto — abortando sin tocar el original" >&2
+    exit 1
+fi
+
 mv "$TMP" "$MANIFEST"
 trap - EXIT
 
@@ -169,4 +203,5 @@ echo "  id:         $ID"
 echo "  ruta:       $ABS_PATH"
 echo "  hash:       $HASH"
 echo "  manifiesto: $MANIFEST"
+mantis_note "$TICKET" "ResolveCore Clonacion: imagen_registrada id=$ID equipo=$EQUIPO so=$SO estado=$ESTADO hash=${HASH:0:12}... fecha=$TS"
 exit 0

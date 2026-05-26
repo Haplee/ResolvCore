@@ -28,6 +28,7 @@
 13. [Despliegue / Infraestructura](#13-despliegue--infraestructura)
 14. [Seguridad y cumplimiento](#14-seguridad-y-cumplimiento)
 15. [Modelo de negocio](#15-modelo-de-negocio)
+15b. [Servicios adicionales — scripts operativos](#15b-servicios-adicionales--scripts-operativos)
 16. [Decisiones de diseño justificadas](#16-decisiones-de-diseño-justificadas)
 17. [Errores cometidos y aprendizajes](#17-errores-cometidos-y-aprendizajes)
 18. [Demostración en vivo (guion)](#18-demostración-en-vivo-guion)
@@ -85,6 +86,9 @@ Construir una plataforma operativa que permita a un técnico:
 | O8 | Generador PDF informes | ✅ Completado — `reports/generate-report.php` + wkhtmltopdf |
 | O9 | Base CVE sincronizada con NVD | 🟡 Schema definido, cron pendiente |
 | O10 | Despliegue VPS productivo | 🟡 Scripts listos (`deploy-ionos.sh` + `upload-to-vps.ps1`), pendiente ejecución |
+| O11 | Servicio congelación de sistemas (Windows + Linux) | ✅ Completado — `scripts/servicios/congelacion/` |
+| O12 | Servicio clonación (registro + verificación de imágenes) | ✅ Completado — `scripts/servicios/clonacion/` |
+| O13 | Kit de implantación en cliente (paquete AnyDesk + scripts) | ✅ Completado — `scripts/servicios/kit/construir-kit.ps1` |
 
 ### Fuera de alcance (declarado)
 - App móvil nativa Android (queda como roadmap, no entregable TFG).
@@ -715,6 +719,57 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 
 ---
 
+## 15b. Servicios adicionales — scripts operativos
+
+Tres servicios complementarios implementados en `scripts/servicios/`.
+Justificación técnica completa: [`docs/tecnica/servicios-adicionales.md`](../tecnica/servicios-adicionales.md).
+
+### Congelación de sistemas
+
+| Plataforma | Script | Mecanismo |
+|------------|--------|-----------|
+| Windows | `congelacion/congelacion-windows.ps1` | Reboot Restore Rx Free (freeware PYME) / Deep Freeze (comercial) |
+| Linux | `congelacion/congelacion-linux.sh` | BTRFS + snapper (GPL) sobre Ubuntu 22.04 LTS |
+
+**Acciones Windows:** `Status` · `Configure` · `Freeze -Confirm` · `Thaw -Confirm`  
+**Acciones Linux:** `status` · `configure` · `snapshot --etiqueta` · `rollback --confirm`
+
+`Freeze`/`Thaw` y `rollback` exigen flag de confirmación explícito (operaciones destructivas — convención CLAUDE.md). Salida estructurada: `[PSCustomObject]` → JSON (Windows), JSON por stdout (Linux). Esquema documentado en [`docs/scripting/schema-servicios-adicionales.md`](../scripting/schema-servicios-adicionales.md).
+
+### Clonación de sistemas
+
+ResolveCore no automatiza Clonezilla (Live USB, fuera de alcance). Aporta **trazabilidad** sobre las imágenes generadas:
+
+- `registrar-imagen.sh` — da de alta en `imagenes-manifest.json`: `id`, `equipo`, `so`, `estado`, `ruta`, `hash_sha256`, `fecha_registro`.  
+- `verificar-imagen.sh` — recalcula SHA-256 y compara con el manifiesto. Exit codes: 0 íntegra · 1 corrupta · 2 no encontrada.
+
+Hash de carpetas Clonezilla: hash determinista combinando hashes individuales ordenados (`find | sort | sha256sum`).
+
+### Kit de implantación en cliente
+
+`kit/construir-kit.ps1` empaqueta `resolvecore-kit/` + `resolvecore-kit.zip`:
+
+```
+resolvecore-kit/
+├── anydesk-portable.exe
+├── README-cliente.txt
+└── scripts/
+    ├── diagnostico-windows.ps1
+    └── diagnostico-linux.sh
+```
+
+Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, diagnóstico, cláusula RGPD). Comprime con `Compress-Archive` (built-in PS 5.1+). Exit 2 si AnyDesk portable no encontrado.
+
+### Modelo de precios asociado
+
+| Servicio | Precio orientativo |
+|----------|--------------------|
+| Congelación (configuración + estado de referencia) | Incluido en Plan Pro mensual |
+| Clonación (registro + verificación) | 19 € intervención puntual |
+| Kit implantación (entrega única suscriptores) | Sin coste adicional en Plan Pro/Enterprise |
+
+---
+
 ## 16. Decisiones de diseño justificadas
 
 ### Por qué WordPress
@@ -892,4 +947,5 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 | 2026-05-21 | **Correo de contacto profesional**: sustituido el email personal `fvidalmateo@gmail.com` por el buzón Ionos del dominio `tecnicos@resolvecore.website` en las 4 páginas del tema donde aparecía — `front-page.php` (canales de contacto), `page-contacto.php`, y las páginas legales `page-aviso-legal.php` (LSSI) y `page-privacidad.php` (RGPD: responsable del tratamiento y ejercicio de derechos). Tema `resolvecore-theme` v3.1.2 → **v3.1.3**. El `admin_email` de WordPress (usado por `resolvecore_handle_contact()` y el `Reply-To` de la confirmación) se cambia en `Ajustes → Generales` del VPS. |
 | 2026-05-21 | **Correo saliente en producción — relay Ionos + mejoras de entregabilidad**: el despliegue real destapó que Ionos bloquea el puerto 25 saliente del VPS (`Connection timed out`, correo en cola). Se configuró Postfix para relayar el correo autenticado por el smarthost `smtp.ionos.es:587` (buzón `tecnicos@`); `setup-mail-dkim.sh` ganó el flag `--relayhost` (relay + SASL, contraseña pedida de forma interactiva) y fija `myhostname = mail.<dominio>` + `mydestination` sin el dominio raíz, lo que corrige el rebote `unknown user` de los buzones del dominio. `resolvecore_send_client_confirmation()` pasó a `multipart/alternative` — añade una parte de texto plano junto al HTML — y emite la cabecera `List-Unsubscribe`. Doc `docs/tecnica/correo-dkim.md` ampliada con la sección "1b. Relay saliente". Verificado con mail-tester sobre el ticket #8: SPF/DKIM/DMARC autenticados, sin blacklist, enlace de seguimiento con token HMAC respondiendo 200. Tras detectar que el aviso al técnico caía en spam, se unificó el remitente con los filtros `wp_mail_from`/`wp_mail_from_name` a `ResolveCore <tecnicos@resolvecore.website>` — el `wordpress@` genérico de WordPress no coincidía con el buzón autenticado del relay y el antispam lo penalizaba. |
 | 2026-05-21 | **Endurecimiento y mejoras**: (1) **Token anti-enumeración** en el seguimiento de tickets — `resolvecore_ticket_token()` deriva un HMAC-SHA256 stateless de `rc_ticket_<id>` con `wp_salt('auth')`; `resolvecore_handle_ticket_status()` lo valida con `hash_equals()`; el token viaja en el correo (`&rc_t=`), en la respuesta AJAX y en el `dataset.token` del enlace, y el JS del modal (`fetchStatus(id, token)`) lo reenvía. Cierra un IDOR de baja gravedad (IDs secuenciales enumerables). (2) **Caché del endpoint público de la flota** — `rc_fleet_get_public_stats()` cachea en transient (`rc_fleet_public_stats`, 5 min), invalidado en cada POST de agente; plugin `rc-fleet` 0.2.1 → **0.2.2**. (3) **Entregabilidad de correo** — nuevo `scripts/server/setup-mail-dkim.sh` (Postfix + OpenDKIM idempotente) y guía `docs/tecnica/correo-dkim.md` con los registros SPF/DKIM/DMARC para Ionos. (4) **Versionado** — `docs/tecnica/versionado.md` unifica los 4 flujos de versión. (5) **Riesgo wkhtmltopdf** — nota de deprecación + plan de migración a DomPDF en cabecera de `generate-report.php`. (6) **Smoke-test de permisos** — checklist por rol añadido a `docs/tecnica/mantis-permisos.md`. Tres docs nuevos indexados en `docs/INDEX.md`. |
+| 2026-05-25 | **Servicios adicionales — scripts operativos** (O11–O13 → ✅): implementados los 5 scripts en `scripts/servicios/`. Congelación Windows (`congelacion-windows.ps1`): detección automática Reboot Restore Rx / Deep Freeze, acciones `Status`/`Configure`/`Freeze -Confirm`/`Thaw -Confirm`, salida `[PSCustomObject]` JSON. Congelación Linux (`congelacion-linux.sh`): BTRFS + snapper, acciones `status`/`configure`/`snapshot`/`rollback --confirm`, JSON por stdout. Clonación: `registrar-imagen.sh` da de alta en `imagenes-manifest.json` (SHA-256 fichero o árbol), `verificar-imagen.sh` valida integridad (exit 0/1/2). Kit implantación: `construir-kit.ps1` empaqueta `resolvecore-kit.zip` (AnyDesk portable + scripts diagnóstico + README-cliente.txt). Esquemas JSON propios documentados en `docs/scripting/schema-servicios-adicionales.md`. `scripts/servicios/README.md` actualizado: stubs → implementado. Sección 15b añadida a este documento. Objetivos O11–O13 marcados ✅. |
 | 2026-05-23 | **Auditoría — quick-wins + CI**: cerrados 9 items pendientes de `docs/defensa/auditoria-mejoras.md`. **E4** `.editorconfig` raíz (UTF-8 + LF globales, CRLF para `.ps1`, indent 2 YAML/JSON, tab Makefile). **E5** `LICENSE` con texto oficial GPL-3.0 (35 149 bytes); GitHub ya detecta la licencia. **D3** nueva sección "Versiones por componente" en README — tabla con 12 componentes (producto, tema, plugin, los 8 scripts diag/optim, escáner CVE, schema JSON) y regla de paridad `_meta.version` ≡ versión cabecera de script. **S4** (ya hecho — verificación): los 4 puntos de inyección HTML escapan `</`→`<\/` (`scripts/windows/diagnostico.ps1:820`, `scripts/linux/diagnostico.sh:933`, `scripts/android/diagnostico.sh:522`, `reports/generate-report.php:82`) sobre template `<script type="application/json" id="rc-data">` parseado con `JSON.parse()`. **W3** `strlen`→`mb_strlen` en `RC_Mantis_API::sanitize_summary/description()` (sync ambas copias del plugin: `wordpress/plugins/` + `wp/wp-content/plugins/`). **W4** cabeceras estándar de WP en `rc-mantisbt.php`: `Requires at least: 6.0`, `Tested up to: 6.5`, `Requires PHP: 8.0`, `License URI`, `Domain Path`; license alineada a `GPL-3.0-or-later` (era `GPL-2.0+`). **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en las dos asignaciones `@field_id`/`@anydesk_field_id` de `mantisbt/sql/resolvecore-setup.sql` (evita warnings strict-mode). **C1** `.github/workflows/lint.yml` con 4 jobs paralelos: shellcheck (`ludeeus/action-shellcheck@2.0.0`), PSScriptAnalyzer (Windows runner), phpcs WordPress-Core (`shivammathur/setup-php@v2` + composer WPCS 3.x), ruff + `py_compile` sobre `scripts/common/`. **C2** `.pre-commit-config.yaml` con `pre-commit-hooks@v4.6.0` + `shellcheck-py@v0.10.0.1` + `ruff-pre-commit@v0.5.0` + hook local `phpcs` opcional (skip si no está en PATH). Pendientes diferidos en `auditoria-mejoras.md`: E2 mover zips a GitHub Releases (manual), D4 testar macOS en hardware real, S3 test con hostnames `"\\\n`, S5 modularizar `buscar_vulnerabilidades.py` (solo si crece). |
