@@ -1177,12 +1177,10 @@ function rc_tech_my_stats(): array {
 	global $wpdb;
 	$user  = wp_get_current_user();
 	$table = $wpdb->prefix . 'rc_download_log';
-	$sql = 'SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at FROM ' . $table . ' WHERE user_login = %s AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-	$row = $wpdb->get_row(
-		$wpdb->prepare( $sql, $user->user_login ),
-		ARRAY_A
-	);
+	// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	$sql = 'SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at FROM ' . $table . ' WHERE user_login = %s AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+	$row = $wpdb->get_row( $wpdb->prepare( $sql, $user->user_login ), ARRAY_A );
+	// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	return array(
 		'total'   => (int) ( $row['total'] ?? 0 ),
 		'last_at' => (string) ( $row['last_at'] ?? '' ),
