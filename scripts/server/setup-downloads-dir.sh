@@ -80,45 +80,57 @@ chmod 640 "$HTPASSWD_FILE"
 chown root:www-data "$HTPASSWD_FILE"
 
 # ── 6. Config nginx ───────────────────────────────────────────────────────
-step 6 "Escribiendo config nginx: $NGINX_CONF..."
+step 6 "Escribiendo snippet nginx: $NGINX_CONF..."
+# Genera solo el bloque location — se incluye en el vhost SSL existente.
+# NO crea un server{} nuevo para evitar conflicto de ssl_certificate.
 cat > "$NGINX_CONF" <<'NGINX'
-# ResolveCore — Directorio de descargas para técnicos
-# Servido en /downloads/ con HTTP Basic Auth
+# ResolveCore — snippet /downloads/ (incluir dentro del server{} SSL existente)
+# include /etc/nginx/conf.d/rc-downloads.conf;
 
-server {
-    listen 443 ssl;
-    server_name resolvecore.website www.resolvecore.website;
+location /downloads/ {
+    alias /opt/resolvecore-downloads/;
+    auth_basic "ResolveCore — Area de tecnicos";
+    auth_basic_user_file /etc/nginx/.htpasswd-tecnicos;
 
-    # Incluir aquí los certificados SSL ya configurados por deploy-ionos.sh
-    # (evitamos duplicar el bloque ssl_certificate; este include apunta al vhost principal)
+    autoindex off;
 
-    location /downloads/ {
-        alias /opt/resolvecore-downloads/;
-        auth_basic "ResolveCore — Área de técnicos";
+    add_header Content-Disposition 'attachment';
+    add_header X-Content-Type-Options nosniff;
+    add_header Cache-Control 'no-cache, no-store, must-revalidate';
+
+    location ~ \.(ps1|sh|zip|exe)$ {
+        auth_basic "ResolveCore — Area de tecnicos";
         auth_basic_user_file /etc/nginx/.htpasswd-tecnicos;
+    }
 
-        # Solo ficheros permitidos (no listado de directorio)
-        autoindex off;
-
-        # Forzar descarga (no previsualizar en navegador)
-        add_header Content-Disposition 'attachment';
-        add_header X-Content-Type-Options nosniff;
-        add_header Cache-Control 'no-cache, no-store, must-revalidate';
-
-        # Solo los ficheros concretos
-        location ~ \.(ps1|sh|zip|exe)$ {
-            auth_basic "ResolveCore — Área de técnicos";
-            auth_basic_user_file /etc/nginx/.htpasswd-tecnicos;
-        }
-
-        # Bloquear cualquier otra extensión
-        location ~ [^.](ps1|sh|zip|exe)$ {
-            return 403;
-        }
+    location ~ [^.]\.(ps1|sh|zip|exe)$ {
+        return 403;
     }
 }
 NGINX
-ok "Config nginx escrita"
+ok "Snippet nginx escrito (añadir include al vhost SSL existente)"
+
+# Intentar añadir include al vhost existente si no está ya
+VHOST_CONF=""
+for _v in /etc/nginx/sites-enabled/resolvecore.conf \
+           /etc/nginx/sites-available/resolvecore.conf \
+           /etc/nginx/conf.d/resolvecore.conf; do
+    [[ -f "$_v" ]] && { VHOST_CONF="$_v"; break; }
+done
+
+if [[ -n "$VHOST_CONF" ]]; then
+    if ! grep -q 'rc-downloads.conf' "$VHOST_CONF"; then
+        # Insertar include antes del último } del server SSL block
+        sed -i '/^}/{ /^}/!b; ${s/^}/    include \/etc\/nginx\/conf.d\/rc-downloads.conf;\n}/} ' "$VHOST_CONF" 2>/dev/null \
+            || warn "No se pudo auto-insertar include en $VHOST_CONF — añádelo manualmente"
+        ok "include añadido a $VHOST_CONF"
+    else
+        ok "include ya presente en $VHOST_CONF"
+    fi
+else
+    warn "Vhost SSL no encontrado. Añade manualmente dentro del server{} SSL:"
+    warn "    include /etc/nginx/conf.d/rc-downloads.conf;"
+fi
 
 # ── 7. Validar y recargar nginx ───────────────────────────────────────────
 step 7 "Validando config nginx..."

@@ -80,7 +80,8 @@ if (-not $wsl) {
     # Instalar jq dentro de WSL para clonacion
     Write-Step 3 "Instalando jq en WSL..."
     try {
-        wsl -- bash -c "command -v jq &>/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq jq)" 2>&1 | Out-Null
+        $bashCmd = 'command -v jq >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq jq)'
+        wsl -- bash -c $bashCmd 2>&1 | Out-Null
         Write-Ok "jq disponible en WSL"
     } catch {
         Write-Warn "No se pudo instalar jq en WSL"
@@ -102,29 +103,6 @@ if (-not (Test-Path $anyDeskDest)) {
     }
 } else {
     Write-Ok "AnyDesk portable ya existe"
-}
-
-# ── 5. Reboot Restore Rx Free ─────────────────────────────────────────────
-Write-Step 5 "Verificando Reboot Restore Rx..."
-$rrrxSvc = Get-Service -Name 'Shield' -ErrorAction SilentlyContinue
-if (-not $rrrxSvc) {
-    $rrrxUrl = if ($env:RRRX_DOWNLOAD_URL) { $env:RRRX_DOWNLOAD_URL } `
-               else { "https://resolvecore.website/downloads/RebootRestoreRx-Setup.exe" }
-    $rrrxInstaller = Join-Path $env:TEMP "RebootRestoreRx-Setup.exe"
-    Write-Step 5 "Descargando Reboot Restore Rx Free..."
-    try {
-        Invoke-WebRequest -Uri $rrrxUrl -OutFile $rrrxInstaller -UseBasicParsing -ErrorAction Stop
-        $p = Start-Process -FilePath $rrrxInstaller -ArgumentList '/S' -Wait -PassThru
-        Remove-Item $rrrxInstaller -ErrorAction SilentlyContinue
-        Write-Ok "Reboot Restore Rx instalado (exit $($p.ExitCode))"
-        $script:needsReboot = $true
-    } catch {
-        Write-Warn "No se pudo descargar RRRx desde $rrrxUrl"
-        Write-Host "    -> Descarga manual: https://horizondatasys.com/reboot-restore-rx-freeware/" -ForegroundColor Gray
-        Write-Host "    -> O aloja el instalador en: resolvecore.website/downloads/RebootRestoreRx-Setup.exe" -ForegroundColor Gray
-    }
-} else {
-    Write-Ok "Reboot Restore Rx ya instalado (servicio Shield: $($rrrxSvc.Status))"
 }
 
 # ── Resumen ──────────────────────────────────────────────────────────────
