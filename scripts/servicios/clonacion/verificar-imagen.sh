@@ -28,6 +28,7 @@ set -uo pipefail
 IMAGEN=""
 MANIFEST="./imagenes-manifest.json"
 ID=""
+TICKET=""
 
 show_help() { sed -n '2,24p' "$0" | sed 's/^# \?//'; exit 0; }
 
@@ -36,6 +37,7 @@ while [[ $# -gt 0 ]]; do
         --imagen)   IMAGEN="${2:-}";   shift 2 ;;
         --manifest) MANIFEST="${2:-}"; shift 2 ;;
         --id)       ID="${2:-}";       shift 2 ;;
+        --ticket)   TICKET="${2:-}"; shift 2 ;;
         -h|--help)  show_help ;;
         *) echo "Argumento desconocido: $1" >&2; exit 2 ;;
     esac
@@ -46,9 +48,16 @@ if [[ -z "$IMAGEN" && -z "$ID" ]]; then
     exit 2
 fi
 
+# Auto-install jq si falta
 if ! command -v jq &>/dev/null; then
-    echo "jq no instalado" >&2
-    exit 2
+    echo "[->] Instalando jq..."
+    if command -v apt-get &>/dev/null;  then sudo apt-get install -y -qq jq 2>/dev/null
+    elif command -v dnf &>/dev/null;    then sudo dnf install -y -q jq 2>/dev/null
+    elif command -v pacman &>/dev/null; then sudo pacman -Sy --noconfirm jq 2>/dev/null
+    elif command -v brew &>/dev/null;   then brew install jq 2>/dev/null
+    fi
+    command -v jq &>/dev/null || { echo "[X] No se pudo instalar jq" >&2; exit 1; }
+    echo "[OK] jq instalado"
 fi
 
 SHA_CMD=""
@@ -58,7 +67,7 @@ elif command -v shasum &>/dev/null; then
     SHA_CMD="shasum -a 256"
 else
     echo "Ni sha256sum ni shasum disponibles" >&2
-    exit 2
+    exit 1
 fi
 
 if [[ ! -f "$MANIFEST" ]]; then
@@ -71,12 +80,32 @@ if ! jq empty "$MANIFEST" 2>/dev/null; then
     exit 2
 fi
 
+mantis_note() {
+    local ticket="$1" text="$2"
+    [[ -z "$ticket" ]] && return
+    local env_file url="" tok=""
+    for env_file in "$(dirname "$0")/../../../scripts/common/.env" \
+                    "$(dirname "$0")/../../../.env.example"; do
+        [[ -f "$env_file" ]] || continue
+        url=$(grep '^MANTIS_URL=' "$env_file" | head -1 | cut -d= -f2- | tr -d "'\"")
+        tok=$(grep '^MANTIS_TOKEN=' "$env_file" | head -1 | cut -d= -f2- | tr -d "'\"")
+        break
+    done
+    [[ -z "$url" || -z "$tok" ]] && return
+    curl -s -X POST "$url/api/rest/issues/$ticket/notes" \
+        -H "Authorization: Bearer $tok" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"$text\"}" &>/dev/null \
+        && echo "[OK] Nota creada en ticket #$ticket" \
+        || echo "[!] No se pudo crear nota en MantisBT"
+}
+
 # ── Localizar entrada ───────────────────────────────────────────────────────
 ENTRY=""
 if [[ -n "$ID" ]]; then
     ENTRY=$(jq --arg id "$ID" '.imagenes[] | select(.id == $id)' "$MANIFEST")
 else
-    ABS=$(cd "$(dirname "$IMAGEN")" 2>/dev/null && echo "$(pwd)/$(basename "$IMAGEN")" || echo "$IMAGEN")
+    ABS=$(readlink -f "$IMAGEN" 2>/dev/null || realpath "$IMAGEN" 2>/dev/null || echo "$IMAGEN")
     ENTRY=$(jq --arg r1 "$IMAGEN" --arg r2 "$ABS" \
         '.imagenes[] | select(.ruta == $r1 or .ruta == $r2)' "$MANIFEST")
 fi
@@ -115,8 +144,10 @@ echo "  obtenido: $ACTUAL"
 
 if [[ "$EXPECTED" == "$ACTUAL" ]]; then
     echo "✓ OK — imagen íntegra"
+    mantis_note "$TICKET" "ResolveCore Clonacion: verificacion=OK equipo=$EQUIPO ruta=$RUTA hash_ok=${ACTUAL:0:12}..."
     exit 0
 else
     echo "✗ CORRUPTA — el hash no coincide" >&2
+    mantis_note "$TICKET" "ResolveCore Clonacion: verificacion=CORRUPTA equipo=$EQUIPO ruta=$RUTA esperado=${EXPECTED:0:12}... obtenido=${ACTUAL:0:12}..."
     exit 1
 fi

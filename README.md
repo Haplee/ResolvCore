@@ -113,8 +113,9 @@ ResolveCore/
 │   │   ├── page-docs.php           Página de documentación pública
 │   │   ├── page-changelog.php      Historial de versiones
 │   │   ├── page-contacto.php       Formulario de soporte
+│   │   ├── page-tecnicos.php       Portal técnicos (requiere rol Editor, descarga kit)
 │   │   ├── header.php / footer.php Layout global
-│   │   ├── functions.php           Hooks, AJAX, integración MantisBT
+│   │   ├── functions.php           Hooks, AJAX, integración MantisBT, handler descargas técnicos
 │   │   ├── style.css               Variables CSS, layout, responsive
 │   │   └── assets/
 │   │       ├── js/main.js          JS vanilla (formulario AJAX, nav)
@@ -150,8 +151,14 @@ ResolveCore/
 │   │   ├── buscar_vulnerabilidades.py  Motor CVE multi-feed (NVD/KEV/OSV/EPSS)
 │   │   ├── escaner_nmap.py         Escáner de puertos (Nmap wrapper)
 │   │   └── adjuntar_informe_mantis.py  CLI fase 2 — sube PDF a ticket vía API REST
+│   ├── servicios/                  Servicios adicionales (congelación + clonación + kit)
+│   │   ├── congelacion/            congelacion-windows.ps1 + congelacion-linux.sh
+│   │   ├── clonacion/              registrar-imagen.sh + verificar-imagen.sh
+│   │   ├── kit/                    construir-kit.ps1 (genera resolvecore-kit.zip)
+│   │   ├── install.ps1             Bootstrap servicios Windows (Chocolatey + WSL + AnyDesk)
+│   │   └── install.sh              Bootstrap servicios Linux (jq + btrfs-progs + snapper)
 │   ├── setup/                      Setup entorno técnico (Linux + Windows)
-│   ├── server/                     Bootstrap VPS (post-install.sh, bootstrap-mantis.sh)
+│   ├── server/                     Bootstrap VPS (post-install.sh, bootstrap-mantis.sh, setup-downloads-dir.sh)
 │   └── diagnosticos/               Salidas JSON + HTML generadas (gitignored)
 ├── reports/
 │   └── informe.html                Plantilla HTML del informe técnico
@@ -324,7 +331,38 @@ Cliente REST para MantisBT 2.x. Cuando el usuario envía el formulario de contac
 
 Panel de configuración en **Ajustes → MantisBT**: URL, API Token, ID de proyecto.
 
-### 4b. Adjuntador de informes MantisBT (fase 2)
+### 4b. Servicios adicionales (congelación · clonación · kit)
+
+Scripts operativos en `scripts/servicios/`:
+
+| Script | SO | Función |
+|---|---|---|
+| `congelacion/congelacion-windows.ps1` | Windows | Status / Configure / Freeze / Thaw con Reboot Restore Rx o Deep Freeze |
+| `congelacion/congelacion-linux.sh` | Linux | BTRFS + snapper: status / configure / snapshot / rollback |
+| `clonacion/registrar-imagen.sh` | Linux | Registra imagen en `imagenes-manifest.json` con SHA-256 |
+| `clonacion/verificar-imagen.sh` | Linux | Valida integridad de imagen (exit 0 íntegra / 1 corrupta / 2 no encontrada) |
+| `kit/construir-kit.ps1` | Windows | Empaqueta `resolvecore-kit.zip` (AnyDesk portable + scripts + README-cliente.txt) |
+
+```powershell
+# Construir kit de implantación en cliente
+pwsh scripts/servicios/kit/construir-kit.ps1 -AnyDeskPath .\anydesk.exe
+```
+
+```bash
+# Tomar snapshot de congelación Linux
+bash scripts/servicios/congelacion/congelacion-linux.sh --action=snapshot --etiqueta="estado-limpio"
+
+# Registrar imagen de clonación
+bash scripts/servicios/clonacion/registrar-imagen.sh --imagen=/ruta/imagen.img --equipo=pc-cliente-01 --so=linux --estado=limpio
+```
+
+### 4c. Portal de técnicos
+
+Página WordPress protegida en `/tecnicos/` (rol Editor requerido). Permite a los técnicos descargar los scripts de instalación y el kit cliente directamente desde el navegador. Los ficheros se sirven desde `/opt/resolvecore-downloads/` con HTTP Basic Auth via nginx.
+
+URL en producción: `https://resolvecore.website/tecnicos/`
+
+### 4d. Adjuntador de informes MantisBT (fase 2)
 
 CLI Python hexagonal que sube el PDF generado al ticket correspondiente vía `POST /api/rest/issues/{id}/files`. Stdlib-only (sin `requests`), credenciales por entorno:
 
@@ -373,6 +411,8 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Clonación, congelación, acceso remoto, cifrado |
 | [`docs/scripting/arquitectura-scripting.md`](docs/scripting/arquitectura-scripting.md) | Arquitectura de módulos: diagnóstico → JSON → informe → PDF |
 | [`docs/scripting/schema-diagnostico.md`](docs/scripting/schema-diagnostico.md) | Esquema JSON unificado de diagnóstico |
+| [`docs/scripting/schema-servicios-adicionales.md`](docs/scripting/schema-servicios-adicionales.md) | Esquemas JSON de congelación, clonación y kit |
+| [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Justificación técnica servicios adicionales |
 
 ---
 
@@ -401,9 +441,11 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Informe HTML | Generado por scripts ✅ |
 | Informe PDF | Generado (wkhtmltopdf) + adjuntado al ticket vía API REST ✅ |
 | Fleet Panel | Endpoint REST + página pública agregada ✅ |
+| Servicios adicionales | Congelación (Win+Linux) · Clonación · Kit implantación ✅ |
+| Portal técnicos | `/tecnicos/` WP + `/downloads/` nginx con htpasswd ✅ |
 | Escáner CVE | NVD · CISA KEV · OSV · EPSS ✅ |
 | CI lint | shellcheck · PSScriptAnalyzer · PHPCS WPCS · ruff (4/4 verde, bloqueante) |
-| Última actualización | 24 de mayo de 2026 |
+| Última actualización | 26 de mayo de 2026 |
 
 ### Versiones por componente
 
