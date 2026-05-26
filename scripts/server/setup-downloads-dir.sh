@@ -39,11 +39,14 @@ ok "Directorio creado"
 # ── 2. Copiar scripts de instalación desde el repo ───────────────────────
 step 2 "Copiando scripts de instalacion..."
 
-cp "$REPO_ROOT/scripts/servicios/install.ps1" "$DOWNLOADS_DIR/install-servicios.ps1"
+# PowerShell 5.1 lee ficheros sin BOM como ANSI/Windows-1252. Los caracteres
+# UTF-8 (em-dashes, etc.) rompen el parser. Anadimos BOM al copiar el .ps1.
+{ printf '\xEF\xBB\xBF'; cat "$REPO_ROOT/scripts/servicios/install.ps1"; } \
+    > "$DOWNLOADS_DIR/install-servicios.ps1"
 cp "$REPO_ROOT/scripts/servicios/install.sh"  "$DOWNLOADS_DIR/install-servicios.sh"
 chmod 644 "$DOWNLOADS_DIR/install-servicios.ps1"
 chmod 755 "$DOWNLOADS_DIR/install-servicios.sh"
-ok "install-servicios.ps1 y install-servicios.sh copiados"
+ok "install-servicios.ps1 (UTF-8 BOM) e install-servicios.sh copiados"
 
 # ── 3. Placeholder para binarios (se suben manualmente) ──────────────────
 step 3 "Creando placeholders para binarios..."
