@@ -10,17 +10,26 @@ Este directorio agrupa los scripts de los servicios que ResolveCore presta
 
 | Subcarpeta | Servicio | Plataformas | Estado |
 |------------|----------|-------------|--------|
-| `congelacion/` | Congelación de sistemas (estado de referencia restaurable) | Windows + Linux | Scaffolding |
-| `clonacion/`   | Clonación de sistemas (registro y verificación de imágenes) | Multiplataforma | Scaffolding |
-| `kit/`         | Kit de implantación en cliente (paquete de acceso remoto) | Windows | Scaffolding |
+| `congelacion/` | Congelación de sistemas (estado de referencia restaurable) | Windows + Linux | Implementado |
+| `clonacion/`   | Clonación de sistemas (registro y verificación de imágenes) | Multiplataforma | Implementado |
+| `kit/`         | Kit de implantación en cliente (paquete de acceso remoto) | Windows | Implementado |
 
 ## Estado
 
-Los ficheros de este directorio son **stubs** (esqueletos no implementados).
-Cada stub lleva en su cabecera el contrato previsto (parámetros, exit codes) y
-un bloque `TODO(otro-dia)`. La lógica se implementa siguiendo el prompt de tarea:
+Los 5 scripts están **implementados** (lógica completa, no stubs).
+Cada script incluye cabecera con contrato (parámetros, exit codes) y soporte
+`-Help` / `--help`.
 
-→ [docs/tareas/implementar-servicios-adicionales.md](../../docs/tareas/implementar-servicios-adicionales.md)
+Tarea de referencia: [docs/tareas/implementar-servicios-adicionales.md](../../docs/tareas/implementar-servicios-adicionales.md)
+
+### Esquemas JSON propios
+
+- **Clonación** — manifiesto `imagenes-manifest.json`:
+  documentado en [`docs/scripting/schema-servicios-adicionales.md`](../../docs/scripting/schema-servicios-adicionales.md).
+- **Congelación Linux** — salida por stdout (acción `status`, `configure`,
+  `snapshot`, `rollback`): documentado en el mismo fichero anterior.
+- **Congelación Windows** — `[PSCustomObject]` convertido a JSON por stdout.
+- **Kit** — sin JSON; genera `resolvecore-kit.zip` + `README-cliente.txt`.
 
 ## Contenido
 

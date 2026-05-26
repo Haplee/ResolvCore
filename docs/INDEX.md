@@ -26,7 +26,7 @@
 |---------|-------------|
 | [ResolveCore_Documentacion_Tecnica.md](tecnica/ResolveCore_Documentacion_Tecnica.md) | Documentación técnica completa del proyecto |
 | [stack-tecnologico.md](tecnica/stack-tecnologico.md) | Justificación del stack: WordPress, MantisBT, AnyDesk, herramientas |
-| [entornos.md](tecnica/entornos.md) | Entornos dev (LocalWP) y prod (WordPress.com + VPS) + política de backup |
+| [entornos.md](tecnica/entornos.md) | Entornos dev (LocalWP) y prod (VPS IONOS) + política de backup |
 | [flujo-sistema.md](tecnica/flujo-sistema.md) | Diagrama del flujo completo: formulario → ticket → diagnóstico → informe |
 | [mantis-integration.md](tecnica/mantis-integration.md) | Integración WordPress ↔ MantisBT vía REST API |
 | [manual-usuario-mantis.md](tecnica/manual-usuario-mantis.md) | Manual técnico de configuración, BD, workflow y permisos de MantisBT |
@@ -49,6 +49,7 @@
 | [schema-diagnostico.md](scripting/schema-diagnostico.md) | Esquema JSON de diagnóstico unificado (Windows/Linux/macOS/Android) |
 | [schema-diagnostico.schema.json](scripting/schema-diagnostico.schema.json) | JSON Schema formal para validación |
 | [schema-vulnerabilidades.md](scripting/schema-vulnerabilidades.md) | Esquema de la base de datos de vulnerabilidades |
+| [schema-servicios-adicionales.md](scripting/schema-servicios-adicionales.md) | Esquemas JSON propios de los scripts de servicios adicionales (clonación, congelación) |
 | [regex-y-json-diagnostico.md](scripting/regex-y-json-diagnostico.md) | Patrones regex y técnicas de parsing JSON en los scripts |
 
 ---
