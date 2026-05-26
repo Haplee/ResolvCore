@@ -75,6 +75,14 @@ function rc_handle_technician_download(): void {
 }
 add_action( 'template_redirect', 'rc_handle_technician_download', 5 );
 
+// Ocultar admin bar en frontend para técnicos (editores) — solo admin la ve
+function rc_hide_adminbar_for_editors(): void {
+	if ( is_user_logged_in() && ! current_user_can( 'administrator' ) ) {
+		show_admin_bar( false );
+	}
+}
+add_action( 'after_setup_theme', 'rc_hide_adminbar_for_editors' );
+
 // Modo mantenimiento (actívalo cambiando a true)
 define( 'RESOLVECORE_MAINTENANCE', false );
 
