@@ -50,7 +50,8 @@ param(
 
     [switch]$Confirm,
     [Alias('S')][switch]$Silent,
-    [Alias('h')][switch]$Help
+    [Alias('h')][switch]$Help,
+    [int]$Ticket = 0
 )
 
 if ($Help) {
@@ -68,6 +69,40 @@ function Write-Warn($m) { if (-not $Silent) { Write-Host "[!]  $m" -ForegroundCo
 function Test-Admin {
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
         [Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Invoke-MantisNote {
+    param([int]$TicketId, [string]$Text)
+    if (-not $TicketId) { return }
+    $envCandidates = @(
+        (Join-Path $PSScriptRoot '../../../scripts/common/.env'),
+        (Join-Path $PSScriptRoot '../../../.env.example')
+    )
+    $url = $null; $token = $null
+    foreach ($ef in $envCandidates) {
+        if (Test-Path $ef) {
+            Get-Content $ef | Where-Object { $_ -match '^(MANTIS_URL|MANTIS_TOKEN)=' } | ForEach-Object {
+                $k,$v = $_ -split '=',2
+                if ($k -eq 'MANTIS_URL')   { $url   = $v.Trim().Trim("'").Trim('"') }
+                if ($k -eq 'MANTIS_TOKEN') { $token = $v.Trim().Trim("'").Trim('"') }
+            }
+            break
+        }
+    }
+    if (-not $url -or -not $token) {
+        Write-Warn "MANTIS_URL/MANTIS_TOKEN no encontrados — nota al ticket omitida"
+        return
+    }
+    try {
+        $body = @{ text = $Text } | ConvertTo-Json -Compress
+        Invoke-RestMethod -Uri "$url/api/rest/issues/$TicketId/notes" `
+            -Method Post `
+            -Headers @{ Authorization = "Bearer $token" } `
+            -Body $body -ContentType 'application/json' -ErrorAction Stop | Out-Null
+        Write-Ok "Nota creada en ticket #$TicketId"
+    } catch {
+        Write-Warn "No se pudo crear nota en MantisBT: $($_.Exception.Message)"
+    }
 }
 
 # ── Deteccion de herramienta ────────────────────────────────────────────────
@@ -144,6 +179,30 @@ function Get-FrozenState {
     return 'unknown'
 }
 
+function Install-RebootRestoreRx {
+    # Intenta descargar e instalar RRRx Free (NSIS, soporte /S silent)
+    $rrrxUrl = if ($env:RRRX_DOWNLOAD_URL) { $env:RRRX_DOWNLOAD_URL } `
+               else { "https://resolvecore.website/downloads/RebootRestoreRx-Setup.exe" }
+    $installer = Join-Path $env:TEMP "RebootRestoreRx-Setup.exe"
+    Write-Info "Descargando Reboot Restore Rx Free..."
+    try {
+        Invoke-WebRequest -Uri $rrrxUrl -OutFile $installer -UseBasicParsing -ErrorAction Stop
+        Write-Info "Instalando (silent)..."
+        $p = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
+        Remove-Item $installer -ErrorAction SilentlyContinue
+        if ($p.ExitCode -eq 0) {
+            Write-Ok "Reboot Restore Rx instalado. REINICIA el equipo y vuelve a ejecutar."
+            exit 0
+        } else {
+            Write-Warn "Instalador salio con codigo $($p.ExitCode) — puede requerir reinicio"
+        }
+    } catch {
+        Write-Warn "No se pudo descargar desde $rrrxUrl"
+        Write-Host "  Descarga manual: https://horizondatasys.com/reboot-restore-rx-freeware/" -ForegroundColor Gray
+        Write-Host "  O configura: `$env:RRRX_DOWNLOAD_URL = 'https://tu-servidor/RRRx-Setup.exe'" -ForegroundColor Gray
+    }
+}
+
 # ── Acciones ────────────────────────────────────────────────────────────────
 $resolved = Resolve-Tool -Requested $Tool
 
@@ -171,7 +230,12 @@ function Action-Configure {
         Write-Host ''
         Write-Host 'Opcion comercial (aulas/quioscos): Deep Freeze de Faronics' -ForegroundColor Cyan
         Write-Host '  Licencia por equipo, gestion centralizada.' -ForegroundColor Gray
-        exit 2
+        if (-not (Test-Admin)) {
+            Write-Warn "Instalar requiere consola Administrador"
+            exit 1
+        }
+        $instalar = Read-Host "  ¿Intentar instalar Reboot Restore Rx Free automaticamente? (S/n)"
+        if ($instalar -notmatch '^[nN]') { Install-RebootRestoreRx }
     }
 
     if (-not (Test-Admin)) {
@@ -241,6 +305,9 @@ function Action-Freeze-Or-Thaw {
         reboot_needed = $true
         timestamp_utc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     } | ConvertTo-Json -Depth 5
+
+    $noteText = "ResolveCore Congelacion: accion=$Mode tool=$($resolved.Name) ok=$success timestamp=$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+    Invoke-MantisNote -TicketId $Ticket -Text $noteText
 
     if (-not $success) { exit 1 }
 }
