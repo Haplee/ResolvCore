@@ -283,3 +283,182 @@ datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 ---
 
 **Fin del documento de Fase 4.**
+
+---
+
+# Fase 5 — Servicios adicionales + Portal de técnicos
+
+> **Fecha**: 2026-05-25 (sesión tarde)
+> **Autor**: Francisco Vidal Mateo (Haplee) — TFG ASIR ResolveCore
+> **Rama**: `feat/facturacion-clonacion-congelacion`
+
+---
+
+## 1. Objetivo
+
+Implementar los tres servicios adicionales del catálogo ResolveCore con scripts
+totalmente autónomos (cero intervención manual del técnico) e integrarlos en el
+menú principal y en un portal web de descarga.
+
+---
+
+## 2. Componentes nuevos / modificados
+
+### 2.1 Scripts de servicios (implementados desde stubs)
+
+| Fichero | Plataforma | Estado anterior | Estado actual |
+|---|---|---|---|
+| `scripts/servicios/congelacion/congelacion-windows.ps1` | Windows | Stub | Implementado |
+| `scripts/servicios/congelacion/congelacion-linux.sh` | Linux | Stub | Implementado |
+| `scripts/servicios/clonacion/registrar-imagen.sh` | Multiplataforma | Stub | Implementado |
+| `scripts/servicios/clonacion/verificar-imagen.sh` | Multiplataforma | Stub | Implementado |
+| `scripts/servicios/kit/construir-kit.ps1` | Windows | Stub | Implementado |
+
+### 2.2 Integración en launchers
+
+| Fichero | Cambio |
+|---|---|
+| `scripts/windows/ResolveCore.ps1` | Nueva opción 6 `[SERVICIOS]` (antes 6=Ayuda, 7=Salir → ahora 7 y 8) |
+| `scripts/linux/ResolveCore.sh` | Nueva opción 6 `[SERVICIOS]` (mismo desplazamiento) |
+
+### 2.3 Auto-install y bootstraps
+
+| Fichero | Función |
+|---|---|
+| `scripts/servicios/install.ps1` | Bootstrap Windows: instala Chocolatey + WSL + jq + AnyDesk + RRRx |
+| `scripts/servicios/install.sh` | Bootstrap Linux: instala jq + curl + btrfs-progs + snapper |
+
+### 2.4 Portal web técnicos
+
+| Fichero | Función |
+|---|---|
+| `wordpress/resolvecore-theme/page-tecnicos.php` | Página WP "Área de Técnicos" con tabs Windows/Linux/Kit + botones descarga |
+| `wordpress/resolvecore-theme/functions.php` | Handler `rc_handle_technician_download()` — sirve ficheros con auth WP |
+| `scripts/server/setup-downloads-dir.sh` | Setup VPS: crea `/opt/resolvecore-downloads/`, htpasswd, nginx conf |
+
+### 2.5 Documentación
+
+| Fichero | Cambio |
+|---|---|
+| `docs/scripting/schema-servicios-adicionales.md` | Nuevo: esquemas JSON de congelación y manifiesto de clonación |
+| `docs/INDEX.md` | Añadida entrada `schema-servicios-adicionales.md` |
+| `docs/defensa/defensa-tfg.md` | Sección 15b añadida, O11–O13 marcados ✅, changelog 2026-05-25 |
+| `scripts/servicios/README.md` | Stubs → Implementado, referencia a schemas |
+
+---
+
+## 3. Funcionalidades implementadas
+
+### 3.1 Congelación Windows (`congelacion-windows.ps1`)
+
+- Auto-detecta Reboot Restore Rx Free / Deep Freeze instalados
+- Si no hay ninguno: descarga e instala RRRx Free silenciosamente (`/S`)
+- Acciones: `Status` · `Configure` · `Freeze -Confirm` · `Thaw -Confirm`
+- `-Ticket <id>` crea nota automática en MantisBT al Freeze/Thaw
+- Salida `[PSCustomObject]` → JSON por stdout
+
+### 3.2 Congelación Linux (`congelacion-linux.sh`)
+
+- Auto-instala `jq`, `btrfs-progs`, `snapper` (apt/dnf/pacman)
+- Acciones: `status` · `configure` (root) · `snapshot` · `rollback --confirm` (root)
+- Fix B2: `rollback` verifica que existe ≥1 snapshot antes de ejecutar
+- `--ticket <id>` crea nota en MantisBT al snapshot/rollback
+- JSON por stdout; integración MantisBT vía `curl`
+
+### 3.3 Clonación — registrar-imagen.sh
+
+- Auto-instala `jq` si falta (apt/dnf/pacman/brew)
+- Calcula SHA-256 de fichero o árbol de carpeta Clonezilla (hash determinista)
+- Fix B4: escritura atómica del manifiesto (`.tmp.XXXXXX` → `jq empty` → `mv`)
+- `--ticket <id>` crea nota en MantisBT con hash + id de imagen
+
+### 3.4 Clonación — verificar-imagen.sh
+
+- Auto-instala `jq` si falta
+- Fix B3: conversión ruta con `readlink -f` / `realpath` (antes frágil con caracteres especiales)
+- Busca entrada en manifiesto por ruta o por `--id`
+- `--ticket <id>` crea nota OK/CORRUPTA en MantisBT
+
+### 3.5 Kit de implantación (`construir-kit.ps1`)
+
+- Auto-descarga AnyDesk portable desde `download.anydesk.com` si no se proporciona
+- Fix B1: scripts diagnóstico faltantes → `exit 1` (antes `Write-Warn` y continuaba generando ZIP incompleto)
+- MANIFEST.txt con checksums SHA256 de todos los ficheros del kit
+- `resolvecore-kit.zip` listo para enviar al cliente
+
+### 3.6 Integración en menús TUI
+
+Submenú `[SERVICIOS]` en ambos launchers:
+
+**Windows (opción 6):**
+- Congelación → Status / Configure / Freeze / Thaw
+- Clonación → Registrar / Verificar (vía WSL o Git Bash; auto-detecta)
+- Kit cliente → construir-kit.ps1 interactivo
+
+**Linux (opción 6):**
+- Congelación → status / configure / snapshot / rollback
+- Clonación → Registrar / Verificar
+
+### 3.7 Portal web de descarga
+
+Página WP `/tecnicos/` visible solo para usuarios con rol `editor`/`administrator`:
+
+- **Tab Windows**: one-liner para copiar + botón verde "Descargar install-servicios.ps1" + pasos + tabla deps
+- **Tab Linux**: one-liner + botón "Descargar install-servicios.sh" + pasos + tabla deps
+- **Tab Kit cliente**: botón "Descargar resolvecore-kit.zip" + instrucciones de entrega
+
+Handler PHP en `functions.php`:
+- Whitelist estricta de ficheros descargables (`windows|linux|kit|rrrx`)
+- Requiere login WP + rol técnico (no pública)
+- Log de descarga: usuario + IP + timestamp en error_log WP
+- Bloquea path traversal
+
+---
+
+## 4. Bugs corregidos
+
+| ID | Fichero | Descripción |
+|---|---|---|
+| B1 | `construir-kit.ps1` | Scripts diagnóstico faltantes → ZIP incompleto sin avisar |
+| B2 | `congelacion-linux.sh` | `rollback` sin snapshot previo retornaba éxito sin hacer nada |
+| B3 | `verificar-imagen.sh` | Conversión ruta relativa→absoluta fallaba con caracteres especiales |
+| B4 | `registrar-imagen.sh` | `mv` fallido perdía el manifiesto original (no era atómico) |
+
+---
+
+## 5. Arquitectura de auto-install (flujo técnico)
+
+```
+Técnico abre resolvecore.website/tecnicos/
+    │ (login WP requerido, rol editor/admin)
+    ▼
+Página WP muestra botones por plataforma
+    │ clic en botón
+    ▼
+functions.php rc_handle_technician_download()
+    │ verifica rol → sirve fichero desde /opt/resolvecore-downloads/
+    ▼
+Técnico ejecuta install.ps1 / install.sh
+    │ instala todo automáticamente
+    ▼
+.\ResolveCore.ps1  →  opción 6 SERVICIOS  →  submenú
+    │ cada script se auto-instala si le faltan deps
+    ▼
+--ticket <id>  →  nota automática en MantisBT
+```
+
+---
+
+## 6. Métricas de la sesión
+
+| Métrica | Valor |
+|---|---:|
+| Ficheros nuevos | 7 (`install.ps1`, `install.sh`, `page-tecnicos.php`, `setup-downloads-dir.sh`, `schema-servicios-adicionales.md`) |
+| Ficheros modificados | 10 (`congelacion-*.ps1/.sh`, `registrar-imagen.sh`, `verificar-imagen.sh`, `construir-kit.ps1`, `ResolveCore.ps1`, `ResolveCore.sh`, `functions.php`, `defensa-tfg.md`, `INDEX.md`) |
+| Bugs corregidos | 4 (B1–B4) |
+| Objetivos TFG completados | O11, O12, O13 → ✅ |
+| Deps auto-instaladas | Windows: Chocolatey, WSL, jq, AnyDesk, RRRx · Linux: jq, curl, btrfs-progs, snapper |
+
+---
+
+**Fin del documento de Fase 5.**
