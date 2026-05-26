@@ -201,11 +201,6 @@ get_header();
 							<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
 							Copiar
 						</button>
-						<button class="rc-mini-btn rc-qr-btn" type="button"
-						        data-text="<?php echo esc_attr( $dl['oneliner'] ); ?>" aria-label="Mostrar QR">
-							<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14h1v3M14 20h3v1M20 20h1v1"/></svg>
-							QR
-						</button>
 					</div>
 				</div>
 			</div>
@@ -515,17 +510,6 @@ get_header();
 		</div>
 	</div>
 </section>
-
-<!-- ── Modal QR ────────────────────────────────────────────────────────── -->
-<div id="rc-qr-modal" class="rc-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="rc-qr-title">
-	<div class="rc-modal-bg" data-close></div>
-	<div class="rc-modal-box">
-		<button class="rc-modal-x" type="button" data-close aria-label="Cerrar">×</button>
-		<h3 id="rc-qr-title">Escanea con el móvil</h3>
-		<div id="rc-qr-canvas"></div>
-		<p class="rc-muted" id="rc-qr-text"></p>
-	</div>
-</div>
 
 <!-- ── Atajos teclado hint ─────────────────────────────────────────────── -->
 <div class="rc-tec-hotkeys" aria-hidden="true">
@@ -930,32 +914,6 @@ get_header();
 .rc-tlink:hover { border-color: #00e5a040; color: #00e5a0; transform: translateY(-2px); }
 .rc-tlink svg { stroke: currentColor; }
 
-/* ── Modal QR ─────────────────────────────────────────────────────────── */
-.rc-modal {
-	position: fixed; inset: 0; z-index: 1000;
-	display: grid; place-items: center;
-}
-.rc-modal[hidden] { display: none; }
-.rc-modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px); }
-.rc-modal-box {
-	position: relative;
-	background: #13151c; border: 1px solid #1e2130;
-	border-radius: 14px; padding: 1.5rem;
-	min-width: 280px; max-width: 90vw;
-	text-align: center;
-	box-shadow: 0 20px 60px rgba(0,0,0,.5);
-}
-.rc-modal-box h3 { margin: 0 0 1rem; color: #e8eaf0; font-size: 1rem; }
-.rc-modal-x {
-	position: absolute; top: .5rem; right: .75rem;
-	background: none; border: none; color: #7a7f8e; cursor: pointer;
-	font-size: 1.5rem; line-height: 1; padding: .25rem .5rem;
-}
-.rc-modal-x:hover { color: #e8eaf0; }
-#rc-qr-canvas { display: grid; place-items: center; padding: 1rem; background: #fff; border-radius: 8px; }
-#rc-qr-canvas svg { display: block; }
-#rc-qr-text { font-family: 'JetBrains Mono',monospace; font-size: .72rem; margin: .75rem 0 0; word-break: break-all; }
-
 /* ── Hotkeys hint ─────────────────────────────────────────────────────── */
 .rc-tec-hotkeys {
 	position: fixed; bottom: 1rem; right: 1rem;
@@ -1287,27 +1245,6 @@ get_header();
 				} catch(e){}
 			});
 		});
-	});
-
-	// ── QR (canvas simple, sin librerías externas — usa API qrserver.com como fallback img) ──
-	// Implementación matricial QR sería demasiado código; usamos generador remoto via img.
-	var qrModal = document.getElementById('rc-qr-modal');
-	function openQR(text) {
-		document.getElementById('rc-qr-text').textContent = text;
-		var canvas = document.getElementById('rc-qr-canvas');
-		canvas.innerHTML = '<img alt="QR" width="220" height="220" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(text) + '">';
-		qrModal.hidden = false;
-		qrModal.setAttribute('aria-hidden', 'false');
-	}
-	function closeQR() {
-		qrModal.hidden = true;
-		qrModal.setAttribute('aria-hidden', 'true');
-	}
-	document.querySelectorAll('.rc-qr-btn').forEach(function (btn) {
-		btn.addEventListener('click', function () { openQR(btn.dataset.text); });
-	});
-	qrModal.querySelectorAll('[data-close]').forEach(function (el) {
-		el.addEventListener('click', closeQR);
 	});
 
 	// ── Dashboard ticket activo ──────────────────────────────────────────
@@ -1644,7 +1581,6 @@ get_header();
 		}
 		if (e.key === 'Escape') {
 			if (!palette.hidden) { closePalette(); return; }
-			if (!qrModal.hidden) { closeQR();      return; }
 		}
 		if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 		if (e.key === '1') activateTab('windows');
