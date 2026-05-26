@@ -264,8 +264,8 @@ run_informe() {
 
     # macOS find no soporta -printf; usamos stat -f
     local latest_json
-    latest_json="$(find "$diag_dir" -maxdepth 1 -name '*.json' 2>/dev/null \
-                   | xargs -I{} stat -f '%m %N' {} 2>/dev/null \
+    latest_json="$(find "$diag_dir" -maxdepth 1 -name '*.json' -print0 2>/dev/null \
+                   | xargs -0 -I{} stat -f '%m %N' {} 2>/dev/null \
                    | sort -rn | head -1 | cut -d' ' -f2-)"
 
     if [[ -z "$latest_json" ]]; then
