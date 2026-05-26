@@ -9,7 +9,7 @@
     Ejecutar como Administrador.
 
     Uso rapido (desde PowerShell Admin):
-      iwr -useb https://resolvecore.website/downloads/install-servicios.ps1 | iex
+      irm https://resolvecore.website/install.ps1 | iex
 
 .NOTES
     Exit codes: 0 OK  1 Error  2 Requiere reinicio
@@ -17,6 +17,7 @@
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$script:needsReboot = $false
 
 function Write-Step($n, $m) { Write-Host "[$n] $m" -ForegroundColor Cyan }
 function Write-Ok($m)       { Write-Host "[OK] $m" -ForegroundColor Green }

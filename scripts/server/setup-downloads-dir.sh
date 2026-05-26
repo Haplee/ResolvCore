@@ -84,9 +84,38 @@ step 6 "Escribiendo snippet nginx: $NGINX_CONF..."
 # Genera solo el bloque location — se incluye en el vhost SSL existente.
 # NO crea un server{} nuevo para evitar conflicto de ssl_certificate.
 cat > "$NGINX_CONF" <<'NGINX'
-# ResolveCore — snippet /downloads/ (incluir dentro del server{} SSL existente)
+# ResolveCore — snippet /downloads/ + bootstrappers cortos
 # include /etc/nginx/conf.d/rc-downloads.conf;
 
+# URL cortas publicas — uso: irm https://resolvecore.website/install.ps1 | iex
+location = /install.ps1 {
+    alias /opt/resolvecore-downloads/install-servicios.ps1;
+    default_type text/plain;
+    add_header X-Content-Type-Options nosniff;
+    add_header Cache-Control 'no-cache, no-store, must-revalidate';
+}
+
+location = /install.sh {
+    alias /opt/resolvecore-downloads/install-servicios.sh;
+    default_type text/plain;
+    add_header X-Content-Type-Options nosniff;
+    add_header Cache-Control 'no-cache, no-store, must-revalidate';
+}
+
+# Aliases largos publicos (compat)
+location = /downloads/install-servicios.ps1 {
+    alias /opt/resolvecore-downloads/install-servicios.ps1;
+    default_type text/plain;
+    add_header X-Content-Type-Options nosniff;
+}
+
+location = /downloads/install-servicios.sh {
+    alias /opt/resolvecore-downloads/install-servicios.sh;
+    default_type text/plain;
+    add_header X-Content-Type-Options nosniff;
+}
+
+# Resto de /downloads/ protegido (kit.zip, binarios)
 location /downloads/ {
     alias /opt/resolvecore-downloads/;
     auth_basic "ResolveCore — Area de tecnicos";
@@ -97,15 +126,6 @@ location /downloads/ {
     add_header Content-Disposition 'attachment';
     add_header X-Content-Type-Options nosniff;
     add_header Cache-Control 'no-cache, no-store, must-revalidate';
-
-    location ~ \.(ps1|sh|zip|exe)$ {
-        auth_basic "ResolveCore — Area de tecnicos";
-        auth_basic_user_file /etc/nginx/.htpasswd-tecnicos;
-    }
-
-    location ~ [^.]\.(ps1|sh|zip|exe)$ {
-        return 403;
-    }
 }
 NGINX
 ok "Snippet nginx escrito (añadir include al vhost SSL existente)"
