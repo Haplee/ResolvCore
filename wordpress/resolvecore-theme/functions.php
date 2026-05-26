@@ -3,6 +3,80 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// ── Descarga segura de ficheros para área técnicos ─────────────────────────
+// Añade en wp-config.php: define('RC_DOWNLOADS_PATH', '/opt/resolvecore-downloads');
+function rc_handle_technician_download(): void {
+	if ( ! isset( $_GET['rc_download'] ) ) {
+		return;
+	}
+
+	// Requiere login
+	if ( ! is_user_logged_in() ) {
+		wp_redirect( wp_login_url( get_permalink() ) );
+		exit;
+	}
+
+	// Solo editores/administradores (roles técnico)
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_die( 'Sin permiso para descargar.', 'Sin acceso', array( 'response' => 403 ) );
+	}
+
+	$key = sanitize_key( wp_unslash( $_GET['rc_download'] ) );
+
+	$allowed = array(
+		'windows' => array(
+			'file' => 'install-servicios.ps1',
+			'type' => 'application/octet-stream',
+		),
+		'linux'   => array(
+			'file' => 'install-servicios.sh',
+			'type' => 'application/octet-stream',
+		),
+		'kit'     => array(
+			'file' => 'resolvecore-kit.zip',
+			'type' => 'application/zip',
+		),
+		'rrrx'    => array(
+			'file' => 'RebootRestoreRx-Setup.exe',
+			'type' => 'application/octet-stream',
+		),
+	);
+
+	if ( ! array_key_exists( $key, $allowed ) ) {
+		wp_die( 'Descarga no válida.', 'Error', array( 'response' => 404 ) );
+	}
+
+	$downloads_dir = defined( 'RC_DOWNLOADS_PATH' )
+		? RC_DOWNLOADS_PATH
+		: '/opt/resolvecore-downloads';
+
+	$filepath = trailingslashit( $downloads_dir ) . $allowed[ $key ]['file'];
+
+	if ( ! file_exists( $filepath ) ) {
+		wp_die( 'Fichero no disponible en este momento.', 'No encontrado', array( 'response' => 404 ) );
+	}
+
+	// Log de descarga
+	$user = wp_get_current_user();
+	error_log( sprintf(
+		'[ResolveCore] Descarga: %s | usuario: %s | IP: %s | %s',
+		esc_html( $key ),
+		esc_html( $user->user_login ),
+		sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) ),
+		gmdate( 'Y-m-d H:i:s' )
+	) );
+
+	header( 'Content-Type: ' . $allowed[ $key ]['type'] );
+	header( 'Content-Disposition: attachment; filename="' . basename( $filepath ) . '"' );
+	header( 'Content-Length: ' . filesize( $filepath ) );
+	header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+	header( 'Pragma: no-cache' );
+	header( 'X-Content-Type-Options: nosniff' );
+	readfile( $filepath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_readfile
+	exit;
+}
+add_action( 'template_redirect', 'rc_handle_technician_download', 5 );
+
 // Modo mantenimiento (actívalo cambiando a true)
 define( 'RESOLVECORE_MAINTENANCE', false );
 
