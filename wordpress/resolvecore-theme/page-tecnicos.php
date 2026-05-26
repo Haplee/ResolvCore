@@ -24,7 +24,10 @@ $nonce_kit  = wp_create_nonce( 'rc_tech_readme' );
 $meta_win = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'windows' ) : array();
 $meta_lin = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'linux' ) : array();
 $meta_kit = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'kit' ) : array();
-$stats    = function_exists( 'rc_tech_my_stats' ) ? rc_tech_my_stats() : array( 'total' => 0, 'last_at' => '' );
+$stats    = function_exists( 'rc_tech_my_stats' ) ? rc_tech_my_stats() : array(
+	'total'   => 0,
+	'last_at' => '',
+);
 
 $downloads = array(
 	'windows' => array(
@@ -170,9 +173,8 @@ get_header();
 		$size   = $exists ? rc_format_bytes( (int) $meta['size'] ) : '—';
 		$sha    = $exists ? $meta['sha256'] : '';
 		$mtime  = $exists ? wp_date( 'Y-m-d H:i', (int) $meta['mtime'] ) : '—';
-	?>
-	<div id="tab-<?php echo esc_attr( $key ); ?>" class="rc-tab-panel<?php echo esc_attr( $active ); ?>"
-	     role="tabpanel" aria-labelledby="btn-<?php echo esc_attr( $key ); ?>" <?php echo $hidden ? 'hidden' : ''; ?>>
+		?>
+		<div id="tab-<?php echo esc_attr( $key ); ?>" class="rc-tab-panel<?php echo esc_attr( $active ); ?>" role="tabpanel" aria-labelledby="btn-<?php echo esc_attr( $key ); ?>" <?php echo $hidden ? 'hidden' : ''; ?>>
 
 		<div class="rc-dl-card rc-dl-card--<?php echo esc_attr( $key ); ?>">
 			<div class="rc-dl-card-bar" aria-hidden="true"></div>
