@@ -358,7 +358,51 @@ bash scripts/servicios/clonacion/registrar-imagen.sh --imagen=/ruta/imagen.img -
 
 ### 4c. Portal de técnicos
 
-Página WordPress protegida en `/tecnicos/` (rol Editor requerido). Permite a los técnicos descargar los scripts de instalación y el kit cliente directamente desde el navegador. Los ficheros se sirven desde `/opt/resolvecore-downloads/` con HTTP Basic Auth via nginx.
+Página WordPress protegida en `/tecnicos/` (rol Editor o Admin). Centro de operaciones del técnico.
+
+**Bootstrap one-liner público** (sin auth):
+
+```powershell
+# Windows (PowerShell Admin)
+irm https://resolvecore.website/install.ps1 | iex
+```
+
+```bash
+# Linux
+curl -fsSL https://resolvecore.website/install.sh | sudo bash
+```
+
+**Features UI:**
+
+- Hero con gradient mesh animado + auto-detect SO por navegador
+- Estado infraestructura en vivo: MantisBT / Web / Fleet (ping cada 60 s, cached)
+- Terminal mock con chrome (3 dots + prompt + cursor)
+- SHA-256 + tamaño + mtime reales por fichero
+- Troubleshooting expandible (UAC, BOM, BTRFS, ExecutionPolicy)
+- Checklist post-instalación persistido en `localStorage`
+- Widget tickets MantisBT del técnico (filtrados por handler/reporter)
+- **Dashboard ticket activo (pinned, sticky)**: cronómetro intervención, añadir nota a Mantis, subir informe PDF/HTML al ticket, generar factura HTML imprimible (`?rc_factura=ID&cliente=X&horas=N&tarifa=€` con IVA 21%), AnyDesk launcher (`anydesk:ID` + historial 5 sesiones)
+- **Command palette (`Ctrl`+`K`)**: búsqueda fuzzy de tabs, acciones, links y tickets
+- **Tail logs en vivo**: últimas 20 entradas `wp_rc_download_log`, refresh 10 s
+- Atajos teclado: `1` `2` `3` tabs · `C` copia oneliner · `Ctrl`+`K` palette · `Esc` cierra
+- Generador README cliente personalizado (cliente + ticket → `.txt` descargable)
+- Admin bar de WordPress oculta para rol Editor
+
+**Endpoints AJAX nuevos (en `wordpress/resolvecore-theme/functions.php`):**
+
+| Acción | Función | Uso |
+|---|---|---|
+| `rc_tech_infra_status` | Pings Mantis/Web/Fleet | Cache 60 s |
+| `rc_tech_my_tickets` | Tickets Mantis del user | Cache 2 min |
+| `rc_tech_logs_tail` | Últimas 20 descargas | — |
+| `rc_tech_add_note` | Nota al ticket pinned | `MantisApi::add_note()` |
+| `rc_tech_upload_informe` | Adjunta PDF/HTML | `MantisApi::attach_file()` |
+| `rc_tech_factura_inline` | Factura HTML imprimible | `template_redirect` |
+| `rc_tech_build_readme` | README cliente personalizado | `admin-post.php` |
+
+**Tabla DB nueva:** `wp_rc_download_log` (id, file_key, user_login, ip, ua, downloaded_at) — creada vía `dbDelta` en `after_setup_theme`. Auditoría completa de descargas técnicos.
+
+**Despliegue VPS:** symlink permanente `/var/www/wp/wp-content/themes/resolvecore-theme` → `/opt/resolvecore-git/wordpress/resolvecore-theme`. `git pull` actualiza al instante.
 
 URL en producción: `https://resolvecore.website/tecnicos/`
 
@@ -454,7 +498,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Componente | Path | Versión | Política |
 |---|---|---|---|
 | Producto (release tag) | repo root | `1.2.0-beta` | SemVer; bump al cerrar hito de roadmap |
-| Tema WordPress | `wordpress/resolvecore-theme/` | `3.0.0` | SemVer; bump al cambiar layout o paleta |
+| Tema WordPress | `wordpress/resolvecore-theme/` | `3.2.0` | SemVer; bump al cambiar layout o paleta |
 | Plugin WP (rc-mantisbt) | `wordpress/plugins/rc-mantisbt/` | `1.0.0` | SemVer; bump al cambiar payload Mantis o API REST consumida |
 | Diagnóstico Windows | `scripts/windows/diagnostico.ps1` | `4.1.0` | SemVer; **major** rompe schema JSON |
 | Optimización Windows | `scripts/windows/optimizacion.ps1` | `3.2.0` | SemVer; **major** cambia comportamiento `--undo` |
