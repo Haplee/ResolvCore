@@ -965,6 +965,182 @@ TXT;
 add_action( 'admin_post_rc_tech_build_readme', 'rc_tech_build_readme' );
 
 /**
+ * AJAX: últimas 20 descargas de la tabla rc_download_log (todas, no solo del user).
+ */
+function rc_tech_logs_tail(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	global $wpdb;
+	$table = $wpdb->prefix . 'rc_download_log';
+	$rows  = $wpdb->get_results(
+		"SELECT id, file_key, user_login, ip, downloaded_at
+		 FROM {$table}
+		 ORDER BY id DESC
+		 LIMIT 20",
+		ARRAY_A
+	);
+	wp_send_json_success( array( 'rows' => $rows ?: array() ) );
+}
+add_action( 'wp_ajax_rc_tech_logs_tail', 'rc_tech_logs_tail' );
+
+/**
+ * AJAX: añade nota pública al ticket Mantis.
+ */
+function rc_tech_add_note(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	$id   = absint( $_POST['ticket_id'] ?? 0 );
+	$text = sanitize_textarea_field( wp_unslash( $_POST['text'] ?? '' ) );
+	if ( $id < 1 || $text === '' ) {
+		wp_send_json_error( array( 'msg' => 'Faltan datos.' ) );
+	}
+	if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no disponible.' ) );
+	}
+	$api = rc_mantis_get_api();
+	if ( ! $api ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no configurado.' ) );
+	}
+	$user = wp_get_current_user();
+	$body = "[{$user->display_name}] {$text}";
+	$res  = $api->add_note( $id, $body );
+	if ( is_wp_error( $res ) ) {
+		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
+	}
+	wp_send_json_success( array( 'msg' => 'Nota añadida al ticket #' . $id ) );
+}
+add_action( 'wp_ajax_rc_tech_add_note', 'rc_tech_add_note' );
+
+/**
+ * AJAX: sube informe PDF y lo adjunta al ticket.
+ * Acepta multipart con file[informe] y ticket_id.
+ */
+function rc_tech_upload_informe(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	$id = absint( $_POST['ticket_id'] ?? 0 );
+	if ( $id < 1 ) {
+		wp_send_json_error( array( 'msg' => 'ticket_id inválido' ) );
+	}
+	if ( empty( $_FILES['informe']['tmp_name'] ) ) {
+		wp_send_json_error( array( 'msg' => 'Falta fichero.' ) );
+	}
+
+	$file = $_FILES['informe'];
+	if ( (int) $file['size'] > 10 * 1024 * 1024 ) {
+		wp_send_json_error( array( 'msg' => 'Fichero > 10 MB.' ) );
+	}
+
+	$mime = mime_content_type( $file['tmp_name'] );
+	if ( ! in_array( $mime, array( 'application/pdf', 'text/html' ), true ) ) {
+		wp_send_json_error( array( 'msg' => 'Solo PDF o HTML.' ) );
+	}
+
+	if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no disponible.' ) );
+	}
+	$api = rc_mantis_get_api();
+	if ( ! $api ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no configurado.' ) );
+	}
+
+	$safe_name = sanitize_file_name( $file['name'] );
+	$res       = $api->attach_file( $id, $file['tmp_name'], $safe_name );
+	if ( is_wp_error( $res ) ) {
+		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
+	}
+	wp_send_json_success( array( 'msg' => 'Informe adjuntado al ticket #' . $id, 'file' => $safe_name ) );
+}
+add_action( 'wp_ajax_rc_tech_upload_informe', 'rc_tech_upload_informe' );
+
+/**
+ * Genera factura HTML imprimible inline para un ticket.
+ * Acceso: /tecnicos/?rc_factura=<ID>&cliente=<nombre>&horas=<n>
+ */
+function rc_tech_factura_inline(): void {
+	if ( ! isset( $_GET['rc_factura'] ) ) {
+		return;
+	}
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_die( 'forbidden', 'error', array( 'response' => 403 ) );
+	}
+	$id      = absint( $_GET['rc_factura'] );
+	$cliente = sanitize_text_field( wp_unslash( $_GET['cliente'] ?? 'Cliente' ) );
+	$horas   = max( 0.25, (float) ( $_GET['horas'] ?? 1 ) );
+	$tarifa  = (float) ( $_GET['tarifa'] ?? 35.0 );
+	$tecnico = wp_get_current_user()->display_name;
+	$fecha   = wp_date( 'Y-m-d' );
+	$num     = sprintf( 'F-%s-%04d', gmdate( 'Ym' ), $id );
+	$base    = round( $horas * $tarifa, 2 );
+	$iva     = round( $base * 0.21, 2 );
+	$total   = round( $base + $iva, 2 );
+
+	header( 'Content-Type: text/html; charset=UTF-8' );
+	?>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Factura <?php echo esc_html( $num ); ?></title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,Arial,sans-serif;color:#222;max-width:800px;margin:2rem auto;padding:2rem;background:#fff}
+header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #00c988;padding-bottom:1rem;margin-bottom:2rem}
+h1{margin:0;color:#00c988;font-size:1.8rem}
+.meta{text-align:right;font-size:.9rem;color:#555}
+.meta strong{color:#222}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0}
+th,td{padding:.7rem;text-align:left;border-bottom:1px solid #ddd}
+th{background:#f5f7fa;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#666}
+tfoot td{border:none;font-weight:600}
+tfoot tr:last-child td{border-top:2px solid #00c988;color:#00c988;font-size:1.2rem}
+.right{text-align:right}
+footer{margin-top:3rem;font-size:.8rem;color:#888;border-top:1px solid #eee;padding-top:1rem}
+@media print {body{margin:0;padding:1cm}.noprint{display:none}}
+.noprint{position:fixed;top:1rem;right:1rem;background:#00c988;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:6px;cursor:pointer;font-weight:600}
+</style></head><body>
+<button class="noprint" onclick="window.print()">Imprimir / Guardar PDF</button>
+<header>
+	<div><h1>ResolveCore</h1><div>Soporte técnico remoto<br>fvidalmateo@gmail.com</div></div>
+	<div class="meta">
+		<strong>Factura <?php echo esc_html( $num ); ?></strong><br>
+		Fecha: <?php echo esc_html( $fecha ); ?><br>
+		Ticket: #<?php echo (int) $id; ?>
+	</div>
+</header>
+<p><strong>Cliente:</strong> <?php echo esc_html( $cliente ); ?></p>
+<p><strong>Técnico:</strong> <?php echo esc_html( $tecnico ); ?></p>
+<table>
+	<thead><tr><th>Concepto</th><th class="right">Cantidad</th><th class="right">Precio</th><th class="right">Importe</th></tr></thead>
+	<tbody>
+		<tr>
+			<td>Intervención de soporte técnico remoto (ticket #<?php echo (int) $id; ?>)</td>
+			<td class="right"><?php echo esc_html( number_format( $horas, 2, ',', '.' ) ); ?> h</td>
+			<td class="right"><?php echo esc_html( number_format( $tarifa, 2, ',', '.' ) ); ?> €</td>
+			<td class="right"><?php echo esc_html( number_format( $base, 2, ',', '.' ) ); ?> €</td>
+		</tr>
+	</tbody>
+	<tfoot>
+		<tr><td colspan="3" class="right">Base imponible</td><td class="right"><?php echo esc_html( number_format( $base, 2, ',', '.' ) ); ?> €</td></tr>
+		<tr><td colspan="3" class="right">IVA 21%</td><td class="right"><?php echo esc_html( number_format( $iva, 2, ',', '.' ) ); ?> €</td></tr>
+		<tr><td colspan="3" class="right">TOTAL</td><td class="right"><?php echo esc_html( number_format( $total, 2, ',', '.' ) ); ?> €</td></tr>
+	</tfoot>
+</table>
+<footer>
+	Factura simplificada (RD 1619/2012 art. 7). Para factura completa, contactar.<br>
+	ResolveCore — Solución a tus problemas informáticos.
+</footer>
+</body></html>
+	<?php
+	exit;
+}
+add_action( 'template_redirect', 'rc_tech_factura_inline', 4 );
+
+/**
  * Estadísticas rápidas del técnico (descargas propias últimas 30d).
  */
 function rc_tech_my_stats(): array {
