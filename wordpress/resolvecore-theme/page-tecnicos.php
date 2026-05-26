@@ -391,6 +391,106 @@ get_header();
 	</div>
 </section>
 
+<!-- ── Dashboard ticket activo (pinned) ────────────────────────────────── -->
+<section class="rc-tec-dash" id="rc-dash" hidden>
+	<div class="rc-tec-wrap">
+		<div class="rc-dash-header">
+			<div class="rc-dash-pin">
+				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14l-1.5-9.5a2 2 0 0 0-2-1.5h-7a2 2 0 0 0-2 1.5z"/></svg>
+				<span>Ticket activo</span>
+				<strong id="rc-dash-id">#—</strong>
+				<span id="rc-dash-sum" class="rc-muted"></span>
+			</div>
+			<div class="rc-dash-timer">
+				<span id="rc-dash-elapsed">00:00:00</span>
+				<button type="button" class="rc-mini-btn" id="rc-dash-toggle">Pausar</button>
+				<button type="button" class="rc-mini-btn" id="rc-dash-reset">Reset</button>
+				<button type="button" class="rc-mini-btn" id="rc-dash-unpin">Soltar</button>
+			</div>
+		</div>
+
+		<div class="rc-dash-grid">
+			<div class="rc-dash-block">
+				<h4>Añadir nota al ticket</h4>
+				<textarea id="rc-note-text" rows="3" placeholder="Diagnóstico breve, paso aplicado…"></textarea>
+				<div class="rc-dash-row">
+					<small id="rc-note-feedback" class="rc-muted"></small>
+					<button type="button" class="rc-mini-btn rc-mini-btn--primary" id="rc-note-send">Enviar nota</button>
+				</div>
+			</div>
+
+			<div class="rc-dash-block">
+				<h4>Subir informe (PDF/HTML)</h4>
+				<input type="file" id="rc-informe-file" accept=".pdf,.html" hidden>
+				<button type="button" class="rc-mini-btn" id="rc-informe-pick">Elegir fichero…</button>
+				<small id="rc-informe-name" class="rc-muted">Ningún fichero</small>
+				<div class="rc-dash-row">
+					<small id="rc-informe-feedback" class="rc-muted"></small>
+					<button type="button" class="rc-mini-btn rc-mini-btn--primary" id="rc-informe-send" disabled>Adjuntar al ticket</button>
+				</div>
+			</div>
+
+			<div class="rc-dash-block">
+				<h4>Generar factura</h4>
+				<div class="rc-fact-form">
+					<label>Cliente <input type="text" id="rc-fact-cliente" placeholder="Juan Pérez"></label>
+					<label>Horas <input type="number" id="rc-fact-horas" step="0.25" min="0.25" value="1"></label>
+					<label>€/h <input type="number" id="rc-fact-tarifa" step="1" min="0" value="35"></label>
+				</div>
+				<button type="button" class="rc-mini-btn rc-mini-btn--primary" id="rc-fact-go">Abrir factura</button>
+			</div>
+
+			<div class="rc-dash-block">
+				<h4>Sesión AnyDesk</h4>
+				<div class="rc-dash-row">
+					<input type="text" id="rc-anydesk-id" placeholder="ID AnyDesk (9-10 dígitos)" pattern="[0-9]+" inputmode="numeric">
+					<button type="button" class="rc-mini-btn rc-mini-btn--primary" id="rc-anydesk-go">Conectar</button>
+				</div>
+				<ul id="rc-anydesk-recent" class="rc-anydesk-recent"></ul>
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- ── Tail logs en vivo ───────────────────────────────────────────────── -->
+<section class="rc-tec-logs">
+	<div class="rc-tec-wrap">
+		<div class="rc-tec-logs-head">
+			<h2>Últimas descargas <span class="rc-muted">(auto-refresh 10s)</span></h2>
+			<button type="button" class="rc-mini-btn" id="rc-logs-refresh">
+				<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/></svg>
+				Actualizar
+			</button>
+		</div>
+		<div class="rc-logs-table-wrap">
+			<table class="rc-logs-table">
+				<thead><tr><th>#</th><th>Cuándo</th><th>Usuario</th><th>Fichero</th><th>IP</th></tr></thead>
+				<tbody id="rc-logs-body">
+					<tr><td colspan="5" class="rc-muted">Cargando…</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</section>
+
+<!-- ── Command palette ─────────────────────────────────────────────────── -->
+<div id="rc-palette" class="rc-palette" hidden role="dialog" aria-modal="true" aria-label="Paleta de comandos">
+	<div class="rc-palette-bg" data-close></div>
+	<div class="rc-palette-box">
+		<div class="rc-palette-input-row">
+			<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+			<input type="text" id="rc-palette-q" placeholder="Buscar acción, ticket, plataforma… (Esc cierra)" autocomplete="off" spellcheck="false">
+			<kbd>Esc</kbd>
+		</div>
+		<ul id="rc-palette-list" class="rc-palette-list" role="listbox"></ul>
+		<div class="rc-palette-footer">
+			<span><kbd>↑↓</kbd> navegar</span>
+			<span><kbd>Enter</kbd> seleccionar</span>
+			<span><kbd>Ctrl</kbd>+<kbd>K</kbd> abrir/cerrar</span>
+		</div>
+	</div>
+</div>
+
 <!-- ── Accesos rápidos ─────────────────────────────────────────────────── -->
 <section class="rc-tec-links">
 	<div class="rc-tec-wrap">
@@ -429,7 +529,7 @@ get_header();
 
 <!-- ── Atajos teclado hint ─────────────────────────────────────────────── -->
 <div class="rc-tec-hotkeys" aria-hidden="true">
-	<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> tabs · <kbd>C</kbd> copiar · <kbd>?</kbd> ayuda
+	<kbd>Ctrl</kbd>+<kbd>K</kbd> palette · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> tabs · <kbd>C</kbd> copiar · <kbd>Esc</kbd> cerrar
 </div>
 
 </main>
@@ -870,6 +970,170 @@ get_header();
 	font-family: inherit; font-size: .65rem; color: #c8cad8;
 }
 
+/* ── Dashboard ticket activo ──────────────────────────────────────────── */
+.rc-tec-dash {
+	position: sticky; top: 50px; z-index: 20;
+	background: rgba(10,12,16,.92); backdrop-filter: blur(12px);
+	border-top: 1px solid #00e5a040;
+	border-bottom: 1px solid #00e5a040;
+	padding: 1rem 1.5rem;
+	box-shadow: 0 8px 30px rgba(0,0,0,.4);
+}
+.rc-dash-header {
+	display: flex; justify-content: space-between; align-items: center;
+	flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;
+}
+.rc-dash-pin {
+	display: flex; align-items: center; gap: .5rem;
+	color: #00e5a0; font-weight: 600; font-size: .9rem;
+}
+.rc-dash-pin strong { color: #e8eaf0; font-family: 'JetBrains Mono',monospace; }
+.rc-dash-pin #rc-dash-sum { font-size: .8rem; font-weight: 400; }
+.rc-dash-timer {
+	display: flex; align-items: center; gap: .5rem;
+}
+.rc-dash-timer #rc-dash-elapsed {
+	font-family: 'JetBrains Mono',monospace; font-size: 1.1rem; font-weight: 700;
+	color: #00e5a0;
+	background: rgba(0,229,160,.08); border: 1px solid #00e5a030;
+	padding: .35rem .75rem; border-radius: 6px;
+	min-width: 90px; text-align: center;
+}
+.rc-dash-grid {
+	display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem;
+}
+.rc-dash-block {
+	background: rgba(19,21,28,.6); border: 1px solid #1e2130;
+	border-radius: 10px; padding: .85rem;
+}
+.rc-dash-block h4 {
+	font-size: .7rem; font-weight: 700; color: #7a7f8e;
+	letter-spacing: .08em; text-transform: uppercase; margin: 0 0 .6rem;
+}
+.rc-dash-block textarea, .rc-dash-block input {
+	width: 100%;
+	background: #04060a; border: 1px solid #1e2130; color: #e8eaf0;
+	border-radius: 6px; padding: .45rem .6rem;
+	font-size: .82rem; font-family: inherit;
+	resize: vertical;
+}
+.rc-dash-block textarea:focus, .rc-dash-block input:focus {
+	outline: none; border-color: #00e5a060;
+}
+.rc-dash-row {
+	display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+	margin-top: .5rem;
+}
+.rc-fact-form { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: .4rem; margin-bottom: .5rem; }
+.rc-fact-form label { display: flex; flex-direction: column; font-size: .65rem; color: #7a7f8e; text-transform: uppercase; gap: .2rem; }
+.rc-anydesk-recent {
+	list-style: none; margin: .6rem 0 0; padding: 0;
+	max-height: 80px; overflow-y: auto;
+}
+.rc-anydesk-recent li {
+	display: flex; justify-content: space-between; align-items: center;
+	padding: .25rem .4rem; font-size: .76rem; color: #9da2b0;
+	border-bottom: 1px solid #13151c;
+}
+.rc-anydesk-recent button {
+	background: none; border: none; color: #00e5a0; cursor: pointer; font-size: .7rem;
+}
+
+/* ── Tail logs ───────────────────────────────────────────────────────── */
+.rc-tec-logs { padding: 2rem 1.5rem; background: #06080c; border-top: 1px solid #1a1d24; }
+.rc-tec-logs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.rc-tec-logs-head h2 {
+	font-size: .85rem; font-weight: 700; color: #7a7f8e;
+	letter-spacing: .08em; text-transform: uppercase; margin: 0;
+}
+.rc-tec-logs-head .rc-muted { font-weight: 400; font-size: .7rem; text-transform: none; letter-spacing: 0; }
+.rc-logs-table-wrap {
+	background: rgba(19,21,28,.6); border: 1px solid #1e2130;
+	border-radius: 10px; overflow: hidden;
+}
+.rc-logs-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.rc-logs-table th {
+	background: #0d0f14; color: #555c6e;
+	font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+	font-weight: 600; text-align: left;
+	padding: .55rem .75rem; border-bottom: 1px solid #1e2130;
+}
+.rc-logs-table td {
+	padding: .5rem .75rem; border-bottom: 1px solid #13151c;
+	color: #c8cad8;
+}
+.rc-logs-table tbody tr:last-child td { border-bottom: none; }
+.rc-logs-table td:first-child { color: #555c6e; font-family: 'JetBrains Mono',monospace; }
+.rc-logs-table td.rc-log-key {
+	font-family: 'JetBrains Mono',monospace;
+}
+.rc-log-key--windows { color: #4fc3f7; }
+.rc-log-key--linux   { color: #ffd54f; }
+.rc-log-key--kit     { color: #00e5a0; }
+
+/* ── Command palette ─────────────────────────────────────────────────── */
+.rc-palette {
+	position: fixed; inset: 0; z-index: 1100;
+	display: grid; place-items: flex-start center;
+	padding-top: 12vh;
+}
+.rc-palette[hidden] { display: none; }
+.rc-palette-bg { position: absolute; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(6px); }
+.rc-palette-box {
+	position: relative;
+	width: min(640px, 92vw);
+	background: #13151c; border: 1px solid #2a2d3e;
+	border-radius: 12px; overflow: hidden;
+	box-shadow: 0 30px 80px rgba(0,0,0,.6);
+}
+.rc-palette-input-row {
+	display: flex; align-items: center; gap: .6rem;
+	padding: .85rem 1rem;
+	border-bottom: 1px solid #1e2130;
+	color: #555c6e;
+}
+.rc-palette-input-row input {
+	flex: 1;
+	background: none; border: none; color: #e8eaf0;
+	font-size: .95rem; outline: none;
+}
+.rc-palette-input-row kbd {
+	background: #1e2130; border: 1px solid #2a2d3e; border-bottom-width: 2px;
+	padding: 1px 6px; border-radius: 3px; font-size: .65rem; color: #7a7f8e;
+}
+.rc-palette-list {
+	list-style: none; margin: 0; padding: .4rem 0;
+	max-height: 50vh; overflow-y: auto;
+}
+.rc-palette-list li {
+	display: flex; align-items: center; gap: .6rem;
+	padding: .55rem 1rem; cursor: pointer;
+	color: #c8cad8; font-size: .88rem;
+}
+.rc-palette-list li.rc-pal-active {
+	background: rgba(0,229,160,.1); color: #00e5a0;
+}
+.rc-palette-list .rc-pal-cat {
+	font-size: .65rem; text-transform: uppercase; letter-spacing: .06em;
+	color: #555c6e; background: #1e2130;
+	padding: .15rem .45rem; border-radius: 3px;
+	margin-left: auto;
+}
+.rc-palette-list .rc-pal-empty {
+	padding: 1.5rem; text-align: center; color: #555c6e; font-style: italic;
+}
+.rc-palette-footer {
+	display: flex; gap: 1rem; justify-content: center;
+	padding: .55rem 1rem; border-top: 1px solid #1e2130;
+	background: #0d0f14;
+	font-size: .7rem; color: #555c6e;
+}
+.rc-palette-footer kbd {
+	background: #1e2130; border: 1px solid #2a2d3e; border-bottom-width: 2px;
+	padding: 1px 5px; border-radius: 3px; font-size: .65rem; color: #c8cad8;
+	margin: 0 1px;
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
 	.rc-tec-status-grid { grid-template-columns: 1fr; }
@@ -1046,8 +1310,342 @@ get_header();
 		el.addEventListener('click', closeQR);
 	});
 
+	// ── Dashboard ticket activo ──────────────────────────────────────────
+	var dash    = document.getElementById('rc-dash');
+	var dashId  = document.getElementById('rc-dash-id');
+	var dashSum = document.getElementById('rc-dash-sum');
+	var dashElapsed = document.getElementById('rc-dash-elapsed');
+	var dashToggleBtn = document.getElementById('rc-dash-toggle');
+	var dashResetBtn  = document.getElementById('rc-dash-reset');
+	var dashUnpinBtn  = document.getElementById('rc-dash-unpin');
+
+	var pinned = null;   // { id, summary }
+	var timer  = { start: 0, accumulated: 0, running: false, intervalId: null };
+
+	function loadPinned() {
+		try {
+			pinned = JSON.parse(localStorage.getItem('rc-pinned-ticket') || 'null');
+			var t  = JSON.parse(localStorage.getItem('rc-timer') || 'null');
+			if (t) timer = Object.assign(timer, t);
+		} catch(e){}
+	}
+	function savePinned() {
+		try {
+			localStorage.setItem('rc-pinned-ticket', JSON.stringify(pinned));
+			localStorage.setItem('rc-timer', JSON.stringify({ start: timer.start, accumulated: timer.accumulated, running: timer.running }));
+		} catch(e){}
+	}
+	function fmtElapsed(ms) {
+		var s = Math.floor(ms / 1000);
+		var h = Math.floor(s / 3600); s -= h * 3600;
+		var m = Math.floor(s / 60); s -= m * 60;
+		var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+		return p(h) + ':' + p(m) + ':' + p(s);
+	}
+	function tickTimer() {
+		var ms = timer.accumulated + (timer.running ? Date.now() - timer.start : 0);
+		dashElapsed.textContent = fmtElapsed(ms);
+	}
+	function startTimer() {
+		if (timer.running) return;
+		timer.start = Date.now(); timer.running = true;
+		dashToggleBtn.textContent = 'Pausar';
+		if (!timer.intervalId) timer.intervalId = setInterval(tickTimer, 500);
+		savePinned();
+	}
+	function pauseTimer() {
+		if (!timer.running) return;
+		timer.accumulated += Date.now() - timer.start;
+		timer.running = false;
+		dashToggleBtn.textContent = 'Reanudar';
+		savePinned();
+	}
+	function resetTimer() {
+		timer.start = 0; timer.accumulated = 0; timer.running = false;
+		dashToggleBtn.textContent = 'Iniciar';
+		tickTimer();
+		savePinned();
+	}
+	function renderDash() {
+		if (!pinned) { dash.hidden = true; return; }
+		dash.hidden = false;
+		dashId.textContent = '#' + pinned.id;
+		dashSum.textContent = pinned.summary || '';
+		dashToggleBtn.textContent = timer.running ? 'Pausar' : (timer.accumulated ? 'Reanudar' : 'Iniciar');
+		if (!timer.intervalId) timer.intervalId = setInterval(tickTimer, 500);
+		tickTimer();
+	}
+	function pinTicket(id, summary) {
+		pinned = { id: parseInt(id, 10), summary: summary || '' };
+		timer = { start: 0, accumulated: 0, running: false, intervalId: timer.intervalId };
+		savePinned();
+		renderDash();
+		startTimer();
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	}
+	function unpinTicket() {
+		pinned = null; resetTimer();
+		try { localStorage.removeItem('rc-pinned-ticket'); localStorage.removeItem('rc-timer'); } catch(e){}
+		renderDash();
+	}
+	dashToggleBtn.addEventListener('click', function () { timer.running ? pauseTimer() : startTimer(); });
+	dashResetBtn .addEventListener('click', resetTimer);
+	dashUnpinBtn .addEventListener('click', unpinTicket);
+
+	loadPinned();
+	renderDash();
+	if (timer.running) startTimer();
+
+	// Pin ticket desde widget: añadimos botón a cada ticket renderizado
+	var paintTicketsOrig = paintTickets;
+	paintTickets = function (list) {
+		paintTicketsOrig(list);
+		document.querySelectorAll('.rc-ticket').forEach(function (a, i) {
+			if (!list[i]) return;
+			var t = list[i];
+			var pinBtn = document.createElement('button');
+			pinBtn.type = 'button';
+			pinBtn.className = 'rc-mini-btn';
+			pinBtn.textContent = (pinned && pinned.id === t.id) ? 'Pinned' : 'Pin';
+			pinBtn.addEventListener('click', function (ev) {
+				ev.preventDefault(); ev.stopPropagation();
+				pinTicket(t.id, t.summary);
+				pinBtn.textContent = 'Pinned';
+			});
+			a.appendChild(pinBtn);
+		});
+	};
+
+	// Add note al ticket pinned
+	var noteText = document.getElementById('rc-note-text');
+	var noteSend = document.getElementById('rc-note-send');
+	var noteFb   = document.getElementById('rc-note-feedback');
+	noteSend.addEventListener('click', function () {
+		if (!pinned) { noteFb.textContent = 'Pin un ticket primero.'; return; }
+		var txt = (noteText.value || '').trim();
+		if (!txt) { noteFb.textContent = 'Texto vacío.'; return; }
+		noteSend.disabled = true; noteFb.textContent = 'Enviando…';
+		var fd = new FormData();
+		fd.append('action', 'rc_tech_add_note');
+		fd.append('nonce', nonce);
+		fd.append('ticket_id', pinned.id);
+		fd.append('text', txt);
+		fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
+			.then(function (r) { return r.json(); })
+			.then(function (j) {
+				noteSend.disabled = false;
+				if (j && j.success) { noteFb.textContent = j.data.msg; noteText.value = ''; }
+				else noteFb.textContent = (j && j.data && j.data.msg) || 'Error';
+			})
+			.catch(function () { noteSend.disabled = false; noteFb.textContent = 'Error red.'; });
+	});
+
+	// Upload informe
+	var informeFile = document.getElementById('rc-informe-file');
+	var informePick = document.getElementById('rc-informe-pick');
+	var informeName = document.getElementById('rc-informe-name');
+	var informeSend = document.getElementById('rc-informe-send');
+	var informeFb   = document.getElementById('rc-informe-feedback');
+	informePick.addEventListener('click', function () { informeFile.click(); });
+	informeFile.addEventListener('change', function () {
+		if (informeFile.files.length) {
+			informeName.textContent = informeFile.files[0].name;
+			informeSend.disabled = false;
+		} else {
+			informeName.textContent = 'Ningún fichero';
+			informeSend.disabled = true;
+		}
+	});
+	informeSend.addEventListener('click', function () {
+		if (!pinned) { informeFb.textContent = 'Pin un ticket primero.'; return; }
+		if (!informeFile.files.length) return;
+		informeSend.disabled = true; informeFb.textContent = 'Subiendo…';
+		var fd = new FormData();
+		fd.append('action', 'rc_tech_upload_informe');
+		fd.append('nonce', nonce);
+		fd.append('ticket_id', pinned.id);
+		fd.append('informe', informeFile.files[0]);
+		fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
+			.then(function (r) { return r.json(); })
+			.then(function (j) {
+				informeSend.disabled = false;
+				if (j && j.success) {
+					informeFb.textContent = j.data.msg;
+					informeFile.value = ''; informeName.textContent = 'Ningún fichero';
+					informeSend.disabled = true;
+				} else informeFb.textContent = (j && j.data && j.data.msg) || 'Error';
+			})
+			.catch(function () { informeSend.disabled = false; informeFb.textContent = 'Error red.'; });
+	});
+
+	// Factura
+	document.getElementById('rc-fact-go').addEventListener('click', function () {
+		if (!pinned) { alert('Pin un ticket primero.'); return; }
+		var cliente = (document.getElementById('rc-fact-cliente').value || '').trim() || 'Cliente';
+		var horas   = parseFloat(document.getElementById('rc-fact-horas').value) || 1;
+		var tarifa  = parseFloat(document.getElementById('rc-fact-tarifa').value) || 35;
+		var url = '<?php echo esc_js( home_url( '/tecnicos/' ) ); ?>?rc_factura=' + pinned.id
+			+ '&cliente=' + encodeURIComponent(cliente)
+			+ '&horas=' + horas + '&tarifa=' + tarifa;
+		window.open(url, '_blank');
+	});
+
+	// AnyDesk launcher
+	var anydeskInput  = document.getElementById('rc-anydesk-id');
+	var anydeskGo     = document.getElementById('rc-anydesk-go');
+	var anydeskRecent = document.getElementById('rc-anydesk-recent');
+	function loadAnydeskHist() {
+		try { return JSON.parse(localStorage.getItem('rc-anydesk-hist') || '[]'); } catch(e){ return []; }
+	}
+	function saveAnydeskHist(h) { try { localStorage.setItem('rc-anydesk-hist', JSON.stringify(h.slice(0,5))); } catch(e){} }
+	function paintAnydeskHist() {
+		var h = loadAnydeskHist();
+		anydeskRecent.innerHTML = h.map(function (item) {
+			return '<li><span>' + escapeHtml(item.id) + (item.ticket ? ' · #' + item.ticket : '') + '</span>'
+				+ '<button data-anydesk="' + escapeHtml(item.id) + '">Conectar</button></li>';
+		}).join('');
+		anydeskRecent.querySelectorAll('button').forEach(function (b) {
+			b.addEventListener('click', function () { launchAnydesk(b.dataset.anydesk); });
+		});
+	}
+	function launchAnydesk(id) {
+		if (!/^[0-9]{6,12}$/.test(id)) { alert('ID AnyDesk inválido.'); return; }
+		var h = loadAnydeskHist();
+		h = [{ id: id, ticket: pinned ? pinned.id : 0, at: Date.now() }]
+			.concat(h.filter(function (x) { return x.id !== id; }));
+		saveAnydeskHist(h);
+		paintAnydeskHist();
+		window.location.href = 'anydesk:' + id;
+	}
+	anydeskGo.addEventListener('click', function () { launchAnydesk(anydeskInput.value.trim()); });
+	anydeskInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') launchAnydesk(anydeskInput.value.trim()); });
+	paintAnydeskHist();
+
+	// ── Tail logs ────────────────────────────────────────────────────────
+	function paintLogs(rows) {
+		var body = document.getElementById('rc-logs-body');
+		if (!rows.length) { body.innerHTML = '<tr><td colspan="5" class="rc-muted">Sin descargas registradas.</td></tr>'; return; }
+		body.innerHTML = rows.map(function (r) {
+			return '<tr>'
+				+ '<td>' + r.id + '</td>'
+				+ '<td>' + escapeHtml(r.downloaded_at) + '</td>'
+				+ '<td>' + escapeHtml(r.user_login) + '</td>'
+				+ '<td class="rc-log-key rc-log-key--' + escapeHtml(r.file_key) + '">' + escapeHtml(r.file_key) + '</td>'
+				+ '<td>' + escapeHtml(r.ip) + '</td>'
+				+ '</tr>';
+		}).join('');
+	}
+	function fetchLogs() {
+		var fd = new FormData();
+		fd.append('action', 'rc_tech_logs_tail');
+		fd.append('nonce', nonce);
+		fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
+			.then(function (r) { return r.json(); })
+			.then(function (j) { if (j && j.success) paintLogs(j.data.rows || []); })
+			.catch(function () {});
+	}
+	fetchLogs();
+	setInterval(fetchLogs, 10000);
+	document.getElementById('rc-logs-refresh').addEventListener('click', fetchLogs);
+
+	// ── Command palette ──────────────────────────────────────────────────
+	var palette  = document.getElementById('rc-palette');
+	var palQ     = document.getElementById('rc-palette-q');
+	var palList  = document.getElementById('rc-palette-list');
+	var palItems = [];
+	var palIdx   = 0;
+	var palTickets = [];
+
+	function buildPalItems() {
+		var base = [
+			{ cat: 'Tab', label: 'Ir a Windows',         action: function(){ activateTab('windows'); } },
+			{ cat: 'Tab', label: 'Ir a Linux',           action: function(){ activateTab('linux'); } },
+			{ cat: 'Tab', label: 'Ir a Kit cliente',     action: function(){ activateTab('kit'); } },
+			{ cat: 'Acción', label: 'Copiar oneliner Windows', action: function(){ copyText('irm https://resolvecore.website/install.ps1 | iex', document.querySelector('.rc-copy-btn')); } },
+			{ cat: 'Acción', label: 'Copiar oneliner Linux',   action: function(){ copyText('curl -fsSL https://resolvecore.website/install.sh | sudo bash', document.querySelector('.rc-copy-btn')); } },
+			{ cat: 'Acción', label: 'Refrescar estado infra',  action: fetchInfra },
+			{ cat: 'Acción', label: 'Refrescar logs',          action: fetchLogs },
+			{ cat: 'Acción', label: 'Refrescar mis tickets',   action: fetchTickets },
+			{ cat: 'Link', label: 'Abrir MantisBT',  action: function(){ window.open('https://mantis.resolvecore.website','_blank'); } },
+			{ cat: 'Link', label: 'Abrir Fleet panel', action: function(){ window.open('<?php echo esc_js( home_url( '/fleet-status/' ) ); ?>','_blank'); } },
+			{ cat: 'Link', label: 'Abrir Changelog',  action: function(){ window.open('<?php echo esc_js( home_url( '/changelog/' ) ); ?>','_blank'); } },
+			{ cat: 'Link', label: 'Abrir Documentación', action: function(){ window.open('<?php echo esc_js( home_url( '/docs/' ) ); ?>','_blank'); } },
+		];
+		palTickets.forEach(function (t) {
+			base.push({
+				cat: 'Ticket #' + t.id,
+				label: t.summary,
+				action: function () { pinTicket(t.id, t.summary); }
+			});
+		});
+		return base;
+	}
+	function renderPalList(filter) {
+		var q = (filter || '').toLowerCase().trim();
+		palItems = buildPalItems().filter(function (it) {
+			if (!q) return true;
+			return (it.label + ' ' + it.cat).toLowerCase().indexOf(q) >= 0;
+		});
+		if (!palItems.length) {
+			palList.innerHTML = '<li class="rc-pal-empty">Sin resultados</li>';
+			return;
+		}
+		palList.innerHTML = palItems.map(function (it, i) {
+			return '<li role="option" data-i="' + i + '" class="' + (i === 0 ? 'rc-pal-active' : '') + '">'
+				+ '<span>' + escapeHtml(it.label) + '</span>'
+				+ '<span class="rc-pal-cat">' + escapeHtml(it.cat) + '</span>'
+				+ '</li>';
+		}).join('');
+		palIdx = 0;
+		palList.querySelectorAll('li').forEach(function (li) {
+			li.addEventListener('click', function () { runPal(parseInt(li.dataset.i, 10)); });
+			li.addEventListener('mouseenter', function () { highlightPal(parseInt(li.dataset.i, 10)); });
+		});
+	}
+	function highlightPal(i) {
+		palIdx = i;
+		palList.querySelectorAll('li').forEach(function (li, j) {
+			li.classList.toggle('rc-pal-active', j === i);
+		});
+	}
+	function runPal(i) {
+		if (palItems[i]) { palItems[i].action(); closePalette(); }
+	}
+	function openPalette() {
+		// Refresca tickets de cache (último fetchTickets los guardó si lo modificamos; usar globales).
+		palTickets = window.__rcLastTickets || [];
+		renderPalList('');
+		palette.hidden = false;
+		setTimeout(function () { palQ.value = ''; palQ.focus(); }, 0);
+	}
+	function closePalette() { palette.hidden = true; palQ.blur(); }
+	palQ.addEventListener('input', function () { renderPalList(palQ.value); });
+	palQ.addEventListener('keydown', function (e) {
+		if (e.key === 'ArrowDown')      { e.preventDefault(); highlightPal(Math.min(palIdx + 1, palItems.length - 1)); }
+		else if (e.key === 'ArrowUp')   { e.preventDefault(); highlightPal(Math.max(palIdx - 1, 0)); }
+		else if (e.key === 'Enter')     { e.preventDefault(); runPal(palIdx); }
+	});
+	palette.querySelectorAll('[data-close]').forEach(function (el) { el.addEventListener('click', closePalette); });
+
+	// Hook para guardar últimos tickets en global
+	var paintTicketsForPalette = paintTickets;
+	paintTickets = function (list) {
+		window.__rcLastTickets = list || [];
+		paintTicketsForPalette(list);
+	};
+
 	// ── Atajos teclado ───────────────────────────────────────────────────
 	document.addEventListener('keydown', function (e) {
+		// Ctrl/Cmd + K abre palette (siempre)
+		if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+			e.preventDefault();
+			palette.hidden ? openPalette() : closePalette();
+			return;
+		}
+		if (e.key === 'Escape') {
+			if (!palette.hidden) { closePalette(); return; }
+			if (!qrModal.hidden) { closeQR();      return; }
+		}
 		if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 		if (e.key === '1') activateTab('windows');
 		else if (e.key === '2') activateTab('linux');
@@ -1060,7 +1658,7 @@ get_header();
 				var btn = term.querySelector('.rc-copy-btn');
 				if (btn) copyText(term.dataset.oneliner, btn);
 			}
-		} else if (e.key === 'Escape' && !qrModal.hidden) closeQR();
+		}
 	});
 
 })();
