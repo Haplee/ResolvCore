@@ -91,7 +91,8 @@ if (-not $wsl) {
 
 # ── 4. AnyDesk portable ───────────────────────────────────────────────────
 Write-Step 4 "Verificando AnyDesk portable..."
-$anyDeskDest = Join-Path $PSScriptRoot 'kit\anydesk.exe'
+$baseDir = if ($PSScriptRoot) { $PSScriptRoot } else { Join-Path $env:USERPROFILE 'ResolveCore' }
+$anyDeskDest = Join-Path $baseDir 'kit\anydesk.exe'
 if (-not (Test-Path $anyDeskDest)) {
     Write-Step 4 "Descargando AnyDesk portable..."
     try {
