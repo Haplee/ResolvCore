@@ -6,13 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ── Descarga segura de ficheros para área técnicos ─────────────────────────
 // Añade en wp-config.php: define('RC_DOWNLOADS_PATH', '/opt/resolvecore-downloads');
 function rc_handle_technician_download(): void {
-	if ( ! isset( $_GET['rc_download'] ) ) {
+	if ( ! isset( $_GET['rc_download'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return;
 	}
 
 	// Requiere login
 	if ( ! is_user_logged_in() ) {
-		wp_redirect( wp_login_url( get_permalink() ) );
+		wp_safe_redirect( wp_login_url( get_permalink() ) );
 		exit;
 	}
 
@@ -21,6 +21,7 @@ function rc_handle_technician_download(): void {
 		wp_die( 'Sin permiso para descargar.', 'Sin acceso', array( 'response' => 403 ) );
 	}
 
+	check_admin_referer( 'rc_download' );
 	$key = sanitize_key( wp_unslash( $_GET['rc_download'] ) );
 
 	$allowed = array(
@@ -55,13 +56,15 @@ function rc_handle_technician_download(): void {
 	// Log de descarga (error_log + tabla rc_download_log)
 	$user = wp_get_current_user();
 	$ip   = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
-	error_log( sprintf(
-		'[ResolveCore] Descarga: %s | usuario: %s | IP: %s | %s',
-		esc_html( $key ),
-		esc_html( $user->user_login ),
-		$ip,
-		gmdate( 'Y-m-d H:i:s' )
-	) );
+	error_log(
+		sprintf(
+			'[ResolveCore] Descarga: %s | usuario: %s | IP: %s | %s',
+			esc_html( $key ),
+			esc_html( $user->user_login ),
+			$ip,
+			gmdate( 'Y-m-d H:i:s' )
+		)
+	);
 	rc_log_download( $key, $user->user_login, $ip );
 
 	header( 'Content-Type: ' . $allowed[ $key ]['type'] );
@@ -70,7 +73,7 @@ function rc_handle_technician_download(): void {
 	header( 'Cache-Control: no-cache, no-store, must-revalidate' );
 	header( 'Pragma: no-cache' );
 	header( 'X-Content-Type-Options: nosniff' );
-	readfile( $filepath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_readfile
+	readfile( $filepath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 	exit;
 }
 add_action( 'template_redirect', 'rc_handle_technician_download', 5 );
@@ -664,7 +667,7 @@ function resolvecore_handle_ticket_status() {
 			static fn( $n ) => isset( $n['view_state']['name'] ) && 'public' === $n['view_state']['name']
 		);
 		if ( $pub_notes ) {
-			$last = end( $pub_notes );
+			$last      = end( $pub_notes );
 			$last_note = (string) ( $last['text'] ?? '' );
 			// Truncar a 300 caracteres para el modal
 			if ( mb_strlen( $last_note ) > 300 ) {
@@ -724,7 +727,7 @@ add_action( 'after_setup_theme', 'rc_create_download_log_table' );
 
 function rc_log_download( string $key, string $user_login, string $ip ): void {
 	global $wpdb;
-	$wpdb->insert(
+	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->prefix . 'rc_download_log',
 		array(
 			'file_key'      => $key,
@@ -827,10 +830,19 @@ function rc_tech_infra_status(): void {
 		);
 		$ms  = (int) ( ( microtime( true ) - $t0 ) * 1000 );
 		if ( is_wp_error( $res ) ) {
-			$out[ $name ] = array( 'ok' => false, 'code' => 0, 'ms' => $ms, 'err' => $res->get_error_message() );
+			$out[ $name ] = array(
+				'ok'   => false,
+				'code' => 0,
+				'ms'   => $ms,
+				'err'  => $res->get_error_message(),
+			);
 		} else {
 			$code         = wp_remote_retrieve_response_code( $res );
-			$out[ $name ] = array( 'ok' => $code >= 200 && $code < 400, 'code' => $code, 'ms' => $ms );
+			$out[ $name ] = array(
+				'ok'   => $code >= 200 && $code < 400,
+				'code' => $code,
+				'ms'   => $ms,
+			);
 		}
 	}
 	$out['checked_at'] = gmdate( 'c' );
@@ -867,7 +879,12 @@ function rc_tech_my_tickets(): void {
 	}
 
 	if ( ! method_exists( $api, 'list_issues' ) ) {
-		wp_send_json_success( array( 'tickets' => array(), 'note' => 'API sin list_issues' ) );
+		wp_send_json_success(
+			array(
+				'tickets' => array(),
+				'note'    => 'API sin list_issues',
+			)
+		);
 	}
 
 	$res = $api->list_issues( array( 'page_size' => 25 ) );
@@ -983,11 +1000,9 @@ function rc_tech_logs_tail(): void {
 
 	global $wpdb;
 	$table = $wpdb->prefix . 'rc_download_log';
-	$rows  = $wpdb->get_results(
-		"SELECT id, file_key, user_login, ip, downloaded_at
-		 FROM {$table}
-		 ORDER BY id DESC
-		 LIMIT 20",
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	$rows = $wpdb->get_results(
+		"SELECT id, file_key, user_login, ip, downloaded_at FROM {$table} ORDER BY id DESC LIMIT 20", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		ARRAY_A
 	);
 	wp_send_json_success( array( 'rows' => $rows ?: array() ) );
@@ -1043,6 +1058,7 @@ function rc_tech_upload_informe(): void {
 		wp_send_json_error( array( 'msg' => 'Falta fichero.' ) );
 	}
 
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- tmp_name/size validated below; name sanitized via sanitize_file_name before use
 	$file = $_FILES['informe'];
 	if ( (int) $file['size'] > 10 * 1024 * 1024 ) {
 		wp_send_json_error( array( 'msg' => 'Fichero > 10 MB.' ) );
@@ -1066,7 +1082,12 @@ function rc_tech_upload_informe(): void {
 	if ( is_wp_error( $res ) ) {
 		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
 	}
-	wp_send_json_success( array( 'msg' => 'Informe adjuntado al ticket #' . $id, 'file' => $safe_name ) );
+	wp_send_json_success(
+		array(
+			'msg'  => 'Informe adjuntado al ticket #' . $id,
+			'file' => $safe_name,
+		)
+	);
 }
 add_action( 'wp_ajax_rc_tech_upload_informe', 'rc_tech_upload_informe' );
 
@@ -1075,16 +1096,17 @@ add_action( 'wp_ajax_rc_tech_upload_informe', 'rc_tech_upload_informe' );
  * Acceso: /tecnicos/?rc_factura=<ID>&cliente=<nombre>&horas=<n>
  */
 function rc_tech_factura_inline(): void {
-	if ( ! isset( $_GET['rc_factura'] ) ) {
+	if ( ! isset( $_GET['rc_factura'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return;
 	}
 	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
 		wp_die( 'forbidden', 'error', array( 'response' => 403 ) );
 	}
-	$id      = absint( $_GET['rc_factura'] );
+	check_admin_referer( 'rc_factura' );
+	$id      = absint( wp_unslash( $_GET['rc_factura'] ) );
 	$cliente = sanitize_text_field( wp_unslash( $_GET['cliente'] ?? 'Cliente' ) );
-	$horas   = max( 0.25, (float) ( $_GET['horas'] ?? 1 ) );
-	$tarifa  = (float) ( $_GET['tarifa'] ?? 35.0 );
+	$horas   = max( 0.25, (float) wp_unslash( $_GET['horas'] ?? '1' ) );
+	$tarifa  = (float) wp_unslash( $_GET['tarifa'] ?? '35.0' );
 	$tecnico = wp_get_current_user()->display_name;
 	$fecha   = wp_date( 'Y-m-d' );
 	$num     = sprintf( 'F-%s-%04d', gmdate( 'Ym' ), $id );
@@ -1155,12 +1177,10 @@ function rc_tech_my_stats(): array {
 	global $wpdb;
 	$user  = wp_get_current_user();
 	$table = $wpdb->prefix . 'rc_download_log';
-	$row   = $wpdb->get_row(
-		$wpdb->prepare(
-			"SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at
-			 FROM {$table}
-			 WHERE user_login = %s
-			   AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	$row = $wpdb->get_row(
+		$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			"SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at FROM {$table} WHERE user_login = %s AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
 			$user->user_login
 		),
 		ARRAY_A

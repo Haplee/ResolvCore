@@ -22,7 +22,6 @@ Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
 
 import argparse
 import json
-import os
 import re
 import shutil
 import subprocess
