@@ -1961,7 +1961,7 @@ function submitForm(e) {
 	backdrop-filter: blur(6px);
 }
 .rc-ticket-modal-box {
-	position: relative; max-width: 560px; width: 100%;
+	position: relative; max-width: 680px; width: 100%;
 	background: var(--rc-surface); border: 1px solid var(--rc-border2);
 	box-shadow: 0 24px 60px rgba(0,0,0,.55);
 	max-height: 90vh; overflow: hidden;
@@ -2085,18 +2085,48 @@ function submitForm(e) {
 	font-size: 12px; color: var(--rc-muted); line-height: 1.5;
 }
 
-.rc-ticket-meta-grid {
-	display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1rem;
-	margin-top: 1.5rem; padding-top: 1rem;
-	border-top: 1px dashed var(--rc-border);
-	font-family: var(--rc-mono); font-size: 11px;
-}
 .rc-ticket-meta-grid dt {
 	color: var(--rc-muted); letter-spacing: .06em; text-transform: uppercase;
 	font-size: 10px;
 }
 .rc-ticket-meta-grid dd {
 	color: var(--rc-text); margin: 0;
+}
+.rc-ticket-summary {
+	font-size: .92rem; color: var(--rc-muted); margin-top: .4rem;
+	line-height: 1.45; font-style: italic;
+}
+.rc-ticket-chips {
+	display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem;
+}
+.rc-chip {
+	font-family: var(--rc-mono); font-size: 10px; letter-spacing: .07em;
+	padding: 3px 8px; border-radius: 3px;
+	background: rgba(122,127,142,.13); color: var(--rc-muted);
+	border: 1px solid var(--rc-border);
+}
+.rc-chip.priority-high, .rc-chip.priority-urgent, .rc-chip.priority-immediate {
+	background: rgba(255,107,53,.1); color: var(--rc-warn); border-color: rgba(255,107,53,.3);
+}
+.rc-chip.priority-normal { background: rgba(0,229,160,.08); color: var(--rc-accent); border-color: rgba(0,229,160,.2); }
+.rc-ticket-note {
+	margin-top: 1.25rem; padding: 1rem 1.1rem;
+	background: rgba(0,229,160,.04); border-left: 2px solid var(--rc-accent);
+	border-radius: 0 4px 4px 0;
+}
+.rc-ticket-note-label {
+	font-family: var(--rc-mono); font-size: 9px; letter-spacing: .12em;
+	color: var(--rc-accent); text-transform: uppercase; margin-bottom: .4rem;
+}
+.rc-ticket-note-text {
+	font-size: .82rem; color: var(--rc-muted); line-height: 1.6;
+	white-space: pre-wrap; word-break: break-word;
+}
+.rc-ticket-meta-grid {
+	display: grid; grid-template-columns: 1fr 1fr; gap: .6rem 1rem;
+	margin-top: 1.25rem; padding-top: 1rem;
+	border-top: 1px dashed var(--rc-border);
+	font-family: var(--rc-mono); font-size: 11px;
 }
 @media (max-width: 480px) {
 	.rc-ticket-modal-box  { max-height: 95vh; }
@@ -2165,8 +2195,24 @@ function submitForm(e) {
 	} catch { return s; }
 	}
 
+	function priorityClass(p) {
+	const s = (p || '').toLowerCase();
+	if (['urgent','immediate','emergency'].some(k => s.includes(k))) return 'priority-urgent';
+	if (s.includes('high')) return 'priority-high';
+	if (s.includes('normal')) return 'priority-normal';
+	return '';
+	}
+
 	function renderTicket(data) {
 	titleEl.textContent = 'Ticket #' + data.ticket_id;
+
+	// Chips de metadatos
+	const chipsHtml = [
+		data.category ? `<span class="rc-chip">${escapeHtml(data.category)}</span>` : '',
+		data.priority ? `<span class="rc-chip ${priorityClass(data.priority)}">${escapeHtml(data.priority.toUpperCase())}</span>` : '',
+		data.handler  ? `<span class="rc-chip">Técnico: ${escapeHtml(data.handler)}</span>` : '',
+	].filter(Boolean).join('');
+
 	const steps = (data.events || []).map(ev => {
 		let cls = 'pending';
 		if (ev.phase <  data.phase) cls = 'done';
@@ -2181,13 +2227,30 @@ function submitForm(e) {
 		</li>`;
 	}).join('');
 
+	// Última nota del técnico
+	const noteHtml = data.last_note ? `
+		<div class="rc-ticket-note">
+		<div class="rc-ticket-note-label">// Última actualización del técnico</div>
+		<div class="rc-ticket-note-text">${escapeHtml(data.last_note)}</div>
+		</div>` : '';
+
+	// Meta-grid: más campos
+	const metaRows = [
+		['Creado',      formatDate(data.created_at)],
+		['Actualizado', formatDate(data.updated_at)],
+		data.reporter ? ['Solicitante', data.reporter] : null,
+		data.handler  ? ['Asignado a',  data.handler]  : null,
+	].filter(Boolean).map(([k, v]) =>
+		`<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`
+	).join('');
+
 	bodyEl.innerHTML = `
 		<span class="rc-ticket-status-pill">${escapeHtml((data.status || '').toUpperCase())}</span>
+		${data.summary ? `<div class="rc-ticket-summary">${escapeHtml(data.summary)}</div>` : ''}
+		${chipsHtml ? `<div class="rc-ticket-chips">${chipsHtml}</div>` : ''}
 		<ul class="rc-track">${steps}</ul>
-		<dl class="rc-ticket-meta-grid">
-		<dt>Creado</dt>     <dd>${escapeHtml(formatDate(data.created_at))}</dd>
-		<dt>Actualizado</dt><dd>${escapeHtml(formatDate(data.updated_at))}</dd>
-		</dl>`;
+		${noteHtml}
+		<dl class="rc-ticket-meta-grid">${metaRows}</dl>`;
 	}
 
 	function fetchStatus(id, token) {

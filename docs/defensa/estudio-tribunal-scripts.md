@@ -12,7 +12,7 @@ Antes de defender un script individual, debes tener clara la defensa de las deci
 
 1.  **Por qué PowerShell 5.1 en Windows**: Porque es nativo en Windows 10/11. Exigir PowerShell 7 obligaría al técnico a instalar dependencias previas en la máquina remota del cliente, añadiendo fricción al servicio.
 2.  **Por qué Bash y no Python para diagnósticos en Linux**: Bash y las utilidades estándar GNU/Linux (`top`, `df`, `lsblk`, `ip`) están presentes en todas las distribuciones. Python no siempre viene instalado por defecto en servidores mínimos (ej. Alpine, contenedores).
-3.  **Por qué Python *sólo* para el escáner de vulnerabilidades**: Porque la complejidad de parsear JSONs de múltiples APIs (NVD, OSV, Shodan) y correlacionarlos es inmanejable en Bash/PowerShell puro de forma cruzada. Python stdlib permite usar el *mismo código* en los cuatro sistemas operativos.
+3.  **Por qué Python *sólo* para el escáner de vulnerabilidades**: Porque la complejidad de parsear JSONs de múltiples APIs (NVD, OSV) y correlacionarlos es inmanejable en Bash/PowerShell puro de forma cruzada. Python stdlib permite usar el *mismo código* en los cuatro sistemas operativos.
 4.  **Por qué `set -uo pipefail` sin `-e` en Bash**: Para diagnósticos, un comando fallido (ej. `sensors` si no hay hardware) no debe detener la recolección del resto del JSON. El script captura el error granularmente y escribe `"null"` en el JSON.
 5.  **Cero dependencias cerradas (No winget / No pip)**: Se respeta una política estricta de Open Source. Los scripts usan `urllib` en vez de `requests` para no requerir `pip install`. En Windows se prefiere Scoop/Choco si no hay winget, evitando la Microsoft Store.
 
@@ -90,11 +90,6 @@ Antes de defender un script individual, debes tener clara la defensa de las deci
 *   **Arquitectura (11 fases)**: `PlatformDetector` (inventaría apps) -> `CISAKEVCache` (baja feed de explotados activos) -> `VulnScanner` (Threadding de NVD y OSV) -> `RiskScorer` (calcula puntos) -> `MantisBTClient` (envía resultado).
 *   **Defensa (Tribunal):** *"Si el script no usa pip, ¿cómo haces las peticiones web de forma segura?"* -> "Usando `urllib.request` con validación estricta de TLS/SSL por defecto (`ssl.create_default_context()`). Se prefiere no forzar `requests` para cumplir la máxima de no depender de instalaciones de terceros, garantizando la ejecución inmediata."
 *   **Defensa avanzada**: *"¿Por qué añades EPSS y KEV además del CVSS?"* -> "CVSS mide gravedad estática. KEV mide si está siendo explotado hoy. EPSS mide la probabilidad futura de explotación. Priorizar solo por CVSS (NVD) es obsoleto y arroja demasiados falsos positivos en entornos corporativos."
-
-### 6.2 `escaner_shodan.py` (v1.0.0)
-*   **Propósito**: Consultar la exposición pública (puertos, servicios, CVEs) de una IP usando la API de Shodan.
-*   **Arquitectura**: Consta de gestión de créditos (`--info`), conexión REST pura y normalización de la salida a formato consola o JSON.
-*   **Defensa (Tribunal):** *"¿Qué pasa si la respuesta de la API no es un JSON estándar o cambia el tipo de dato?"* -> "Está securizado en el script. Por ejemplo, en la fase de CVEs, capturamos el `cvss` crudo e intentamos convertirlo a `float` gestionando `ValueError` y `TypeError`, porque Shodan devuelve inconsistencias de tipos. Además controlamos el crédito del tier gratuito explícitamente y mostramos los créditos restantes con `api-info` antes de agotar la cuota."
 
 ---
 
