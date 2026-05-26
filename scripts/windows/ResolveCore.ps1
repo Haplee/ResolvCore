@@ -154,6 +154,7 @@ $usuario = $env:USERNAME
 $ErrorActionPreference = 'Continue'
 $SCRIPT_DIR = $PSScriptRoot
 $PROJECT_ROOT = Split-Path -Parent $PSScriptRoot
+$SERVICIOS_DIR = Join-Path $PROJECT_ROOT "servicios"
 
 $SYSTEM_ISSUES = @()
 
@@ -349,8 +350,9 @@ function Show-Menu {
     Write-Host "    3.  [VULNERABILIDADES] - Buscar y corregir CVEs" -ForegroundColor Magenta
     Write-Host "    4.  [INFORME]          - Generar HTML/PDF + adjuntar a Mantis" -ForegroundColor Cyan
     Write-Host "    5.  [FACTURA]          - Factura PDF + email al cliente" -ForegroundColor Cyan
-    Write-Host "    6.  [AYUDA]            - Ver guia rapida" -ForegroundColor Gray
-    Write-Host "    7.  [SALIR]            - Salir" -ForegroundColor Red
+    Write-Host "    6.  [SERVICIOS]        - Congelacion / Clonacion / Kit cliente" -ForegroundColor White
+    Write-Host "    7.  [AYUDA]            - Ver guia rapida" -ForegroundColor Gray
+    Write-Host "    8.  [SALIR]            - Salir" -ForegroundColor Red
     Write-Host ""
     Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
     Write-Host ""
@@ -658,6 +660,187 @@ function Invoke-Optimizacion {
     Read-Host "  Presiona ENTER"
 }
 
+# ── Servicios adicionales ───────────────────────────────────────────────────
+
+function Get-BashExe {
+    # WSL (preferido)
+    $wsl = Get-Command wsl -ErrorAction SilentlyContinue
+    if ($wsl) { return @{ Cmd = 'wsl'; Type = 'wsl' } }
+    # Git Bash
+    $gitBash = @(
+        "${env:ProgramFiles}\Git\bin\bash.exe",
+        "${env:ProgramFiles(x86)}\Git\bin\bash.exe",
+        "${env:LOCALAPPDATA}\Programs\Git\bin\bash.exe"
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($gitBash) { return @{ Cmd = $gitBash; Type = 'bash' } }
+    return $null
+}
+
+function Invoke-BashScript {
+    param([string]$Script, [string[]]$Args = @(), [hashtable]$BashInfo)
+    if ($BashInfo.Type -eq 'wsl') {
+        $linuxPath = ($Script -replace '\\', '/') -replace '^([A-Za-z]):', { "/mnt/$($args[0].ToLower())" }
+        & wsl bash $linuxPath @Args
+    } else {
+        & $BashInfo.Cmd $Script @Args
+    }
+}
+
+function Invoke-Congelacion {
+    Write-Host ""
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+    Write-Host "  |  CONGELACION DE SISTEMAS (Windows)                            |" -ForegroundColor White
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+    Write-Host ""
+    Write-Host "    1. Estado actual                (Status)"    -ForegroundColor Cyan
+    Write-Host "    2. Configurar / Verificar       (Configure)" -ForegroundColor Cyan
+    Write-Host "    3. CONGELAR sistema             (Freeze)"    -ForegroundColor Yellow
+    Write-Host "    4. DESCONGELAR sistema          (Thaw)"      -ForegroundColor Yellow
+    Write-Host "    5. Volver"                                    -ForegroundColor Gray
+    Write-Host ""
+
+    $s = Join-Path $SERVICIOS_DIR "congelacion\congelacion-windows.ps1"
+    if (-not (Test-Path $s)) {
+        Write-Host "  [X] Script no encontrado: $s" -ForegroundColor Red
+        Read-Host "  Presiona ENTER"
+        return
+    }
+
+    $op = Read-Host "  Selecciona (1-5)"
+    switch ($op) {
+        "1" { & $s -Action Status }
+        "2" { & $s -Action Configure }
+        "3" {
+            Write-Host ""
+            Write-Host "  [!] CONGELAR: el sistema descartara cambios tras cada reinicio." -ForegroundColor Yellow
+            Write-Host "      Escribe 'SI' para confirmar:" -ForegroundColor Yellow
+            if ((Read-Host) -eq "SI") { & $s -Action Freeze -Confirm }
+        }
+        "4" {
+            Write-Host ""
+            Write-Host "  [!] DESCONGELAR: los cambios se guardaran tras el reinicio." -ForegroundColor Yellow
+            Write-Host "      Escribe 'SI' para confirmar:" -ForegroundColor Yellow
+            if ((Read-Host) -eq "SI") { & $s -Action Thaw -Confirm }
+        }
+        "5" { return }
+        default { Write-Host "  Opcion no valida" -ForegroundColor Red }
+    }
+    Write-Host ""
+    Read-Host "  Presiona ENTER"
+}
+
+function Invoke-Clonacion {
+    $bash = Get-BashExe
+    if (-not $bash) {
+        Write-Host ""
+        Write-Host "  [!] Clonacion requiere WSL o Git Bash instalado en Windows." -ForegroundColor Yellow
+        Write-Host "      - WSL:      wsl --install  (reinicia y vuelve a ejecutar)" -ForegroundColor Gray
+        Write-Host "      - Git Bash: https://git-scm.com/download/win" -ForegroundColor Gray
+        Write-Host ""
+        Read-Host "  Presiona ENTER"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+    Write-Host "  |  CLONACION DE SISTEMAS                                        |" -ForegroundColor White
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+    Write-Host ""
+    Write-Host "    1. Registrar imagen en manifiesto"  -ForegroundColor Cyan
+    Write-Host "    2. Verificar integridad de imagen"  -ForegroundColor Cyan
+    Write-Host "    3. Volver"                           -ForegroundColor Gray
+    Write-Host ""
+
+    $regScript = Join-Path $SERVICIOS_DIR "clonacion\registrar-imagen.sh"
+    $verScript = Join-Path $SERVICIOS_DIR "clonacion\verificar-imagen.sh"
+
+    $op = Read-Host "  Selecciona (1-3)"
+    switch ($op) {
+        "1" {
+            $img    = Read-Host "  Ruta imagen o carpeta Clonezilla"
+            $equipo = Read-Host "  Nombre del equipo (ej: pc-cliente-01)"
+            $so     = Read-Host "  SO (windows|linux|macos)"
+            $estado = Read-Host "  Estado (limpio|post-instalacion|produccion)"
+            $notas  = Read-Host "  Notas (ENTER = ninguna)"
+            Write-Host ""
+            Write-Host "  Calculando SHA-256..." -ForegroundColor Yellow
+            Invoke-BashScript -Script $regScript -BashInfo $bash `
+                -Args @("--imagen", $img, "--equipo", $equipo, "--so", $so, "--estado", $estado, "--notas", $notas)
+        }
+        "2" {
+            $img = Read-Host "  Ruta imagen (o ENTER para buscar por ID)"
+            if ($img) {
+                Invoke-BashScript -Script $verScript -BashInfo $bash -Args @("--imagen", $img)
+            } else {
+                $id = Read-Host "  ID del manifiesto"
+                Invoke-BashScript -Script $verScript -BashInfo $bash -Args @("--id", $id)
+            }
+        }
+        "3" { return }
+        default { Write-Host "  Opcion no valida" -ForegroundColor Red }
+    }
+    Write-Host ""
+    Read-Host "  Presiona ENTER"
+}
+
+function Invoke-KitCliente {
+    Write-Host ""
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+    Write-Host "  |  KIT DE IMPLANTACION EN CLIENTE                               |" -ForegroundColor White
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+    Write-Host ""
+
+    $kitScript = Join-Path $SERVICIOS_DIR "kit\construir-kit.ps1"
+    if (-not (Test-Path $kitScript)) {
+        Write-Host "  [X] Script no encontrado: $kitScript" -ForegroundColor Red
+        Read-Host "  Presiona ENTER"
+        return
+    }
+
+    $anydesk = Read-Host "  Ruta a anydesk-portable.exe (ENTER = ./anydesk.exe)"
+    if (-not $anydesk) { $anydesk = ".\anydesk.exe" }
+
+    $outdir = Read-Host "  Directorio de salida (ENTER = ./dist)"
+    if (-not $outdir) { $outdir = ".\dist" }
+
+    $contacto = Read-Host "  Contacto tecnico (ENTER = tecnicos@resolvecore.website)"
+    if (-not $contacto) { $contacto = "tecnicos@resolvecore.website" }
+
+    Write-Host ""
+    Write-Host "  Construyendo kit..." -ForegroundColor Yellow
+
+    & $kitScript -AnyDeskPath $anydesk -OutputDir $outdir -ContactoTecnico $contacto
+
+    Write-Host ""
+    Read-Host "  Presiona ENTER"
+}
+
+function Invoke-Servicios {
+    while ($true) {
+        Show-Banner
+        Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+        Write-Host "  |  SERVICIOS ADICIONALES                                        |" -ForegroundColor White
+        Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+        Write-Host ""
+        Write-Host "    1.  [CONGELACION]  - Estado de referencia restaurable (Win)" -ForegroundColor Cyan
+        Write-Host "    2.  [CLONACION]    - Registrar / verificar imagen de disco"  -ForegroundColor Cyan
+        Write-Host "    3.  [KIT CLIENTE]  - Empaquetar kit AnyDesk + scripts"       -ForegroundColor Cyan
+        Write-Host "    4.  [VOLVER]       - Menu principal"                          -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "  +---------------------------------------------------------------+" -ForegroundColor White
+        Write-Host ""
+
+        $op = Read-Host "  Selecciona (1-4)"
+        switch ($op) {
+            "1" { Invoke-Congelacion }
+            "2" { Invoke-Clonacion }
+            "3" { Invoke-KitCliente }
+            "4" { return }
+            default { Write-Host "  Opcion no valida" -ForegroundColor Red; Start-Sleep 1 }
+        }
+    }
+}
+
 # Programa principal
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator
@@ -683,7 +866,7 @@ function Main-Menu {
 
         Show-Menu
 
-        $opcion = Read-Host "  Selecciona (1-7)"
+        $opcion = Read-Host "  Selecciona (1-8)"
 
         switch ($opcion) {
             "1" { Invoke-Diagnostico }
@@ -691,11 +874,12 @@ function Main-Menu {
             "3" { Invoke-Vulnerabilidades }
             "4" { Invoke-Informe }
             "5" { Invoke-Factura }
-            "6" { Show-Help }
-            "7" {
+            "6" { Invoke-Servicios }
+            "7" { Show-Help }
+            "8" {
                 Write-Host "  [ResolveCore] Sesion finalizada correctamente." -ForegroundColor Cyan
                 Write-Host "  Gracias $usuario por utilizar nuestras herramientas de soporte." -ForegroundColor Gray
-                Write-Host "  ¡Hasta la proxima!" -ForegroundColor White
+                Write-Host "  Hasta la proxima!" -ForegroundColor White
                 exit
             }
             default {
