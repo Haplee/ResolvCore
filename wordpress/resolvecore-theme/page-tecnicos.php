@@ -24,7 +24,7 @@ $downloads = array(
 	'windows' => array(
 		'label'   => 'Windows — install-servicios.ps1',
 		'size'    => '~12 KB',
-		'desc'    => 'Instala: Chocolatey · WSL · jq · AnyDesk portable · Reboot Restore Rx Free',
+		'desc'    => 'Instala: Chocolatey · WSL · jq · AnyDesk portable',
 		'oneliner'=> 'iwr -useb https://resolvecore.website/downloads/install-servicios.ps1 | iex',
 		'note'    => 'Requiere PowerShell como Administrador',
 	),
@@ -152,7 +152,6 @@ get_header();
 					<tr><td>WSL</td><td>Ejecutar scripts Bash (clonación)</td><td>Microsoft</td></tr>
 					<tr><td>jq (WSL)</td><td>Parseo JSON en scripts Bash</td><td>MIT</td></tr>
 					<tr><td>AnyDesk portable</td><td>Acceso remoto al cliente</td><td>Freeware</td></tr>
-					<tr><td>Reboot Restore Rx Free</td><td>Congelación del sistema</td><td>Freeware</td></tr>
 				</tbody>
 			</table>
 		</div>

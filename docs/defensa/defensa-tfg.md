@@ -840,15 +840,30 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 - Equipo Windows secundario para diagnóstico real
 - Móvil Android con USB debugging activado y ADB en el laptop
 
-### Guion (15 min)
+### Guion (20 min)
 1. **(2 min)** Mostrar landing pública — nav, hero, stats animados, hamburger en mobile.
-2. **(2 min)** Lighthouse en directo: Performance/A11y/SEO/Best Practices ≥ 90.
+2. **(1 min)** Lighthouse en directo: Performance/A11y/SEO/Best Practices ≥ 90.
 3. **(2 min)** Rellenar formulario contacto → mostrar respuesta AJAX con `#TICKET_ID` → abrir ticket en MantisBT.
 4. **(3 min)** Ejecutar `diagnostico.ps1` en el portátil Windows → mostrar JSON de salida → snippet HTML resumen.
-5. **(2 min)** `rc_mantis_attach_diagnostic($id, $jsonpath)` desde wp-cli → mostrar adjunto + nota Markdown en el ticket.
+5. **(2 min)** `adjuntar_informe_mantis.py --ticket <ID> --pdf informe.pdf` → mostrar adjunto + nota Markdown en el ticket.
 6. **(1 min)** Mostrar tabla `rc_vulnerabilities` con CVEs cargados + matching contra paquetes detectados.
-7. **(2 min)** `optimizacion.ps1 -Nivel rendimiento -DryRun` → mostrar plan; luego con `-Confirm` → mostrar `estado_previo.json` y servicios desactivados; finalmente `-Undo` → restaura.
-8. **(1 min)** Cierre: roadmap, preguntas.
+7. **(2 min)** `optimizacion.ps1 -Nivel rendimiento -DryRun` → mostrar plan; luego con `-Confirm` → mostrar `estado_previo.json`; finalmente `-Undo` → restaura.
+8. **(2 min)** **Servicios adicionales — congelación Linux:**
+   ```bash
+   bash scripts/servicios/congelacion/congelacion-linux.sh --action=snapshot --etiqueta="estado-limpio"
+   # → JSON: { "action": "snapshot", "snapshot_id": "6", ... }
+   bash scripts/servicios/congelacion/congelacion-linux.sh --action=status
+   # → lista snapshots snapper
+   ```
+9. **(2 min)** **Servicios adicionales — clonación:**
+   ```bash
+   bash scripts/servicios/clonacion/registrar-imagen.sh --imagen=/ruta/imagen.img --equipo=pc-cliente-01 --so=linux --estado=limpio
+   # → actualiza imagenes-manifest.json con hash SHA-256
+   bash scripts/servicios/clonacion/verificar-imagen.sh --imagen=/ruta/imagen.img
+   # → exit 0 (íntegra) o 1 (corrupta)
+   ```
+10. **(2 min)** **Portal técnicos:** abrir `https://resolvecore.website/tecnicos/` — login con cuenta técnico (rol Editor) → mostrar botones de descarga: `install-servicios.ps1` / `install-servicios.sh` / `resolvecore-kit.zip` (servidos con HTTP Basic Auth desde nginx).
+11. **(1 min)** Cierre: roadmap, preguntas.
 
 ### Riesgos demo + mitigación
 | Riesgo | Mitigación |
@@ -857,6 +872,9 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 | MantisBT cae | Screenshots de respaldo + JSON output cacheado |
 | Lighthouse score baja | Pre-medir 1h antes con configuración limpia |
 | WP form bloquea por rate-limit (3/hora) | Limpiar transient: `wp transient delete --all` antes de demo |
+| Congelación Linux sin BTRFS | Preparar salida JSON pre-grabada; el script puede ejecutarse en `--dry-run` modo de documentación |
+| Portal técnicos — sesión expirada | Mantener pestaña de WP Admin abierta; re-login inmediato con credenciales técnico guardadas |
+| Kit zip no subido al VPS | Tener `resolvecore-kit.zip` local; mostrar contenido con `Expand-Archive` en pantalla |
 
 ---
 
@@ -948,4 +966,5 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 | 2026-05-21 | **Correo saliente en producción — relay Ionos + mejoras de entregabilidad**: el despliegue real destapó que Ionos bloquea el puerto 25 saliente del VPS (`Connection timed out`, correo en cola). Se configuró Postfix para relayar el correo autenticado por el smarthost `smtp.ionos.es:587` (buzón `tecnicos@`); `setup-mail-dkim.sh` ganó el flag `--relayhost` (relay + SASL, contraseña pedida de forma interactiva) y fija `myhostname = mail.<dominio>` + `mydestination` sin el dominio raíz, lo que corrige el rebote `unknown user` de los buzones del dominio. `resolvecore_send_client_confirmation()` pasó a `multipart/alternative` — añade una parte de texto plano junto al HTML — y emite la cabecera `List-Unsubscribe`. Doc `docs/tecnica/correo-dkim.md` ampliada con la sección "1b. Relay saliente". Verificado con mail-tester sobre el ticket #8: SPF/DKIM/DMARC autenticados, sin blacklist, enlace de seguimiento con token HMAC respondiendo 200. Tras detectar que el aviso al técnico caía en spam, se unificó el remitente con los filtros `wp_mail_from`/`wp_mail_from_name` a `ResolveCore <tecnicos@resolvecore.website>` — el `wordpress@` genérico de WordPress no coincidía con el buzón autenticado del relay y el antispam lo penalizaba. |
 | 2026-05-21 | **Endurecimiento y mejoras**: (1) **Token anti-enumeración** en el seguimiento de tickets — `resolvecore_ticket_token()` deriva un HMAC-SHA256 stateless de `rc_ticket_<id>` con `wp_salt('auth')`; `resolvecore_handle_ticket_status()` lo valida con `hash_equals()`; el token viaja en el correo (`&rc_t=`), en la respuesta AJAX y en el `dataset.token` del enlace, y el JS del modal (`fetchStatus(id, token)`) lo reenvía. Cierra un IDOR de baja gravedad (IDs secuenciales enumerables). (2) **Caché del endpoint público de la flota** — `rc_fleet_get_public_stats()` cachea en transient (`rc_fleet_public_stats`, 5 min), invalidado en cada POST de agente; plugin `rc-fleet` 0.2.1 → **0.2.2**. (3) **Entregabilidad de correo** — nuevo `scripts/server/setup-mail-dkim.sh` (Postfix + OpenDKIM idempotente) y guía `docs/tecnica/correo-dkim.md` con los registros SPF/DKIM/DMARC para Ionos. (4) **Versionado** — `docs/tecnica/versionado.md` unifica los 4 flujos de versión. (5) **Riesgo wkhtmltopdf** — nota de deprecación + plan de migración a DomPDF en cabecera de `generate-report.php`. (6) **Smoke-test de permisos** — checklist por rol añadido a `docs/tecnica/mantis-permisos.md`. Tres docs nuevos indexados en `docs/INDEX.md`. |
 | 2026-05-25 | **Servicios adicionales — scripts operativos** (O11–O13 → ✅): implementados los 5 scripts en `scripts/servicios/`. Congelación Windows (`congelacion-windows.ps1`): detección automática Reboot Restore Rx / Deep Freeze, acciones `Status`/`Configure`/`Freeze -Confirm`/`Thaw -Confirm`, salida `[PSCustomObject]` JSON. Congelación Linux (`congelacion-linux.sh`): BTRFS + snapper, acciones `status`/`configure`/`snapshot`/`rollback --confirm`, JSON por stdout. Clonación: `registrar-imagen.sh` da de alta en `imagenes-manifest.json` (SHA-256 fichero o árbol), `verificar-imagen.sh` valida integridad (exit 0/1/2). Kit implantación: `construir-kit.ps1` empaqueta `resolvecore-kit.zip` (AnyDesk portable + scripts diagnóstico + README-cliente.txt). Esquemas JSON propios documentados en `docs/scripting/schema-servicios-adicionales.md`. `scripts/servicios/README.md` actualizado: stubs → implementado. Sección 15b añadida a este documento. Objetivos O11–O13 marcados ✅. |
+| 2026-05-26 | **Deploy VPS — portal técnicos + directorio de descargas**: `setup-downloads-dir.sh` corregido (wp-config path multi-candidato, snippet location-only en lugar de nuevo `server{}` que rompía SSL). Desplegado en producción: `/opt/resolvecore-downloads/` con `install-servicios.ps1`, `install-servicios.sh`, `resolvecore-kit.zip`; nginx `/downloads/` con HTTP Basic Auth (htpasswd). Página WP `/tecnicos/` con plantilla "Área de Técnicos" (`page-tecnicos.php`) publicada y accesible para usuarios con rol Editor. Guion de demo sección 18 ampliado: pasos 8-10 cubren congelación Linux, clonación y portal técnicos. |
 | 2026-05-23 | **Auditoría — quick-wins + CI**: cerrados 9 items pendientes de `docs/defensa/auditoria-mejoras.md`. **E4** `.editorconfig` raíz (UTF-8 + LF globales, CRLF para `.ps1`, indent 2 YAML/JSON, tab Makefile). **E5** `LICENSE` con texto oficial GPL-3.0 (35 149 bytes); GitHub ya detecta la licencia. **D3** nueva sección "Versiones por componente" en README — tabla con 12 componentes (producto, tema, plugin, los 8 scripts diag/optim, escáner CVE, schema JSON) y regla de paridad `_meta.version` ≡ versión cabecera de script. **S4** (ya hecho — verificación): los 4 puntos de inyección HTML escapan `</`→`<\/` (`scripts/windows/diagnostico.ps1:820`, `scripts/linux/diagnostico.sh:933`, `scripts/android/diagnostico.sh:522`, `reports/generate-report.php:82`) sobre template `<script type="application/json" id="rc-data">` parseado con `JSON.parse()`. **W3** `strlen`→`mb_strlen` en `RC_Mantis_API::sanitize_summary/description()` (sync ambas copias del plugin: `wordpress/plugins/` + `wp/wp-content/plugins/`). **W4** cabeceras estándar de WP en `rc-mantisbt.php`: `Requires at least: 6.0`, `Tested up to: 6.5`, `Requires PHP: 8.0`, `License URI`, `Domain Path`; license alineada a `GPL-3.0-or-later` (era `GPL-2.0+`). **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en las dos asignaciones `@field_id`/`@anydesk_field_id` de `mantisbt/sql/resolvecore-setup.sql` (evita warnings strict-mode). **C1** `.github/workflows/lint.yml` con 4 jobs paralelos: shellcheck (`ludeeus/action-shellcheck@2.0.0`), PSScriptAnalyzer (Windows runner), phpcs WordPress-Core (`shivammathur/setup-php@v2` + composer WPCS 3.x), ruff + `py_compile` sobre `scripts/common/`. **C2** `.pre-commit-config.yaml` con `pre-commit-hooks@v4.6.0` + `shellcheck-py@v0.10.0.1` + `ruff-pre-commit@v0.5.0` + hook local `phpcs` opcional (skip si no está en PATH). Pendientes diferidos en `auditoria-mejoras.md`: E2 mover zips a GitHub Releases (manual), D4 testar macOS en hardware real, S3 test con hostnames `"\\\n`, S5 modularizar `buscar_vulnerabilidades.py` (solo si crece). |

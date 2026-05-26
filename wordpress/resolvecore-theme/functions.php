@@ -36,10 +36,6 @@ function rc_handle_technician_download(): void {
 			'file' => 'resolvecore-kit.zip',
 			'type' => 'application/zip',
 		),
-		'rrrx'    => array(
-			'file' => 'RebootRestoreRx-Setup.exe',
-			'type' => 'application/octet-stream',
-		),
 	);
 
 	if ( ! array_key_exists( $key, $allowed ) ) {
