@@ -32,10 +32,10 @@ if __package__ in (None, ''):
     if _parent not in sys.path:
         sys.path.insert(0, _parent)
     from common.adapters.nmap_local import NmapLocalAdapter
-    from common.domain import Host, Service
+    from common.domain import Host
 else:
     from .adapters.nmap_local import NmapLocalAdapter
-    from .domain import Host, Service
+    from .domain import Host
 
 SCRIPT_VERSION = '1.0.0'
 
