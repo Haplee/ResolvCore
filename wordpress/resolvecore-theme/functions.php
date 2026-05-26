@@ -1105,8 +1105,8 @@ function rc_tech_factura_inline(): void {
 	check_admin_referer( 'rc_factura' );
 	$id      = absint( wp_unslash( $_GET['rc_factura'] ) );
 	$cliente = sanitize_text_field( wp_unslash( $_GET['cliente'] ?? 'Cliente' ) );
-	$horas   = max( 0.25, (float) wp_unslash( $_GET['horas'] ?? '1' ) );
-	$tarifa  = (float) wp_unslash( $_GET['tarifa'] ?? '35.0' );
+	$horas   = max( 0.25, (float) sanitize_text_field( wp_unslash( $_GET['horas'] ?? '1' ) ) );
+	$tarifa  = (float) sanitize_text_field( wp_unslash( $_GET['tarifa'] ?? '35.0' ) );
 	$tecnico = wp_get_current_user()->display_name;
 	$fecha   = wp_date( 'Y-m-d' );
 	$num     = sprintf( 'F-%s-%04d', gmdate( 'Ym' ), $id );
@@ -1177,12 +1177,10 @@ function rc_tech_my_stats(): array {
 	global $wpdb;
 	$user  = wp_get_current_user();
 	$table = $wpdb->prefix . 'rc_download_log';
+	$sql = 'SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at FROM ' . $table . ' WHERE user_login = %s AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	$row = $wpdb->get_row(
-		$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			"SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at FROM {$table} WHERE user_login = %s AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
-			$user->user_login
-		),
+		$wpdb->prepare( $sql, $user->user_login ),
 		ARRAY_A
 	);
 	return array(
