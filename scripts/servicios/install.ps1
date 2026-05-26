@@ -18,6 +18,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:needsReboot = $false
+$script:isFile = $MyInvocation.ScriptName -ne ''
 
 function Write-Step($n, $m) { Write-Host "[$n] $m" -ForegroundColor Cyan }
 function Write-Ok($m)       { Write-Host "[OK] $m" -ForegroundColor Green }
@@ -27,7 +28,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Warn "Ejecuta como Administrador (clic derecho -> Ejecutar como administrador)"
-    exit 1
+    if ($script:isFile) { exit 1 } else { return }
 }
 
 Write-Host ""
@@ -117,8 +118,8 @@ Write-Host ""
 if ($script:needsReboot) {
     Write-Warn "REINICIO REQUERIDO para completar la instalacion."
     Write-Host "  Tras reiniciar, ejecuta: .\ResolveCore.ps1 -> opcion 6 SERVICIOS" -ForegroundColor Gray
-    exit 2
+    if ($script:isFile) { exit 2 }
+} else {
+    Write-Ok "Todo listo. Ejecuta: .\ResolveCore.ps1 -> opcion 6 SERVICIOS"
+    if ($script:isFile) { exit 0 }
 }
-
-Write-Ok "Todo listo. Ejecuta: .\ResolveCore.ps1 -> opcion 6 SERVICIOS"
-exit 0
