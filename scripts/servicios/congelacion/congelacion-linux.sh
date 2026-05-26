@@ -36,6 +36,7 @@ ACTION=""
 SUBVOL="/"
 ETIQUETA="resolvecore-snapshot"
 CONFIRM=false
+TICKET=""
 
 show_help() { sed -n '2,34p' "$0" | sed 's/^# \?//'; exit 0; }
 
@@ -45,6 +46,7 @@ while [[ $# -gt 0 ]]; do
         --subvol)   SUBVOL="${2:-}";   shift 2 ;;
         --etiqueta) ETIQUETA="${2:-}"; shift 2 ;;
         --confirm)  CONFIRM=true;      shift ;;
+        --ticket)   TICKET="${2:-}";  shift 2 ;;
         -h|--help)  show_help ;;
         *) echo "Argumento desconocido: $1" >&2; exit 1 ;;
     esac
@@ -55,21 +57,37 @@ if [[ -z "$ACTION" ]]; then
     exit 1
 fi
 
-# ── Deps ────────────────────────────────────────────────────────────────────
-if ! command -v jq &>/dev/null; then
-    echo "jq no instalado: sudo apt install jq" >&2
-    exit 1
-fi
+# ── Auto-install deps ───────────────────────────────────────────────────────
+install_deps() {
+    local missing=()
+    command -v jq      &>/dev/null || missing+=("jq")
+    command -v btrfs   &>/dev/null || missing+=("btrfs-progs")
+    command -v snapper &>/dev/null || missing+=("snapper")
+    [[ ${#missing[@]} -eq 0 ]] && return 0
 
-if ! command -v btrfs &>/dev/null; then
-    echo "btrfs no instalado (paquete btrfs-progs)" >&2
-    exit 2
-fi
+    echo "[->] Instalando dependencias: ${missing[*]}..."
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y -qq "${missing[@]}" 2>/dev/null
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y -q "${missing[@]}" 2>/dev/null
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -Sy --noconfirm "${missing[@]}" 2>/dev/null
+    else
+        echo "[X] Gestor de paquetes no detectado. Instala manualmente: ${missing[*]}" >&2
+        exit 2
+    fi
 
-if ! command -v snapper &>/dev/null; then
-    echo "snapper no instalado: sudo apt install snapper" >&2
-    exit 2
-fi
+    local still=()
+    command -v jq      &>/dev/null || still+=("jq")
+    command -v btrfs   &>/dev/null || still+=("btrfs-progs")
+    command -v snapper &>/dev/null || still+=("snapper")
+    if [[ ${#still[@]} -gt 0 ]]; then
+        echo "[X] No se pudo instalar: ${still[*]}" >&2
+        exit 2
+    fi
+    echo "[OK] Dependencias listas"
+}
+install_deps
 
 # Detecta si subvol está sobre BTRFS
 fs_type() {
@@ -90,6 +108,26 @@ emit_json() {
 }
 
 now() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
+
+mantis_note() {
+    local ticket="$1" text="$2"
+    [[ -z "$ticket" ]] && return
+    local env_file url="" tok=""
+    for env_file in "$(dirname "$0")/../../../scripts/common/.env" \
+                    "$(dirname "$0")/../../../.env.example"; do
+        [[ -f "$env_file" ]] || continue
+        url=$(grep '^MANTIS_URL=' "$env_file" | head -1 | cut -d= -f2- | tr -d "'\"")
+        tok=$(grep '^MANTIS_TOKEN=' "$env_file" | head -1 | cut -d= -f2- | tr -d "'\"")
+        break
+    done
+    [[ -z "$url" || -z "$tok" ]] && return
+    curl -s -X POST "$url/api/rest/issues/$ticket/notes" \
+        -H "Authorization: Bearer $tok" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"$text\"}" &>/dev/null \
+        && echo "[OK] Nota creada en ticket #$ticket" \
+        || echo "[!] No se pudo crear nota en MantisBT"
+}
 
 # ── Acciones ────────────────────────────────────────────────────────────────
 do_status() {
@@ -201,6 +239,7 @@ do_snapshot() {
         --arg desc   "$ETIQUETA" \
         --arg ts     "$(now)" \
         '{action: $action, snapper_config: $config, snapshot_id: $num, descripcion: $desc, fecha: $ts}'
+    mantis_note "$TICKET" "ResolveCore Congelacion: accion=snapshot config=$cfg id=$num desc=$ETIQUETA fecha=$(now)"
 }
 
 do_rollback() {
@@ -221,6 +260,13 @@ do_rollback() {
         exit 1
     fi
 
+    local count
+    count=$(snapper -c "$cfg" list 2>/dev/null | tail -n +4 | grep -c '[0-9]' || echo 0)
+    if [[ "$count" -lt 1 ]]; then
+        echo "No hay snapshots disponibles para rollback en config '$cfg'" >&2
+        exit 1
+    fi
+
     echo "Ejecutando snapper rollback en config '$cfg'..."
     snapper -c "$cfg" rollback
 
@@ -229,6 +275,7 @@ do_rollback() {
         --arg config "$cfg" \
         --arg ts     "$(now)" \
         '{action: $action, snapper_config: $config, fecha: $ts, reinicio_requerido: true}'
+    mantis_note "$TICKET" "ResolveCore Congelacion: accion=rollback config=$cfg fecha=$(now) reinicio=requerido"
 }
 
 case "$ACTION" in

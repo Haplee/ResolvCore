@@ -49,6 +49,7 @@
 | [schema-diagnostico.md](scripting/schema-diagnostico.md) | Esquema JSON de diagnóstico unificado (Windows/Linux/macOS/Android) |
 | [schema-diagnostico.schema.json](scripting/schema-diagnostico.schema.json) | JSON Schema formal para validación |
 | [schema-vulnerabilidades.md](scripting/schema-vulnerabilidades.md) | Esquema de la base de datos de vulnerabilidades |
+| [schema-servicios-adicionales.md](scripting/schema-servicios-adicionales.md) | Esquemas JSON propios de los scripts de servicios adicionales (clonación, congelación) |
 | [regex-y-json-diagnostico.md](scripting/regex-y-json-diagnostico.md) | Patrones regex y técnicas de parsing JSON en los scripts |
 
 ---

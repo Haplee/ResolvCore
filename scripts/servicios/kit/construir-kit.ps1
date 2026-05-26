@@ -63,10 +63,20 @@ function Write-Fail($m) { Write-Host "[X]  $m" -ForegroundColor Red; exit 1 }
 
 # ── Validar AnyDesk ─────────────────────────────────────────────────────────
 if (-not (Test-Path $AnyDeskPath)) {
-    Write-Warn "AnyDesk portable no encontrado: $AnyDeskPath"
-    Write-Host "  Descarga desde: https://anydesk.com/downloads/windows" -ForegroundColor Gray
-    Write-Host "  Selecciona 'Portable' y pasa la ruta con -AnyDeskPath" -ForegroundColor Gray
-    exit 2
+    Write-Info "AnyDesk portable no encontrado. Descargando desde anydesk.com..."
+    $anyDeskDir = Split-Path $AnyDeskPath -Parent
+    if ($anyDeskDir -and -not (Test-Path $anyDeskDir)) {
+        New-Item -ItemType Directory -Force -Path $anyDeskDir | Out-Null
+    }
+    try {
+        Invoke-WebRequest -Uri 'https://download.anydesk.com/AnyDesk.exe' `
+            -OutFile $AnyDeskPath -UseBasicParsing -ErrorAction Stop
+        Write-Ok "AnyDesk portable descargado: $AnyDeskPath"
+    } catch {
+        Write-Warn "No se pudo descargar AnyDesk: $($_.Exception.Message)"
+        Write-Host "  Descarga manual: https://anydesk.com/downloads/windows (elige Portable)" -ForegroundColor Gray
+        exit 2
+    }
 }
 
 # ── Ubicacion del repo (un nivel arriba de scripts/) ────────────────────────
@@ -93,18 +103,17 @@ Write-Ok "AnyDesk portable copiado"
 
 # ── Copiar scripts ──────────────────────────────────────────────────────────
 if ($IncludeScripts) {
-    if (Test-Path $diagWin) {
-        Copy-Item $diagWin (Join-Path $kitDir 'scripts/diagnostico-windows.ps1')
-        Write-Ok "diagnostico-windows.ps1 copiado"
-    } else {
-        Write-Warn "No encontrado: $diagWin"
+    if (-not (Test-Path $diagWin)) {
+        Write-Fail "Script de diagnostico Windows no encontrado: $diagWin"
     }
-    if (Test-Path $diagLinux) {
-        Copy-Item $diagLinux (Join-Path $kitDir 'scripts/diagnostico-linux.sh')
-        Write-Ok "diagnostico-linux.sh copiado"
-    } else {
-        Write-Warn "No encontrado: $diagLinux"
+    Copy-Item $diagWin (Join-Path $kitDir 'scripts/diagnostico-windows.ps1')
+    Write-Ok "diagnostico-windows.ps1 copiado"
+
+    if (-not (Test-Path $diagLinux)) {
+        Write-Fail "Script de diagnostico Linux no encontrado: $diagLinux"
     }
+    Copy-Item $diagLinux (Join-Path $kitDir 'scripts/diagnostico-linux.sh')
+    Write-Ok "diagnostico-linux.sh copiado"
 }
 
 # ── README-cliente.txt ──────────────────────────────────────────────────────
@@ -163,6 +172,30 @@ CONTACTO
 "@
 Set-Content -Path $readmePath -Value $readme -Encoding UTF8
 Write-Ok "README-cliente.txt creado"
+
+# ── MANIFEST.txt ─────────────────────────────────────────────────────────────
+$manifestPath = Join-Path $kitDir 'MANIFEST.txt'
+$anyDeskVer = try { (Get-Item $AnyDeskPath).VersionInfo.FileVersion } catch { 'desconocida' }
+$diagWinVer  = try { (Select-String '#Requires\|^# Version' $diagWin | Select-Object -First 1).Line } catch { '' }
+$manifest = @"
+RESOLVECORE KIT — MANIFEST
+==========================
+Generado:              $fechaGen
+Script kit (version):  1.0.0
+AnyDesk portable:      $anyDeskVer
+diagnostico-windows:   $diagWinVer
+diagnostico-linux:     (ver cabecera del script)
+Contacto tecnico:      $ContactoTecnico
+
+Checksums SHA256:
+"@
+Get-ChildItem -Recurse $kitDir -File | Where-Object { $_.Name -ne 'MANIFEST.txt' } | ForEach-Object {
+    $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+    $rel  = $_.FullName.Replace($kitDir + '\','').Replace('\','/')
+    $manifest += "`n  $hash  $rel"
+}
+Set-Content -Path $manifestPath -Value $manifest -Encoding UTF8
+Write-Ok "MANIFEST.txt generado"
 
 # ── Empaquetar ZIP ──────────────────────────────────────────────────────────
 $zipPath = Join-Path $outDirAbs "$kitName.zip"
