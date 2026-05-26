@@ -3,6 +3,86 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// ── Descarga segura de ficheros para área técnicos ─────────────────────────
+// Añade en wp-config.php: define('RC_DOWNLOADS_PATH', '/opt/resolvecore-downloads');
+function rc_handle_technician_download(): void {
+	if ( ! isset( $_GET['rc_download'] ) ) {
+		return;
+	}
+
+	// Requiere login
+	if ( ! is_user_logged_in() ) {
+		wp_redirect( wp_login_url( get_permalink() ) );
+		exit;
+	}
+
+	// Solo editores/administradores (roles técnico)
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_die( 'Sin permiso para descargar.', 'Sin acceso', array( 'response' => 403 ) );
+	}
+
+	$key = sanitize_key( wp_unslash( $_GET['rc_download'] ) );
+
+	$allowed = array(
+		'windows' => array(
+			'file' => 'install-servicios.ps1',
+			'type' => 'application/octet-stream',
+		),
+		'linux'   => array(
+			'file' => 'install-servicios.sh',
+			'type' => 'application/octet-stream',
+		),
+		'kit'     => array(
+			'file' => 'resolvecore-kit.zip',
+			'type' => 'application/zip',
+		),
+	);
+
+	if ( ! array_key_exists( $key, $allowed ) ) {
+		wp_die( 'Descarga no válida.', 'Error', array( 'response' => 404 ) );
+	}
+
+	$downloads_dir = defined( 'RC_DOWNLOADS_PATH' )
+		? RC_DOWNLOADS_PATH
+		: '/opt/resolvecore-downloads';
+
+	$filepath = trailingslashit( $downloads_dir ) . $allowed[ $key ]['file'];
+
+	if ( ! file_exists( $filepath ) ) {
+		wp_die( 'Fichero no disponible en este momento.', 'No encontrado', array( 'response' => 404 ) );
+	}
+
+	// Log de descarga (error_log + tabla rc_download_log)
+	$user = wp_get_current_user();
+	$ip   = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+	error_log( sprintf(
+		'[ResolveCore] Descarga: %s | usuario: %s | IP: %s | %s',
+		esc_html( $key ),
+		esc_html( $user->user_login ),
+		$ip,
+		gmdate( 'Y-m-d H:i:s' )
+	) );
+	rc_log_download( $key, $user->user_login, $ip );
+
+	header( 'Content-Type: ' . $allowed[ $key ]['type'] );
+	header( 'Content-Disposition: attachment; filename="' . basename( $filepath ) . '"' );
+	header( 'Content-Length: ' . filesize( $filepath ) );
+	header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+	header( 'Pragma: no-cache' );
+	header( 'X-Content-Type-Options: nosniff' );
+	readfile( $filepath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_readfile
+	exit;
+}
+add_action( 'template_redirect', 'rc_handle_technician_download', 5 );
+
+// Ocultar admin bar en frontend para técnicos (editores) — solo admin la ve
+function rc_hide_adminbar_for_editors(): void {
+	if ( is_user_logged_in() && ! current_user_can( 'administrator' ) ) {
+		show_admin_bar( false );
+	}
+}
+add_action( 'after_setup_theme', 'rc_hide_adminbar_for_editors' );
+
 // Modo mantenimiento (actívalo cambiando a true)
 define( 'RESOLVECORE_MAINTENANCE', false );
 
@@ -548,24 +628,50 @@ function resolvecore_handle_ticket_status() {
 		array(
 			'phase' => 1,
 			'label' => 'Recibido',
-			'desc'  => 'Ticket creado y en cola de revisión.',
+			'desc'  => 'Ticket creado y en cola de revisión. En menos de 2 horas un técnico revisará la incidencia.',
 		),
 		array(
 			'phase' => 2,
 			'label' => 'En diagnóstico',
-			'desc'  => 'Técnico analizando el problema.',
+			'desc'  => 'Técnico analizando el problema. Se recopilan datos del sistema para identificar la causa raíz.',
 		),
 		array(
 			'phase' => 3,
 			'label' => 'En resolución',
-			'desc'  => 'Trabajando en la solución (AnyDesk).',
+			'desc'  => 'Trabajando en la solución vía AnyDesk. El técnico aplica los cambios necesarios en tu equipo.',
 		),
 		array(
 			'phase' => 4,
 			'label' => 'Resuelto',
-			'desc'  => 'Ticket cerrado. Resumen técnico en la nota del ticket.',
+			'desc'  => 'Incidencia cerrada. El informe técnico está adjunto al ticket en MantisBT.',
 		),
 	);
+
+	// Datos extra para el panel ampliado
+	$summary  = (string) ( $issue['summary'] ?? '' );
+	$category = (string) ( $issue['category']['name'] ?? '' );
+	$priority = (string) ( $issue['priority']['name'] ?? '' );
+	$handler  = (string) ( $issue['handler']['real_name'] ?? $issue['handler']['name'] ?? '' );
+	$reporter = (string) ( $issue['reporter']['real_name'] ?? $issue['reporter']['name'] ?? '' );
+
+	// Última nota pública del ticket (si existe)
+	$last_note = '';
+	$notes_raw = $issue['notes'] ?? array();
+	if ( is_array( $notes_raw ) ) {
+		// Las notas vienen en orden ascendente; tomar la última pública del técnico
+		$pub_notes = array_filter(
+			$notes_raw,
+			static fn( $n ) => isset( $n['view_state']['name'] ) && 'public' === $n['view_state']['name']
+		);
+		if ( $pub_notes ) {
+			$last = end( $pub_notes );
+			$last_note = (string) ( $last['text'] ?? '' );
+			// Truncar a 300 caracteres para el modal
+			if ( mb_strlen( $last_note ) > 300 ) {
+				$last_note = mb_substr( $last_note, 0, 297 ) . '…';
+			}
+		}
+	}
 
 	wp_send_json_success(
 		array(
@@ -574,6 +680,12 @@ function resolvecore_handle_ticket_status() {
 			'status_id'  => $status_id,
 			'phase'      => $phase,
 			'events'     => $events,
+			'summary'    => $summary,
+			'category'   => $category,
+			'priority'   => $priority,
+			'handler'    => $handler,
+			'reporter'   => $reporter,
+			'last_note'  => $last_note,
 			'created_at' => $issue['created_at'] ?? null,
 			'updated_at' => $issue['updated_at'] ?? null,
 		)
@@ -581,3 +693,480 @@ function resolvecore_handle_ticket_status() {
 }
 add_action( 'wp_ajax_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
 add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
+
+// =============================================================================
+//  Área de técnicos — backend
+// =============================================================================
+
+/**
+ * Crea la tabla rc_download_log si no existe.
+ */
+function rc_create_download_log_table(): void {
+	global $wpdb;
+	$table   = $wpdb->prefix . 'rc_download_log';
+	$charset = $wpdb->get_charset_collate();
+	$sql     = "CREATE TABLE IF NOT EXISTS {$table} (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+		file_key VARCHAR(64) NOT NULL,
+		user_login VARCHAR(128) NOT NULL,
+		ip VARCHAR(45) NOT NULL,
+		ua VARCHAR(255) NOT NULL DEFAULT '',
+		downloaded_at DATETIME NOT NULL,
+		PRIMARY KEY (id),
+		KEY idx_user (user_login),
+		KEY idx_file (file_key),
+		KEY idx_date (downloaded_at)
+	) {$charset};";
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta( $sql );
+}
+add_action( 'after_setup_theme', 'rc_create_download_log_table' );
+
+function rc_log_download( string $key, string $user_login, string $ip ): void {
+	global $wpdb;
+	$wpdb->insert(
+		$wpdb->prefix . 'rc_download_log',
+		array(
+			'file_key'      => $key,
+			'user_login'    => $user_login,
+			'ip'            => $ip,
+			'ua'            => substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ), 0, 255 ),
+			'downloaded_at' => current_time( 'mysql' ),
+		),
+		array( '%s', '%s', '%s', '%s', '%s' )
+	);
+}
+
+/**
+ * Metadata real de cada fichero descargable (size + sha256 + mtime).
+ * Cacheado 5 min para no recalcular el hash en cada visita.
+ */
+function rc_get_download_meta( string $key ): array {
+	$cache_key = "rc_dl_meta_{$key}";
+	$cached    = get_transient( $cache_key );
+	if ( is_array( $cached ) ) {
+		return $cached;
+	}
+
+	$files = array(
+		'windows' => 'install-servicios.ps1',
+		'linux'   => 'install-servicios.sh',
+		'kit'     => 'resolvecore-kit.zip',
+	);
+	if ( ! isset( $files[ $key ] ) ) {
+		return array();
+	}
+
+	$dir  = defined( 'RC_DOWNLOADS_PATH' ) ? RC_DOWNLOADS_PATH : '/opt/resolvecore-downloads';
+	$path = trailingslashit( $dir ) . $files[ $key ];
+
+	if ( ! file_exists( $path ) ) {
+		$meta = array(
+			'exists' => false,
+			'size'   => 0,
+			'sha256' => '',
+			'mtime'  => 0,
+		);
+		set_transient( $cache_key, $meta, 60 );
+		return $meta;
+	}
+
+	$meta = array(
+		'exists' => true,
+		'size'   => filesize( $path ),
+		'sha256' => hash_file( 'sha256', $path ),
+		'mtime'  => filemtime( $path ),
+	);
+	set_transient( $cache_key, $meta, 5 * MINUTE_IN_SECONDS );
+	return $meta;
+}
+
+/**
+ * Formato humano de bytes.
+ */
+function rc_format_bytes( int $bytes ): string {
+	if ( $bytes <= 0 ) {
+		return '—';
+	}
+	$units = array( 'B', 'KB', 'MB', 'GB' );
+	$i     = (int) floor( log( $bytes, 1024 ) );
+	$i     = min( $i, count( $units ) - 1 );
+	return round( $bytes / pow( 1024, $i ), 1 ) . ' ' . $units[ $i ];
+}
+
+/**
+ * AJAX: estado de infraestructura (mantis, nginx, fleet).
+ * Cacheado 60s — no machaca backends.
+ */
+function rc_tech_infra_status(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+
+	$cached = get_transient( 'rc_tech_infra_status' );
+	if ( is_array( $cached ) ) {
+		wp_send_json_success( $cached );
+	}
+
+	$targets = array(
+		'mantis' => 'https://mantis.resolvecore.website/',
+		'web'    => home_url( '/' ),
+		'fleet'  => home_url( '/fleet-status/' ),
+	);
+
+	$out = array();
+	foreach ( $targets as $name => $url ) {
+		$t0  = microtime( true );
+		$res = wp_remote_head(
+			$url,
+			array(
+				'timeout'     => 4,
+				'redirection' => 2,
+				'sslverify'   => true,
+			)
+		);
+		$ms  = (int) ( ( microtime( true ) - $t0 ) * 1000 );
+		if ( is_wp_error( $res ) ) {
+			$out[ $name ] = array( 'ok' => false, 'code' => 0, 'ms' => $ms, 'err' => $res->get_error_message() );
+		} else {
+			$code         = wp_remote_retrieve_response_code( $res );
+			$out[ $name ] = array( 'ok' => $code >= 200 && $code < 400, 'code' => $code, 'ms' => $ms );
+		}
+	}
+	$out['checked_at'] = gmdate( 'c' );
+
+	set_transient( 'rc_tech_infra_status', $out, MINUTE_IN_SECONDS );
+	wp_send_json_success( $out );
+}
+add_action( 'wp_ajax_rc_tech_infra_status', 'rc_tech_infra_status' );
+
+/**
+ * AJAX: tickets asignados / reportados por el técnico actual en MantisBT.
+ */
+function rc_tech_my_tickets(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+		wp_send_json_error( array( 'msg' => 'Integración MantisBT no disponible.' ) );
+	}
+	$api = rc_mantis_get_api();
+	if ( ! $api ) {
+		wp_send_json_error( array( 'msg' => 'MantisBT no configurado.' ) );
+	}
+
+	$user      = wp_get_current_user();
+	$user_hint = strtolower( $user->user_login );
+
+	$cache_key = 'rc_tech_tickets_' . $user->ID;
+	$cached    = get_transient( $cache_key );
+	if ( is_array( $cached ) ) {
+		wp_send_json_success( $cached );
+	}
+
+	if ( ! method_exists( $api, 'list_issues' ) ) {
+		wp_send_json_success( array( 'tickets' => array(), 'note' => 'API sin list_issues' ) );
+	}
+
+	$res = $api->list_issues( array( 'page_size' => 25 ) );
+	if ( is_wp_error( $res ) ) {
+		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
+	}
+
+	$issues   = $res['issues'] ?? array();
+	$filtered = array();
+	foreach ( $issues as $iss ) {
+		$status_id = (int) ( $iss['status']['id'] ?? 0 );
+		if ( $status_id >= 90 ) {
+			continue; // cerrados fuera
+		}
+		$handler  = strtolower( (string) ( $iss['handler']['name'] ?? '' ) );
+		$reporter = strtolower( (string) ( $iss['reporter']['name'] ?? '' ) );
+		if ( $handler === $user_hint || $reporter === $user_hint ) {
+			$filtered[] = array(
+				'id'       => (int) ( $iss['id'] ?? 0 ),
+				'summary'  => (string) ( $iss['summary'] ?? '' ),
+				'status'   => (string) ( $iss['status']['name'] ?? '' ),
+				'priority' => (string) ( $iss['priority']['name'] ?? '' ),
+				'updated'  => (string) ( $iss['updated_at'] ?? '' ),
+			);
+		}
+	}
+
+	$out = array( 'tickets' => array_slice( $filtered, 0, 10 ) );
+	set_transient( $cache_key, $out, 2 * MINUTE_IN_SECONDS );
+	wp_send_json_success( $out );
+}
+add_action( 'wp_ajax_rc_tech_my_tickets', 'rc_tech_my_tickets' );
+
+/**
+ * AJAX: genera README-cliente.txt personalizado (cliente + ticket).
+ * Devuelve texto plano descargable.
+ */
+function rc_tech_build_readme(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_die( 'forbidden', 'error', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'rc_tech_readme' );
+
+	$cliente   = sanitize_text_field( wp_unslash( $_POST['cliente'] ?? '' ) );
+	$ticket_id = absint( $_POST['ticket'] ?? 0 );
+	$tecnico   = wp_get_current_user()->display_name;
+
+	if ( $cliente === '' ) {
+		wp_die( 'Falta nombre del cliente', 'error', array( 'response' => 400 ) );
+	}
+
+	$ticket_line = $ticket_id ? "Incidencia MantisBT: #{$ticket_id}" : 'Incidencia MantisBT: (pendiente)';
+	$fecha       = wp_date( 'Y-m-d H:i' );
+
+	$txt = <<<TXT
+================================================================
+  ResolveCore — Kit de soporte para {$cliente}
+================================================================
+
+Hola {$cliente},
+
+Tu técnico asignado es {$tecnico}.
+{$ticket_line}
+Fecha de entrega: {$fecha}
+
+----------------------------------------------------------------
+  Cómo iniciar la sesión de soporte remoto
+----------------------------------------------------------------
+
+1. Haz doble clic en "anydesk-portable.exe"
+2. Espera a que aparezca tu ID AnyDesk (9-10 dígitos)
+3. Llama o envía un WhatsApp a tu técnico con ese ID
+4. El técnico te pedirá aceptar la conexión: pulsa "Aceptar"
+
+Cuando la sesión termine, simplemente cierra AnyDesk.
+
+----------------------------------------------------------------
+  Privacidad y RGPD
+----------------------------------------------------------------
+
+- El técnico solo accede mientras AnyDesk está abierto.
+- Puedes cerrar la conexión en cualquier momento.
+- No se instala nada permanente: AnyDesk es portable.
+- Se generará un informe técnico que recibirás por email.
+
+----------------------------------------------------------------
+  Contacto
+----------------------------------------------------------------
+
+Web:    https://resolvecore.website
+Email:  fvidalmateo@gmail.com
+
+ResolveCore — Solución a tus problemas informáticos.
+TXT;
+
+	$filename = 'README-' . sanitize_file_name( strtolower( $cliente ) ) . '.txt';
+	header( 'Content-Type: text/plain; charset=UTF-8' );
+	header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+	header( 'X-Content-Type-Options: nosniff' );
+	echo $txt; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	exit;
+}
+add_action( 'admin_post_rc_tech_build_readme', 'rc_tech_build_readme' );
+
+/**
+ * AJAX: últimas 20 descargas de la tabla rc_download_log (todas, no solo del user).
+ */
+function rc_tech_logs_tail(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	global $wpdb;
+	$table = $wpdb->prefix . 'rc_download_log';
+	$rows  = $wpdb->get_results(
+		"SELECT id, file_key, user_login, ip, downloaded_at
+		 FROM {$table}
+		 ORDER BY id DESC
+		 LIMIT 20",
+		ARRAY_A
+	);
+	wp_send_json_success( array( 'rows' => $rows ?: array() ) );
+}
+add_action( 'wp_ajax_rc_tech_logs_tail', 'rc_tech_logs_tail' );
+
+/**
+ * AJAX: añade nota pública al ticket Mantis.
+ */
+function rc_tech_add_note(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	$id   = absint( $_POST['ticket_id'] ?? 0 );
+	$text = sanitize_textarea_field( wp_unslash( $_POST['text'] ?? '' ) );
+	if ( $id < 1 || $text === '' ) {
+		wp_send_json_error( array( 'msg' => 'Faltan datos.' ) );
+	}
+	if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no disponible.' ) );
+	}
+	$api = rc_mantis_get_api();
+	if ( ! $api ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no configurado.' ) );
+	}
+	$user = wp_get_current_user();
+	$body = "[{$user->display_name}] {$text}";
+	$res  = $api->add_note( $id, $body );
+	if ( is_wp_error( $res ) ) {
+		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
+	}
+	wp_send_json_success( array( 'msg' => 'Nota añadida al ticket #' . $id ) );
+}
+add_action( 'wp_ajax_rc_tech_add_note', 'rc_tech_add_note' );
+
+/**
+ * AJAX: sube informe PDF y lo adjunta al ticket.
+ * Acepta multipart con file[informe] y ticket_id.
+ */
+function rc_tech_upload_informe(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	$id = absint( $_POST['ticket_id'] ?? 0 );
+	if ( $id < 1 ) {
+		wp_send_json_error( array( 'msg' => 'ticket_id inválido' ) );
+	}
+	if ( empty( $_FILES['informe']['tmp_name'] ) ) {
+		wp_send_json_error( array( 'msg' => 'Falta fichero.' ) );
+	}
+
+	$file = $_FILES['informe'];
+	if ( (int) $file['size'] > 10 * 1024 * 1024 ) {
+		wp_send_json_error( array( 'msg' => 'Fichero > 10 MB.' ) );
+	}
+
+	$mime = mime_content_type( $file['tmp_name'] );
+	if ( ! in_array( $mime, array( 'application/pdf', 'text/html' ), true ) ) {
+		wp_send_json_error( array( 'msg' => 'Solo PDF o HTML.' ) );
+	}
+
+	if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no disponible.' ) );
+	}
+	$api = rc_mantis_get_api();
+	if ( ! $api ) {
+		wp_send_json_error( array( 'msg' => 'Mantis no configurado.' ) );
+	}
+
+	$safe_name = sanitize_file_name( $file['name'] );
+	$res       = $api->attach_file( $id, $file['tmp_name'], $safe_name );
+	if ( is_wp_error( $res ) ) {
+		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
+	}
+	wp_send_json_success( array( 'msg' => 'Informe adjuntado al ticket #' . $id, 'file' => $safe_name ) );
+}
+add_action( 'wp_ajax_rc_tech_upload_informe', 'rc_tech_upload_informe' );
+
+/**
+ * Genera factura HTML imprimible inline para un ticket.
+ * Acceso: /tecnicos/?rc_factura=<ID>&cliente=<nombre>&horas=<n>
+ */
+function rc_tech_factura_inline(): void {
+	if ( ! isset( $_GET['rc_factura'] ) ) {
+		return;
+	}
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_die( 'forbidden', 'error', array( 'response' => 403 ) );
+	}
+	$id      = absint( $_GET['rc_factura'] );
+	$cliente = sanitize_text_field( wp_unslash( $_GET['cliente'] ?? 'Cliente' ) );
+	$horas   = max( 0.25, (float) ( $_GET['horas'] ?? 1 ) );
+	$tarifa  = (float) ( $_GET['tarifa'] ?? 35.0 );
+	$tecnico = wp_get_current_user()->display_name;
+	$fecha   = wp_date( 'Y-m-d' );
+	$num     = sprintf( 'F-%s-%04d', gmdate( 'Ym' ), $id );
+	$base    = round( $horas * $tarifa, 2 );
+	$iva     = round( $base * 0.21, 2 );
+	$total   = round( $base + $iva, 2 );
+
+	header( 'Content-Type: text/html; charset=UTF-8' );
+	?>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Factura <?php echo esc_html( $num ); ?></title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,Arial,sans-serif;color:#222;max-width:800px;margin:2rem auto;padding:2rem;background:#fff}
+header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #00c988;padding-bottom:1rem;margin-bottom:2rem}
+h1{margin:0;color:#00c988;font-size:1.8rem}
+.meta{text-align:right;font-size:.9rem;color:#555}
+.meta strong{color:#222}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0}
+th,td{padding:.7rem;text-align:left;border-bottom:1px solid #ddd}
+th{background:#f5f7fa;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#666}
+tfoot td{border:none;font-weight:600}
+tfoot tr:last-child td{border-top:2px solid #00c988;color:#00c988;font-size:1.2rem}
+.right{text-align:right}
+footer{margin-top:3rem;font-size:.8rem;color:#888;border-top:1px solid #eee;padding-top:1rem}
+@media print {body{margin:0;padding:1cm}.noprint{display:none}}
+.noprint{position:fixed;top:1rem;right:1rem;background:#00c988;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:6px;cursor:pointer;font-weight:600}
+</style></head><body>
+<button class="noprint" onclick="window.print()">Imprimir / Guardar PDF</button>
+<header>
+	<div><h1>ResolveCore</h1><div>Soporte técnico remoto<br>fvidalmateo@gmail.com</div></div>
+	<div class="meta">
+		<strong>Factura <?php echo esc_html( $num ); ?></strong><br>
+		Fecha: <?php echo esc_html( $fecha ); ?><br>
+		Ticket: #<?php echo (int) $id; ?>
+	</div>
+</header>
+<p><strong>Cliente:</strong> <?php echo esc_html( $cliente ); ?></p>
+<p><strong>Técnico:</strong> <?php echo esc_html( $tecnico ); ?></p>
+<table>
+	<thead><tr><th>Concepto</th><th class="right">Cantidad</th><th class="right">Precio</th><th class="right">Importe</th></tr></thead>
+	<tbody>
+		<tr>
+			<td>Intervención de soporte técnico remoto (ticket #<?php echo (int) $id; ?>)</td>
+			<td class="right"><?php echo esc_html( number_format( $horas, 2, ',', '.' ) ); ?> h</td>
+			<td class="right"><?php echo esc_html( number_format( $tarifa, 2, ',', '.' ) ); ?> €</td>
+			<td class="right"><?php echo esc_html( number_format( $base, 2, ',', '.' ) ); ?> €</td>
+		</tr>
+	</tbody>
+	<tfoot>
+		<tr><td colspan="3" class="right">Base imponible</td><td class="right"><?php echo esc_html( number_format( $base, 2, ',', '.' ) ); ?> €</td></tr>
+		<tr><td colspan="3" class="right">IVA 21%</td><td class="right"><?php echo esc_html( number_format( $iva, 2, ',', '.' ) ); ?> €</td></tr>
+		<tr><td colspan="3" class="right">TOTAL</td><td class="right"><?php echo esc_html( number_format( $total, 2, ',', '.' ) ); ?> €</td></tr>
+	</tfoot>
+</table>
+<footer>
+	Factura simplificada (RD 1619/2012 art. 7). Para factura completa, contactar.<br>
+	ResolveCore — Solución a tus problemas informáticos.
+</footer>
+</body></html>
+	<?php
+	exit;
+}
+add_action( 'template_redirect', 'rc_tech_factura_inline', 4 );
+
+/**
+ * Estadísticas rápidas del técnico (descargas propias últimas 30d).
+ */
+function rc_tech_my_stats(): array {
+	global $wpdb;
+	$user  = wp_get_current_user();
+	$table = $wpdb->prefix . 'rc_download_log';
+	$row   = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at
+			 FROM {$table}
+			 WHERE user_login = %s
+			   AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+			$user->user_login
+		),
+		ARRAY_A
+	);
+	return array(
+		'total'   => (int) ( $row['total'] ?? 0 ),
+		'last_at' => (string) ( $row['last_at'] ?? '' ),
+	);
+}

@@ -52,8 +52,9 @@ FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
 MENU
     1. DIAGNOSTICO    Lanza diagnostico.sh.
     2. OPTIMIZACION   Lanza optimizacion.sh.
-    3. AYUDA          Guia rapida embebida.
-    4. SALIR          Cierra el programa.
+    3. INFORME        Genera HTML/PDF desde el ultimo JSON + adjunta a Mantis.
+    4. AYUDA          Guia rapida embebida.
+    5. SALIR          Cierra el programa.
 
 REQUISITOS
     - Terminal interactiva (modo menu).
@@ -142,9 +143,15 @@ show_menu() {
     echo -e "                       - Niveles: Basico, Estandar, Rendimiento"
     echo -e "                       - Incluye limpieza, servicios, preferences"
     echo ""
-    echo -e "    ${CYAN}3.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo -e "    ${CYAN}3.${NC}  [INFORME]       - Generar HTML/PDF + adjuntar a Mantis"
+    echo -e "                       - Lee el ultimo JSON de diagnostico"
+    echo -e "                       - Adjunta el PDF al ticket MantisBT (opcional)"
     echo ""
-    echo -e "    ${RED}4.${NC}  [SALIR]         - Salir del programa"
+    echo -e "    ${CYAN}4.${NC}  [FACTURA]       - Generar factura PDF + email al cliente"
+    echo ""
+    echo -e "    ${CYAN}5.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo ""
+    echo -e "    ${RED}6.${NC}  [SALIR]         - Salir del programa"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
     echo ""
@@ -211,6 +218,134 @@ get_system_summary() {
 
     echo -e "  ${GRAY}-------------------------------------------${NC}"
     echo ""
+}
+
+ensure_python() {
+    if command -v python3 &>/dev/null; then
+        return 0
+    fi
+    echo -e "  ${YELLOW}[!] Python3 no encontrado.${NC}"
+    if command -v brew &>/dev/null; then
+        echo -e "  ${CYAN}[>] Instalando python via brew...${NC}"
+        brew install python 2>/dev/null
+    fi
+    command -v python3 &>/dev/null
+}
+
+run_informe() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}GENERAR INFORME TECNICO${NC}                                       |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+
+    if ! ensure_python; then
+        echo -e "  ${RED}[X] Python3 no disponible${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    local gen_script
+    gen_script="$(dirname "$SCRIPT_DIR")/common/generar_informe.py"
+    if [[ ! -f "$gen_script" ]]; then
+        echo -e "  ${RED}[X] No encontrado: $gen_script${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    local diag_dir
+    diag_dir="$(dirname "$SCRIPT_DIR")/diagnosticos"
+    if [[ ! -d "$diag_dir" ]]; then
+        echo -e "  ${RED}[X] No hay diagnosticos en $diag_dir${NC}"
+        echo -e "  ${YELLOW}    Ejecuta antes la opcion 1 (DIAGNOSTICO)${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    # macOS find no soporta -printf; usamos stat -f
+    local latest_json
+    latest_json="$(find "$diag_dir" -maxdepth 1 -name '*.json' 2>/dev/null \
+                   | xargs -I{} stat -f '%m %N' {} 2>/dev/null \
+                   | sort -rn | head -1 | cut -d' ' -f2-)"
+
+    if [[ -z "$latest_json" ]]; then
+        echo -e "  ${RED}[X] No se encontro ningun JSON en $diag_dir${NC}"
+        echo -e "  ${YELLOW}    Ejecuta antes la opcion 1 (DIAGNOSTICO)${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    echo -e "  ${GRAY}JSON detectado:${NC} $(basename "$latest_json")"
+    echo -e "  ${GRAY}    fecha:${NC} $(stat -f '%Sm' "$latest_json")"
+    echo ""
+
+    read -rp "  Usar este JSON? (S/n) " use_latest
+    local json_path="$latest_json"
+    if [[ "$use_latest" =~ ^[nN] ]]; then
+        read -rp "  Ruta al JSON: " custom_json
+        if [[ ! -f "$custom_json" ]]; then
+            echo -e "  ${RED}[X] Fichero no existe${NC}"
+            read -p "  Presiona ENTER..."
+            return
+        fi
+        json_path="$custom_json"
+    fi
+
+    read -rp "  Generar PDF tambien? (S/n) " gen_pdf
+    local pdf_flag=""
+    if [[ ! "$gen_pdf" =~ ^[nN] ]]; then
+        pdf_flag="--pdf"
+    fi
+
+    read -rp "  Abrir HTML en navegador al terminar? (S/n) " open_b
+    local open_flag=""
+    if [[ ! "$open_b" =~ ^[nN] ]]; then
+        open_flag="--open"
+    fi
+
+    local ticket_flag=""
+    if [[ -n "$pdf_flag" ]]; then
+        read -rp "  ID de ticket MantisBT para adjuntar (ENTER = no adjuntar): " ticket_id
+        if [[ "$ticket_id" =~ ^[0-9]+$ ]]; then
+            ticket_flag="--ticket $ticket_id"
+        fi
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}Generando informe...${NC}"
+    echo ""
+
+    # shellcheck disable=SC2086
+    python3 "$gen_script" --json "$json_path" $pdf_flag $open_flag $ticket_flag \
+        || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
+
+    echo ""
+    echo -e "  ${GREEN}[OK] Proceso completado${NC}"
+    read -p "  Presiona ENTER para continuar..."
+}
+
+run_factura() {
+    echo ""
+    echo -e "  ${WHITE}GENERAR FACTURA AL CLIENTE${NC}"
+    echo ""
+    if ! ensure_python; then
+        echo -e "  ${RED}[X] Python3 no disponible${NC}"; read -p "  Presiona ENTER..."; return
+    fi
+    local fac_script
+    fac_script="$(dirname "$SCRIPT_DIR")/common/generar_factura.py"
+    if [[ ! -f "$fac_script" ]]; then
+        echo -e "  ${RED}[X] No encontrado: $fac_script${NC}"; read -p "  Presiona ENTER..."; return
+    fi
+    read -rp "  Generar PDF? (S/n) " gp
+    local pdf_flag=""; [[ ! "$gp" =~ ^[nN] ]] && pdf_flag="--pdf"
+    read -rp "  Subir al ticket MantisBT? (S/n) " up
+    local up_flag=""; [[ ! "$up" =~ ^[nN] ]] && up_flag="--upload"
+    read -rp "  Enviar email al cliente? (S/n) " em
+    local em_flag=""; [[ ! "$em" =~ ^[nN] ]] && em_flag="--send-email"
+    # shellcheck disable=SC2086
+    python3 "$fac_script" $pdf_flag $up_flag $em_flag --open \
+        || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
+    read -p "  Presiona ENTER para continuar..."
 }
 
 run_diagnostico() {
@@ -287,14 +422,16 @@ while true; do
     show_banner
     show_menu
 
-    read -p "  Selecciona una opcion (1-4): " opcion
+    read -p "  Selecciona una opcion (1-6): " opcion
     [[ -z "$opcion" ]] && { echo ""; exit 0; }
 
     case $opcion in
         1) run_diagnostico ;;
         2) run_optimizacion ;;
-        3) show_help ;;
-        4)
+        3) run_informe ;;
+        4) run_factura ;;
+        5) show_help ;;
+        6)
             echo ""
             echo -e "  ${GREEN}Hasta luego!${NC}"
             echo ""

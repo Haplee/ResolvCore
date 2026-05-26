@@ -36,7 +36,6 @@ WP_ENVIRONMENT_TYPE=development
 WP_DEBUG=true
 MANTIS_API_URL=http://localhost:8080/api/rest/
 MANTIS_API_TOKEN=mock_token_for_dev_only
-SHODAN_API_KEY=mock_key
 ```
 
 ---
@@ -45,18 +44,16 @@ SHODAN_API_KEY=mock_key
 
 El entorno de producción se divide en el frontal público (WordPress) y el backend de gestión (MantisBT).
 
-### Frontal (WordPress)
+### Entorno Productivo Unificado (WordPress + MantisBT)
 
-*   **Host actual:** WordPress.com (Plan Business).
-*   **URL:** `https://resolvecore.com` (apunta a la instancia gestionada).
-*   **Gestión:** Despliegue mediante SFTP al entorno de WordPress.com del tema personalizado y los plugins.
+*   **Host actual:** VPS Linux en IONOS (Plan S+).
+*   **Sistema Operativo:** Ubuntu 22.04 LTS.
+*   **Servicios:** Nginx, PHP-FPM 8.2, MariaDB.
+*   **URL WordPress:** `https://resolvecore.website`
+*   **URL MantisBT:** `https://mantis.resolvecore.website`
+*   **Correo Corporativo:** `tecnico@resolvecore.website`
+*   **Gestión:** Acceso root vía SSH.
 *   **Estado:** Operativo y público.
-
-### Backend (MantisBT)
-
-*   **Estado actual:** *Pendiente de despliegue final.*
-*   **Decisión técnica de servidor:** VPS Linux (Ubuntu 22.04 LTS). Se recomienda el uso de **Oracle Cloud Free Tier** (instancia ARM Ampere A1 o micro AMD) por ofrecer recursos sobrados y coste cero para la defensa del proyecto, o un VPS tradicional (Hetzner/Linode).
-*   **URL planificada:** `https://support.resolvecore.com` (subdominio).
 
 ### Entorno de variables (.env.production.example)
 
@@ -67,7 +64,6 @@ WP_ENVIRONMENT_TYPE=production
 WP_DEBUG=false
 MANTIS_API_URL=https://support.resolvecore.com/api/rest/
 MANTIS_API_TOKEN=your_secure_mantis_token_here
-SHODAN_API_KEY=your_real_shodan_key
 DB_NAME=resolvecore_prod
 DB_USER=resolvecore_usr
 DB_PASSWORD=secret_password_prod
