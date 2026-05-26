@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    ResolveCore — Bootstrap de servicios adicionales para Windows
+    ResolveCore - Bootstrap de servicios adicionales para Windows
 
 .DESCRIPTION
     Descarga e instala todas las dependencias necesarias para los servicios
@@ -36,7 +36,7 @@ Write-Host "   ResolveCore - Instalacion de servicios adicionales     " -Foregro
 Write-Host "  =======================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── 1. PowerShell ExecutionPolicy ─────────────────────────────────────────
+# -- 1. PowerShell ExecutionPolicy ----------------------------------------
 Write-Step 1 "Verificando ExecutionPolicy..."
 $policy = Get-ExecutionPolicy
 if ($policy -eq 'Restricted') {
@@ -46,7 +46,7 @@ if ($policy -eq 'Restricted') {
     Write-Ok "ExecutionPolicy ya es $policy"
 }
 
-# ── 2. Chocolatey (si no hay gestor de paquetes) ──────────────────────────
+# -- 2. Chocolatey (si no hay gestor de paquetes) -------------------------
 Write-Step 2 "Verificando gestor de paquetes..."
 $hasChoco = Get-Command choco -ErrorAction SilentlyContinue
 $hasScoop = Get-Command scoop -ErrorAction SilentlyContinue
@@ -64,14 +64,14 @@ if (-not $hasChoco -and -not $hasScoop) {
     Write-Ok "Gestor de paquetes disponible: $(if ($hasScoop) {'scoop'} else {'chocolatey'})"
 }
 
-# ── 3. WSL (para scripts de clonacion Bash) ───────────────────────────────
+# -- 3. WSL (para scripts de clonacion Bash) ------------------------------
 Write-Step 3 "Verificando WSL..."
 $wsl = Get-Command wsl -ErrorAction SilentlyContinue
 if (-not $wsl) {
     Write-Step 3 "Instalando WSL (requiere reinicio al terminar)..."
     try {
         wsl --install --no-distribution 2>&1 | Out-Null
-        Write-Ok "WSL instalado — REINICIA el equipo cuando termine este script"
+        Write-Ok "WSL instalado - REINICIA el equipo cuando termine este script"
         $script:needsReboot = $true
     } catch {
         Write-Warn "WSL no se pudo instalar automaticamente. Hazlo manualmente: wsl --install"
@@ -89,7 +89,7 @@ if (-not $wsl) {
     }
 }
 
-# ── 4. AnyDesk portable ───────────────────────────────────────────────────
+# -- 4. AnyDesk portable --------------------------------------------------
 Write-Step 4 "Verificando AnyDesk portable..."
 $baseDir = if ($PSScriptRoot) { $PSScriptRoot } else { Join-Path $env:USERPROFILE 'ResolveCore' }
 $anyDeskDest = Join-Path $baseDir 'kit\anydesk.exe'
@@ -107,7 +107,7 @@ if (-not (Test-Path $anyDeskDest)) {
     Write-Ok "AnyDesk portable ya existe"
 }
 
-# ── Resumen ──────────────────────────────────────────────────────────────
+# -- Resumen --------------------------------------------------------------
 Write-Host ""
 Write-Host "  =======================================================" -ForegroundColor Cyan
 Write-Host "   Instalacion completada"                                   -ForegroundColor Cyan
