@@ -49,10 +49,13 @@ FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
     --undo                  Restaura sysctl y servicios.
 
 MENU
-    1. DIAGNOSTICO    Lanza diagnostico.sh.
-    2. OPTIMIZACION   Lanza optimizacion.sh.
-    3. AYUDA          Guia rapida embebida.
-    4. SALIR          Cierra el programa.
+    1. DIAGNOSTICO     Lanza diagnostico.sh.
+    2. OPTIMIZACION    Lanza optimizacion.sh.
+    3. VULNERABILIDADES Lanza buscar_vulnerabilidades.py (Python).
+    4. INFORME         Genera HTML/PDF desde el ultimo JSON y opcionalmente
+                       lo adjunta a un ticket MantisBT.
+    5. AYUDA           Guia rapida embebida.
+    6. SALIR           Cierra el programa.
 
 REQUISITOS
     - Terminal interactiva para el menu (no pipes).
@@ -118,6 +121,7 @@ if [[ ! -t 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICIOS_DIR="$(dirname "$SCRIPT_DIR")/servicios"
 source "$SCRIPT_DIR/../.env" 2>/dev/null
 
 # Colores
@@ -155,9 +159,20 @@ show_menu() {
     echo -e "                       - Escaneo NVD + CISA KEV + OSV + EPSS"
     echo -e "                       - Audita configuracion y puertos abiertos"
     echo ""
-    echo -e "    ${CYAN}4.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo -e "    ${CYAN}4.${NC}  [INFORME]       - Generar HTML/PDF + adjuntar a Mantis"
+    echo -e "                       - Lee el ultimo JSON de diagnostico"
+    echo -e "                       - Adjunta el PDF al ticket MantisBT (opcional)"
     echo ""
-    echo -e "    ${RED}5.${NC}  [SALIR]         - Salir del programa"
+    echo -e "    ${CYAN}5.${NC}  [FACTURA]       - Generar factura PDF + email al cliente"
+    echo -e "                       - Asistente interactivo: tecnico, cliente, items"
+    echo -e "                       - Sube a Mantis y envia email al cliente"
+    echo ""
+    echo -e "    ${WHITE}6.${NC}  [SERVICIOS]     - Congelacion / Clonacion de sistemas"
+    echo -e "                       - Snapper/BTRFS, registro de imagenes"
+    echo ""
+    echo -e "    ${CYAN}7.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo ""
+    echo -e "    ${RED}8.${NC}  [SALIR]         - Salir del programa"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
     echo ""
@@ -291,6 +306,305 @@ run_vulnerabilidades() {
     read -p "  Presiona ENTER para continuar..."
 }
 
+run_informe() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}GENERAR INFORME TECNICO${NC}                                       |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+
+    if ! ensure_python; then
+        echo -e "  ${RED}[X] Python3 no disponible${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    local gen_script
+    gen_script="$(dirname "$SCRIPT_DIR")/common/generar_informe.py"
+    if [[ ! -f "$gen_script" ]]; then
+        echo -e "  ${RED}[X] No encontrado: $gen_script${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    # Buscar JSON mas reciente en diagnosticos/
+    local diag_dir
+    diag_dir="$(dirname "$SCRIPT_DIR")/diagnosticos"
+    if [[ ! -d "$diag_dir" ]]; then
+        echo -e "  ${RED}[X] No hay diagnosticos en $diag_dir${NC}"
+        echo -e "  ${YELLOW}    Ejecuta antes la opcion 1 (DIAGNOSTICO)${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    local latest_json
+    latest_json="$(find "$diag_dir" -maxdepth 1 -name '*.json' -printf '%T@ %p\n' 2>/dev/null \
+                   | sort -rn | head -1 | cut -d' ' -f2-)"
+
+    if [[ -z "$latest_json" ]]; then
+        echo -e "  ${RED}[X] No se encontro ningun JSON en $diag_dir${NC}"
+        echo -e "  ${YELLOW}    Ejecuta antes la opcion 1 (DIAGNOSTICO)${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    echo -e "  ${GRAY}JSON detectado:${NC} $(basename "$latest_json")"
+    echo -e "  ${GRAY}    fecha:${NC} $(date -r "$latest_json" '+%Y-%m-%d %H:%M:%S')"
+    echo ""
+
+    read -rp "  Usar este JSON? (S/n) " use_latest
+    local json_path="$latest_json"
+    if [[ "$use_latest" =~ ^[nN] ]]; then
+        read -rp "  Ruta al JSON: " custom_json
+        if [[ ! -f "$custom_json" ]]; then
+            echo -e "  ${RED}[X] Fichero no existe${NC}"
+            read -p "  Presiona ENTER..."
+            return
+        fi
+        json_path="$custom_json"
+    fi
+
+    read -rp "  Generar PDF tambien? (S/n) " gen_pdf
+    local pdf_flag=""
+    if [[ ! "$gen_pdf" =~ ^[nN] ]]; then
+        pdf_flag="--pdf"
+    fi
+
+    read -rp "  Abrir HTML en navegador al terminar? (S/n) " open_b
+    local open_flag=""
+    if [[ ! "$open_b" =~ ^[nN] ]]; then
+        open_flag="--open"
+    fi
+
+    local ticket_flag=""
+    if [[ -n "$pdf_flag" ]]; then
+        read -rp "  ID de ticket MantisBT para adjuntar (ENTER = no adjuntar): " ticket_id
+        if [[ "$ticket_id" =~ ^[0-9]+$ ]]; then
+            ticket_flag="--ticket $ticket_id"
+        fi
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}Generando informe...${NC}"
+    echo ""
+
+    # shellcheck disable=SC2086
+    python3 "$gen_script" --json "$json_path" $pdf_flag $open_flag $ticket_flag \
+        || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
+
+    echo ""
+    echo -e "  ${GREEN}[OK] Proceso completado${NC}"
+    read -p "  Presiona ENTER para continuar..."
+}
+
+run_factura() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}GENERAR FACTURA AL CLIENTE${NC}                                    |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+
+    if ! ensure_python; then
+        echo -e "  ${RED}[X] Python3 no disponible${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    local fac_script
+    fac_script="$(dirname "$SCRIPT_DIR")/common/generar_factura.py"
+    if [[ ! -f "$fac_script" ]]; then
+        echo -e "  ${RED}[X] No encontrado: $fac_script${NC}"
+        read -p "  Presiona ENTER..."
+        return
+    fi
+
+    read -rp "  Generar PDF? (S/n) " gp
+    local pdf_flag=""; [[ ! "$gp" =~ ^[nN] ]] && pdf_flag="--pdf"
+
+    read -rp "  Subir factura al ticket MantisBT? (S/n) " up
+    local up_flag=""; [[ ! "$up" =~ ^[nN] ]] && up_flag="--upload"
+
+    read -rp "  Enviar factura por email al cliente al finalizar? (S/n) " em
+    local em_flag=""; [[ ! "$em" =~ ^[nN] ]] && em_flag="--send-email"
+
+    read -rp "  Abrir HTML en navegador al terminar? (S/n) " ob
+    local op_flag=""; [[ ! "$ob" =~ ^[nN] ]] && op_flag="--open"
+
+    echo ""
+    echo -e "  ${YELLOW}Lanzando asistente interactivo de factura...${NC}"
+    echo ""
+
+    # shellcheck disable=SC2086
+    python3 "$fac_script" $pdf_flag $up_flag $em_flag $op_flag \
+        || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
+
+    echo ""
+    echo -e "  ${GREEN}[OK] Proceso de factura terminado${NC}"
+    read -p "  Presiona ENTER para continuar..."
+}
+
+# ── Servicios adicionales ────────────────────────────────────────────────────
+
+ensure_congelacion_deps() {
+    local missing=()
+    command -v btrfs    &>/dev/null || missing+=("btrfs-progs")
+    command -v snapper  &>/dev/null || missing+=("snapper")
+    command -v jq       &>/dev/null || missing+=("jq")
+    [[ ${#missing[@]} -eq 0 ]] && return 0
+
+    echo -e "  ${YELLOW}[!] Instalando dependencias: ${missing[*]}...${NC}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y -qq "${missing[@]}" 2>/dev/null
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y -q "${missing[@]}" 2>/dev/null
+    elif command -v pacman &>/dev/null; then
+        # btrfs-progs se llama igual; snapper igual; jq igual
+        sudo pacman -Sy --noconfirm "${missing[@]}" 2>/dev/null
+    else
+        echo -e "  ${RED}[X] Gestor de paquetes no detectado. Instala manualmente: ${missing[*]}${NC}"
+        return 1
+    fi
+
+    # Verificar
+    local still_missing=()
+    command -v btrfs   &>/dev/null || still_missing+=("btrfs-progs")
+    command -v snapper &>/dev/null || still_missing+=("snapper")
+    command -v jq      &>/dev/null || still_missing+=("jq")
+    if [[ ${#still_missing[@]} -gt 0 ]]; then
+        echo -e "  ${RED}[X] No se pudo instalar: ${still_missing[*]}${NC}"
+        return 1
+    fi
+    echo -e "  ${GREEN}[OK] Dependencias instaladas${NC}"
+}
+
+ensure_clonacion_deps() {
+    command -v jq &>/dev/null && return 0
+    echo -e "  ${YELLOW}[!] Instalando jq...${NC}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y -qq jq 2>/dev/null
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y -q jq 2>/dev/null
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -Sy --noconfirm jq 2>/dev/null
+    elif command -v brew &>/dev/null; then
+        brew install jq 2>/dev/null
+    fi
+    command -v jq &>/dev/null || { echo -e "  ${RED}[X] No se pudo instalar jq${NC}"; return 1; }
+    echo -e "  ${GREEN}[OK] jq instalado${NC}"
+}
+
+run_congelacion() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}CONGELACION DE SISTEMAS (Linux - BTRFS/snapper)${NC}              |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+    if ! ensure_congelacion_deps; then
+        read -rp "  Presiona ENTER..." _; return
+    fi
+
+    local s="$SERVICIOS_DIR/congelacion/congelacion-linux.sh"
+    if [[ ! -f "$s" ]]; then
+        echo -e "  ${RED}[X] Script no encontrado: $s${NC}"
+        read -rp "  Presiona ENTER..." _; return
+    fi
+
+    echo -e "    ${CYAN}1.${NC}  Estado actual (status)"
+    echo -e "    ${CYAN}2.${NC}  Configurar snapper (configure)  [root]"
+    echo -e "    ${CYAN}3.${NC}  Crear snapshot del estado limpio (snapshot)"
+    echo -e "    ${YELLOW}4.${NC}  ROLLBACK — restaurar estado anterior  [root, destructivo]"
+    echo -e "    ${GRAY}5.${NC}  Volver"
+    echo ""
+    read -rp "  Selecciona (1-5): " op
+    case "$op" in
+        1) bash "$s" --action status ;;
+        2) sudo bash "$s" --action configure ;;
+        3)
+            read -rp "  Etiqueta del snapshot (ENTER = 'estado-limpio'): " etq
+            [[ -z "$etq" ]] && etq="estado-limpio"
+            sudo bash "$s" --action snapshot --etiqueta "$etq"
+            ;;
+        4)
+            echo -e "  ${YELLOW}[!] ROLLBACK descarta el estado actual del sistema.${NC}"
+            read -rp "  Escribe 'SI' para confirmar: " conf
+            [[ "$conf" == "SI" ]] && sudo bash "$s" --action rollback --confirm
+            ;;
+        5) return ;;
+        *) echo -e "  ${RED}Opcion no valida${NC}" ;;
+    esac
+    echo ""
+    read -rp "  Presiona ENTER..." _
+}
+
+run_clonacion() {
+    echo ""
+    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  |  ${WHITE}CLONACION DE SISTEMAS${NC}                                         |"
+    echo -e "  +---------------------------------------------------------------+"
+    echo ""
+    if ! ensure_clonacion_deps; then
+        read -rp "  Presiona ENTER..." _; return
+    fi
+
+    local reg="$SERVICIOS_DIR/clonacion/registrar-imagen.sh"
+    local ver="$SERVICIOS_DIR/clonacion/verificar-imagen.sh"
+
+    echo -e "    ${CYAN}1.${NC}  Registrar imagen en manifiesto"
+    echo -e "    ${CYAN}2.${NC}  Verificar integridad de imagen"
+    echo -e "    ${GRAY}3.${NC}  Volver"
+    echo ""
+    read -rp "  Selecciona (1-3): " op
+    case "$op" in
+        1)
+            read -rp "  Ruta imagen o carpeta Clonezilla: " img
+            read -rp "  Nombre del equipo (ej: pc-cliente-01): " equipo
+            read -rp "  SO (windows|linux|macos): " so
+            read -rp "  Estado (limpio|post-instalacion|produccion): " estado
+            read -rp "  Notas (ENTER = ninguna): " notas
+            echo ""
+            echo -e "  ${YELLOW}Calculando SHA-256...${NC}"
+            bash "$reg" --imagen "$img" --equipo "$equipo" --so "$so" \
+                        --estado "$estado" --notas "$notas"
+            ;;
+        2)
+            read -rp "  Ruta imagen (o ENTER para buscar por ID): " img
+            if [[ -n "$img" ]]; then
+                bash "$ver" --imagen "$img"
+            else
+                read -rp "  ID del manifiesto: " id
+                bash "$ver" --id "$id"
+            fi
+            ;;
+        3) return ;;
+        *) echo -e "  ${RED}Opcion no valida${NC}" ;;
+    esac
+    echo ""
+    read -rp "  Presiona ENTER..." _
+}
+
+run_servicios() {
+    while true; do
+        show_banner
+        echo -e "  +---------------------------------------------------------------+"
+        echo -e "  |  ${WHITE}SERVICIOS ADICIONALES${NC}                                         |"
+        echo -e "  +---------------------------------------------------------------+"
+        echo ""
+        echo -e "    ${CYAN}1.${NC}  [CONGELACION]  - Estado de referencia con BTRFS/snapper"
+        echo -e "    ${CYAN}2.${NC}  [CLONACION]    - Registrar / verificar imagen de disco"
+        echo -e "    ${GRAY}3.${NC}  [VOLVER]       - Menu principal"
+        echo ""
+        echo -e "  +---------------------------------------------------------------+"
+        echo ""
+        read -rp "  Selecciona (1-3): " op
+        case "$op" in
+            1) run_congelacion ;;
+            2) run_clonacion ;;
+            3) return ;;
+            *) echo -e "  ${RED}Opcion no valida${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
 run_diagnostico() {
     echo ""
     echo -e "  ${YELLOW}Ejecutando diagnostico...${NC}"
@@ -365,15 +679,18 @@ while true; do
     show_banner
     show_menu
 
-    read -p "  Selecciona una opcion (1-5): " opcion
+    read -rp "  Selecciona una opcion (1-8): " opcion
     [[ -z "$opcion" ]] && { echo ""; exit 0; }
 
     case $opcion in
         1) run_diagnostico ;;
         2) run_optimizacion ;;
         3) run_vulnerabilidades ;;
-        4) show_help ;;
-        5)
+        4) run_informe ;;
+        5) run_factura ;;
+        6) run_servicios ;;
+        7) show_help ;;
+        8)
             echo ""
             echo -e "  ${GREEN}Hasta luego!${NC}"
             echo ""
@@ -382,7 +699,7 @@ while true; do
         *)
             echo ""
             echo -e "  ${RED}Opcion no valida${NC}"
-            read -p "  Presiona ENTER para continuar..."
+            read -rp "  Presiona ENTER para continuar..." _
             ;;
     esac
 done

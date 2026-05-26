@@ -7,6 +7,13 @@ Escaneo unificado de vulnerabilidades para Windows / Linux / Android / macOS.
 Politica: solo software libre / open source. APIs publicas (NVD, CISA KEV, OSV,
 EPSS-FIRST). Sin dependencias pip. Solo Python 3.8+ stdlib.
 
+Arquitectura: migración hexagonal en curso via Strangler Fig.
+  - Port VulnSource definido en ports/vuln_source.py
+  - Adapter NvdRestAdapter en adapters/nvd_rest.py (NVD extraído)
+  - Adapter NmapLocalAdapter en adapters/nmap_local.py (Nmap extraído)
+  - Adapter MantisRestSink en adapters/mantis_rest.py (MantisBT extraído)
+  - Este monolito se migra progresivamente por subdominios.
+
 Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
 Licencia: GPL-3.0 (mismo proyecto)
 """

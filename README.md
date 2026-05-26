@@ -94,7 +94,7 @@ flowchart LR
 | Scripts Windows | PowerShell | 5.1+ | Diagnóstico, optimización, informes |
 | Scripts Linux/macOS | Bash | 4+ | Diagnóstico, optimización |
 | Scripts Android | Bash (ADB) | — | Diagnóstico remoto vía ADB |
-| Escáner vulns/red | Python | 3.8+ stdlib | NVD, CISA KEV, OSV, EPSS, Shodan, Nmap |
+| Escáner vulns/red | Python | 3.8+ stdlib | NVD, CISA KEV, OSV, EPSS, Nmap |
 | Informe técnico | HTML → PDF | — | wkhtmltopdf / DomPDF (en desarrollo) |
 | Base de datos | MariaDB / MySQL | 10.4+ / 8.0+ | MantisBT + vulnerabilidades |
 | Acceso remoto | AnyDesk | — | Conexión al equipo del cliente |
@@ -113,8 +113,9 @@ ResolveCore/
 │   │   ├── page-docs.php           Página de documentación pública
 │   │   ├── page-changelog.php      Historial de versiones
 │   │   ├── page-contacto.php       Formulario de soporte
+│   │   ├── page-tecnicos.php       Portal técnicos (requiere rol Editor, descarga kit)
 │   │   ├── header.php / footer.php Layout global
-│   │   ├── functions.php           Hooks, AJAX, integración MantisBT
+│   │   ├── functions.php           Hooks, AJAX, integración MantisBT, handler descargas técnicos
 │   │   ├── style.css               Variables CSS, layout, responsive
 │   │   └── assets/
 │   │       ├── js/main.js          JS vanilla (formulario AJAX, nav)
@@ -146,13 +147,18 @@ ResolveCore/
 │   ├── common/                     Python — Hexagonal Architecture
 │   │   ├── domain/                 Modelos: Host, Vulnerability, Service, AttachmentResult
 │   │   ├── ports/                  Interfaces: HostIntelSource, MantisAttachmentSink
-│   │   ├── adapters/               Implementaciones: shodan_rest.py, mantis_rest.py
+│   │   ├── adapters/               Implementaciones: mantis_rest.py
 │   │   ├── buscar_vulnerabilidades.py  Motor CVE multi-feed (NVD/KEV/OSV/EPSS)
-│   │   ├── escaner_shodan.py       Auditoría exposición pública (Shodan API)
 │   │   ├── escaner_nmap.py         Escáner de puertos (Nmap wrapper)
 │   │   └── adjuntar_informe_mantis.py  CLI fase 2 — sube PDF a ticket vía API REST
+│   ├── servicios/                  Servicios adicionales (congelación + clonación + kit)
+│   │   ├── congelacion/            congelacion-windows.ps1 + congelacion-linux.sh
+│   │   ├── clonacion/              registrar-imagen.sh + verificar-imagen.sh
+│   │   ├── kit/                    construir-kit.ps1 (genera resolvecore-kit.zip)
+│   │   ├── install.ps1             Bootstrap servicios Windows (Chocolatey + WSL + AnyDesk)
+│   │   └── install.sh              Bootstrap servicios Linux (jq + btrfs-progs + snapper)
 │   ├── setup/                      Setup entorno técnico (Linux + Windows)
-│   ├── server/                     Bootstrap VPS (post-install.sh, bootstrap-mantis.sh)
+│   ├── server/                     Bootstrap VPS (post-install.sh, bootstrap-mantis.sh, setup-downloads-dir.sh)
 │   └── diagnosticos/               Salidas JSON + HTML generadas (gitignored)
 ├── reports/
 │   └── informe.html                Plantilla HTML del informe técnico
@@ -222,7 +228,7 @@ git clone https://github.com/Haplee/ResolveCore.git
 cd ResolveCore
 
 # Variables de entorno para Python (opcional)
-cp .env.example .env   # añadir SHODAN_API_KEY, NVD_API_KEY
+cp .env.example .env   # añadir NVD_API_KEY si se quiere mayor rate limit
 ```
 
 ---
@@ -279,9 +285,6 @@ bash ./scripts/linux/optimizacion.sh --undo
 # CVE multi-feed (NVD + CISA KEV + OSV + EPSS)
 python3 scripts/common/buscar_vulnerabilidades.py --output json
 
-# Auditoría exposición pública (Shodan)
-python3 scripts/common/escaner_shodan.py
-
 # Escáner de puertos (requiere nmap instalado)
 python3 scripts/common/escaner_nmap.py
 ```
@@ -316,7 +319,6 @@ Todos generan JSON estructurado + HTML visual con inyección segura (`<script ty
 | Módulo | Feed / Herramienta | Salida |
 |---|---|---|
 | `buscar_vulnerabilidades.py` | NVD (NIST), CISA KEV, OSV, EPSS-FIRST | JSON, HTML, texto |
-| `escaner_shodan.py` | Shodan REST API | Puertos, CVEs, org, país |
 | `escaner_nmap.py` | Nmap (wrapper) | Puertos, servicios, OS |
 
 Sin dependencias `pip` — solo Python 3.8+ stdlib.
@@ -329,7 +331,82 @@ Cliente REST para MantisBT 2.x. Cuando el usuario envía el formulario de contac
 
 Panel de configuración en **Ajustes → MantisBT**: URL, API Token, ID de proyecto.
 
-### 4b. Adjuntador de informes MantisBT (fase 2)
+### 4b. Servicios adicionales (congelación · clonación · kit)
+
+Scripts operativos en `scripts/servicios/`:
+
+| Script | SO | Función |
+|---|---|---|
+| `congelacion/congelacion-windows.ps1` | Windows | Status / Configure / Freeze / Thaw con Reboot Restore Rx o Deep Freeze |
+| `congelacion/congelacion-linux.sh` | Linux | BTRFS + snapper: status / configure / snapshot / rollback |
+| `clonacion/registrar-imagen.sh` | Linux | Registra imagen en `imagenes-manifest.json` con SHA-256 |
+| `clonacion/verificar-imagen.sh` | Linux | Valida integridad de imagen (exit 0 íntegra / 1 corrupta / 2 no encontrada) |
+| `kit/construir-kit.ps1` | Windows | Empaqueta `resolvecore-kit.zip` (AnyDesk portable + scripts + README-cliente.txt) |
+
+```powershell
+# Construir kit de implantación en cliente
+pwsh scripts/servicios/kit/construir-kit.ps1 -AnyDeskPath .\anydesk.exe
+```
+
+```bash
+# Tomar snapshot de congelación Linux
+bash scripts/servicios/congelacion/congelacion-linux.sh --action=snapshot --etiqueta="estado-limpio"
+
+# Registrar imagen de clonación
+bash scripts/servicios/clonacion/registrar-imagen.sh --imagen=/ruta/imagen.img --equipo=pc-cliente-01 --so=linux --estado=limpio
+```
+
+### 4c. Portal de técnicos
+
+Página WordPress protegida en `/tecnicos/` (rol Editor o Admin). Centro de operaciones del técnico.
+
+**Bootstrap one-liner público** (sin auth):
+
+```powershell
+# Windows (PowerShell Admin)
+irm https://resolvecore.website/install.ps1 | iex
+```
+
+```bash
+# Linux
+curl -fsSL https://resolvecore.website/install.sh | sudo bash
+```
+
+**Features UI:**
+
+- Hero con gradient mesh animado + auto-detect SO por navegador
+- Estado infraestructura en vivo: MantisBT / Web / Fleet (ping cada 60 s, cached)
+- Terminal mock con chrome (3 dots + prompt + cursor)
+- SHA-256 + tamaño + mtime reales por fichero
+- Troubleshooting expandible (UAC, BOM, BTRFS, ExecutionPolicy)
+- Checklist post-instalación persistido en `localStorage`
+- Widget tickets MantisBT del técnico (filtrados por handler/reporter)
+- **Dashboard ticket activo (pinned, sticky)**: cronómetro intervención, añadir nota a Mantis, subir informe PDF/HTML al ticket, generar factura HTML imprimible (`?rc_factura=ID&cliente=X&horas=N&tarifa=€` con IVA 21%), AnyDesk launcher (`anydesk:ID` + historial 5 sesiones)
+- **Command palette (`Ctrl`+`K`)**: búsqueda fuzzy de tabs, acciones, links y tickets
+- **Tail logs en vivo**: últimas 20 entradas `wp_rc_download_log`, refresh 10 s
+- Atajos teclado: `1` `2` `3` tabs · `C` copia oneliner · `Ctrl`+`K` palette · `Esc` cierra
+- Generador README cliente personalizado (cliente + ticket → `.txt` descargable)
+- Admin bar de WordPress oculta para rol Editor
+
+**Endpoints AJAX nuevos (en `wordpress/resolvecore-theme/functions.php`):**
+
+| Acción | Función | Uso |
+|---|---|---|
+| `rc_tech_infra_status` | Pings Mantis/Web/Fleet | Cache 60 s |
+| `rc_tech_my_tickets` | Tickets Mantis del user | Cache 2 min |
+| `rc_tech_logs_tail` | Últimas 20 descargas | — |
+| `rc_tech_add_note` | Nota al ticket pinned | `MantisApi::add_note()` |
+| `rc_tech_upload_informe` | Adjunta PDF/HTML | `MantisApi::attach_file()` |
+| `rc_tech_factura_inline` | Factura HTML imprimible | `template_redirect` |
+| `rc_tech_build_readme` | README cliente personalizado | `admin-post.php` |
+
+**Tabla DB nueva:** `wp_rc_download_log` (id, file_key, user_login, ip, ua, downloaded_at) — creada vía `dbDelta` en `after_setup_theme`. Auditoría completa de descargas técnicos.
+
+**Despliegue VPS:** symlink permanente `/var/www/wp/wp-content/themes/resolvecore-theme` → `/opt/resolvecore-git/wordpress/resolvecore-theme`. `git pull` actualiza al instante.
+
+URL en producción: `https://resolvecore.website/tecnicos/`
+
+### 4d. Adjuntador de informes MantisBT (fase 2)
 
 CLI Python hexagonal que sube el PDF generado al ticket correspondiente vía `POST /api/rest/issues/{id}/files`. Stdlib-only (sin `requests`), credenciales por entorno:
 
@@ -378,6 +455,8 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Clonación, congelación, acceso remoto, cifrado |
 | [`docs/scripting/arquitectura-scripting.md`](docs/scripting/arquitectura-scripting.md) | Arquitectura de módulos: diagnóstico → JSON → informe → PDF |
 | [`docs/scripting/schema-diagnostico.md`](docs/scripting/schema-diagnostico.md) | Esquema JSON unificado de diagnóstico |
+| [`docs/scripting/schema-servicios-adicionales.md`](docs/scripting/schema-servicios-adicionales.md) | Esquemas JSON de congelación, clonación y kit |
+| [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Justificación técnica servicios adicionales |
 
 ---
 
@@ -406,9 +485,11 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Informe HTML | Generado por scripts ✅ |
 | Informe PDF | Generado (wkhtmltopdf) + adjuntado al ticket vía API REST ✅ |
 | Fleet Panel | Endpoint REST + página pública agregada ✅ |
-| Escáner CVE | NVD · CISA KEV · OSV · EPSS · Shodan ✅ |
+| Servicios adicionales | Congelación (Win+Linux) · Clonación · Kit implantación ✅ |
+| Portal técnicos | `/tecnicos/` WP + `/downloads/` nginx con htpasswd ✅ |
+| Escáner CVE | NVD · CISA KEV · OSV · EPSS ✅ |
 | CI lint | shellcheck · PSScriptAnalyzer · PHPCS WPCS · ruff (4/4 verde, bloqueante) |
-| Última actualización | 24 de mayo de 2026 |
+| Última actualización | 26 de mayo de 2026 |
 
 ### Versiones por componente
 
@@ -417,7 +498,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Componente | Path | Versión | Política |
 |---|---|---|---|
 | Producto (release tag) | repo root | `1.2.0-beta` | SemVer; bump al cerrar hito de roadmap |
-| Tema WordPress | `wordpress/resolvecore-theme/` | `3.0.0` | SemVer; bump al cambiar layout o paleta |
+| Tema WordPress | `wordpress/resolvecore-theme/` | `3.2.0` | SemVer; bump al cambiar layout o paleta |
 | Plugin WP (rc-mantisbt) | `wordpress/plugins/rc-mantisbt/` | `1.0.0` | SemVer; bump al cambiar payload Mantis o API REST consumida |
 | Diagnóstico Windows | `scripts/windows/diagnostico.ps1` | `4.1.0` | SemVer; **major** rompe schema JSON |
 | Optimización Windows | `scripts/windows/optimizacion.ps1` | `3.2.0` | SemVer; **major** cambia comportamiento `--undo` |
@@ -428,7 +509,6 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Diagnóstico Android | `scripts/android/diagnostico.sh` | `2.2.0` | SemVer; **major** rompe schema JSON |
 | Optimización Android | `scripts/android/optimizacion.sh` | `3.1.0` | SemVer |
 | Escáner CVE (Python) | `scripts/common/buscar_vulnerabilidades.py` | `1.0.0` | SemVer; **major** cambia feeds o salida JSON |
-| Escáner Shodan | `scripts/common/escaner_shodan.py` | `2.0.0` | SemVer |
 | Schema JSON diagnóstico | `docs/scripting/schema-diagnostico.md` | trackea SO con menor versión | Bump al añadir/quitar campos obligatorios |
 
 **Regla de paridad**: el `_meta.version` del JSON emitido por cada script de diagnóstico **debe coincidir** con la versión declarada en cabecera. Si modificas el schema, bump major y actualiza `docs/scripting/schema-diagnostico.md` (CLAUDE.md lo exige).
@@ -439,7 +519,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 
 Distribuido bajo licencia **GNU General Public License v3.0**.
 
-El escáner de vulnerabilidades y los scripts de diagnóstico son software libre. Las APIs consumidas (NVD, CISA KEV, OSV, EPSS-FIRST, Shodan) son públicas y auditables.
+El escáner de vulnerabilidades y los scripts de diagnóstico son software libre. Las APIs consumidas (NVD, CISA KEV, OSV, EPSS-FIRST) son públicas y auditables.
 
 ---
 

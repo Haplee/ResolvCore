@@ -4,6 +4,8 @@
 > Eslogan: "Solución a tus problemas informáticos." — Francisco Vidal Mateo
 
 ---
+> Commits: Todos los commits los realiza el usuario ninguno tu.
+
 
 ## Descripción del proyecto
 
@@ -52,12 +54,15 @@ bash ./scripts/linux/diagnostico.sh
 # Ejecutar script de diagnóstico macOS
 bash ./scripts/macos/diagnostico.sh
 
-# Escaneo Nmap / Shodan (Python — requiere .env en scripts/common/)
-python scripts/common/escaner_nmap.py
-python scripts/common/escaner_shodan.py
+# Escaneo Nmap (Python — requiere nmap instalado)
+python scripts/common/escaner_nmap.py --ip 192.168.1.0/24
 
 # Buscar vulnerabilidades
 python scripts/common/buscar_vulnerabilidades.py
+
+# Generar informe HTML/PDF desde JSON de diagnóstico
+python scripts/common/generar_informe.py --json scripts/diagnosticos/diagnostico.json
+python scripts/common/generar_informe.py --json scripts/diagnosticos/diagnostico.json --pdf --ticket 42
 
 # Setup servidor VPS (Linux)
 bash ./scripts/server/linux/post-install.sh

@@ -20,10 +20,9 @@
 10. [Control de versiones — Git / GitHub](#10-control-de-versiones--git--github)
 11. [Generación de informes — PDF](#11-generación-de-informes--pdf)
 12. [Futuro — App Android](#12-futuro--app-android)
-13. [Auditoría de exposición — Shodan](#13-auditoría-de-exposición--shodan)
-14. [Clonado e imágenes de SO](#14-clonado-e-imágenes-de-so)
-15. [Seguridad en cliente — Cifrado y gestores](#15-seguridad-en-cliente--cifrado-y-gestores)
-16. [Resumen comparativo](#16-resumen-comparativo)
+13. [Clonado e imágenes de SO](#13-clonado-e-imágenes-de-so)
+14. [Seguridad en cliente — Cifrado y gestores](#14-seguridad-en-cliente--cifrado-y-gestores)
+15. [Resumen comparativo](#15-resumen-comparativo)
 
 ---
 
@@ -46,25 +45,21 @@ El stack combina herramientas de código abierto maduras, con integración vía 
 
 **WordPress 6.x** con tema personalizado `resolvecore-theme` (PHP puro, sin builders).
 
-### Plan de WordPress elegido
+### Hosting de WordPress: Comparativa y Elección Final
 
-WordPress.com ofrece cuatro planes. ResolveCore requiere el plan **Business** (mínimo) por la necesidad de instalar plugins propios.
+Para el alojamiento del entorno de producción se ha optado finalmente por un **VPS Linux en IONOS (Plan S+)**, instalando WordPress de forma autónoma. Durante la fase de diseño se evaluó WordPress.com (Plan Business), pero se descartó en favor del VPS propio.
 
-| Característica | Gratuito | Personal | Business | VIP |
-|---------------|----------|---------|---------|-----|
-| Precio (aprox.) | 0 €/mes | ~4 €/mes | ~25 €/mes | Contacto |
-| Plugins propios | ❌ | ❌ | ✅ | ✅ |
-| Themes propios | ❌ | ❌ | ✅ | ✅ |
-| Dominio personalizado | ❌ | ✅ | ✅ | ✅ |
-| SSL automático | ✅ | ✅ | ✅ | ✅ |
-| Acceso SFTP/DB | ❌ | ❌ | ✅ | ✅ |
-| Soporte prioritario | ❌ | Chat | Chat + Email | Dedicado |
-| Sin anuncios WordPress.com | ❌ | ✅ | ✅ | ✅ |
-| WooCommerce | ❌ | ❌ | ✅ | ✅ |
+| Característica | WordPress.com (Business) | VPS IONOS (Plan S+) |
+|---------------|--------------------------|---------------------|
+| Precio (aprox.) | ~25 €/mes | 2,5 €/mes |
+| Plugins y Themes propios | ✅ | ✅ |
+| Dominio personalizado | ✅ | ✅ (`resolvecore.website`) |
+| SSL automático | ✅ | ✅ (Let's Encrypt) |
+| Acceso root al SO y DB | ❌ | ✅ |
+| Correo corporativo propio | ❌ (Extra) | ✅ (`tecnico@resolvecore.website`) |
+| Alineación con perfil ASIR | Baja (SaaS gestionado) | Muy alta (Administración Linux) |
 
-**Por qué Business y no VIP:** VIP está orientado a grandes medios (CNN, TechCrunch). El coste es desproporcionado para un proyecto académico. Business proporciona todo lo necesario: plugin `rc-mantisbt`, tema personalizado `resolvecore-theme`, dominio `resolvecore.com` y acceso SFTP para despliegue.
-
-**Alternativa considerada (WordPress.org + hosting propio):** WordPress.org (software libre) sobre VPS propio daría control total. Se descarta para la fase actual porque WordPress.com Business elimina la gestión de servidor en el periodo del TFG. El despliegue en VPS propio (Oracle Cloud Free Tier) está planificado para producción final.
+**Por qué VPS propio y no WordPress.com Business:** Aunque inicialmente se consideró WordPress.com por su facilidad de despliegue, el alto coste mensual (~25 €) resulta desproporcionado para un proyecto académico o una startup. Un VPS propio por 2,5 €/mes no solo es más viable económicamente, sino que ofrece control total sobre el sistema operativo base (Linux). Esto encaja perfectamente con las competencias troncales del ciclo ASIR, permitiendo instalar, configurar y endurecer a medida los servicios de Nginx, PHP-FPM y MariaDB, además de habilitar la gestión del correo corporativo.
 
 ---
 
@@ -486,37 +481,7 @@ En desarrollo. Las opciones evaluadas son:
 
 ---
 
-## 13. Auditoría de exposición — Shodan
-
-### Tecnología elegida
-
-**Shodan API REST** (free tier) + módulo Python `escaner_shodan.py` (stdlib, sin `pip install shodan`).
-
-### Por qué Shodan
-
-| Criterio | Shodan | Censys | Fofa | Nmap (local) |
-|----------|--------|--------|------|---------------|
-| Datos históricos de internet | Sí | Sí | Sí | No |
-| Free tier útil | 100 créditos/mes | 250 queries/mes | Limitado | N/A |
-| CVEs en respuesta | Sí (campo `vulns`) | Sí | Parcial | No |
-| API REST simple | Sí | Sí (más compleja) | Sí | N/A |
-| Sin instalación en cliente | Sí | Sí | Sí | No |
-| Referencia en ASIR/ciberseguridad | Alta | Media | Baja | Alta |
-
-**Razón principal:** Shodan indexa puertos, banners de servicios y CVEs detectados pasivamente para cualquier IP pública. Permite a ResolveCore ofrecer un informe de exposición sin instalar nada en el equipo del cliente. El free tier (100 créditos/mes, 1 crédito por IP) es suficiente para el TFG.
-
-**Implementación:** `scripts/common/escaner_shodan.py` — Python 3.8+ stdlib, sin dependencias pip. Lee `SHODAN_API_KEY` desde variable de entorno o `.env` local.
-
-```
-python escaner_shodan.py --ip 8.8.8.8
-python escaner_shodan.py --ip 1.1.1.1 --json
-```
-
-**Integración en el catálogo:** Auditoría de exposición Shodan → 30 €/IP/informe → `escaner_shodan.py` genera el JSON que `generar_informe.py` formatea en PDF.
-
----
-
-## 14. Clonado e imágenes de SO
+## 13. Clonado e imágenes de SO
 
 ### Herramientas comparadas
 
@@ -555,9 +520,9 @@ Backup programado en producción       → Veeam Agent Free
 
 ---
 
-## 15. Seguridad en cliente — Cifrado y gestores
+## 14. Seguridad en cliente — Cifrado y gestores
 
-### 15.1 Cifrado de disco
+### 14.1 Cifrado de disco
 
 | Herramienta | SO | Licencia | TPM | Algoritmo | Recuperación | Caso de uso |
 |-------------|-----|---------|-----|-----------|--------------|-------------|
@@ -577,7 +542,7 @@ Portátil Linux sin reinstalar      → VeraCrypt contenedor o ecryptfs home
 
 **Por qué no DiskCryptor:** sin mantenimiento activo desde 2014. VeraCrypt lo sustituye con soporte multiplataforma y auditorías de seguridad recientes (2016, 2020).
 
-### 15.2 Gestores de contraseñas
+### 14.2 Gestores de contraseñas
 
 | Gestor | Licencia | Almacenamiento | Sync | 2FA | Compartir | Auditoría | Precio |
 |--------|---------|---------------|------|-----|-----------|-----------|--------|
@@ -600,11 +565,11 @@ Portátil Linux sin reinstalar      → VeraCrypt contenedor o ecryptfs home
 
 ---
 
-## 16. Resumen comparativo
+## 15. Resumen comparativo
 
 | Componente | Elegido | Alternativa principal | Razón del descarte |
 |-----------|---------|----------------------|-------------------|
-| CMS | WordPress Business | CMS custom PHP | Tiempo de desarrollo, plugins, comunidad |
+| CMS | WordPress VPS | CMS custom PHP | Tiempo de desarrollo, plugins, comunidad, SO Linux |
 | Bug tracker | MantisBT 2.27 | Jira | Coste, complejidad, PHP incompatible |
 | Acceso remoto | AnyDesk | TeamViewer | Bloqueo sesiones largas en free |
 | Scripts Windows | PowerShell 7 | Python | No requiere instalación adicional |
@@ -616,7 +581,6 @@ Portátil Linux sin reinstalar      → VeraCrypt contenedor o ecryptfs home
 | SLA automático | SetDuedate | Manual | Automatiza promesa <2h |
 | PDF (previsto) | DomPDF/mPDF | wkhtmltopdf | Sin mantenimiento desde 2023 |
 | App Android (futuro) | Kotlin/Compose | Flutter | Acceso total a APIs nativas Android |
-| Auditoría exposición | Shodan API | Censys | Free tier más generoso, CVEs en respuesta |
 | Clonación puntual | Clonezilla Live | Macrium Reflect | GPL, multiplataforma (Linux/Windows/macOS) |
 | Despliegue en flota | FOG Project | WDS + MDT | No requiere Windows Server, multiplataforma |
 | Cifrado Windows | BitLocker / VeraCrypt | DiskCryptor | Sin mantenimiento activo |
