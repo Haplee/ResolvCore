@@ -52,15 +52,17 @@ function rc_handle_technician_download(): void {
 		wp_die( 'Fichero no disponible en este momento.', 'No encontrado', array( 'response' => 404 ) );
 	}
 
-	// Log de descarga
+	// Log de descarga (error_log + tabla rc_download_log)
 	$user = wp_get_current_user();
+	$ip   = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
 	error_log( sprintf(
 		'[ResolveCore] Descarga: %s | usuario: %s | IP: %s | %s',
 		esc_html( $key ),
 		esc_html( $user->user_login ),
-		sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) ),
+		$ip,
 		gmdate( 'Y-m-d H:i:s' )
 	) );
+	rc_log_download( $key, $user->user_login, $ip );
 
 	header( 'Content-Type: ' . $allowed[ $key ]['type'] );
 	header( 'Content-Disposition: attachment; filename="' . basename( $filepath ) . '"' );
@@ -683,3 +685,304 @@ function resolvecore_handle_ticket_status() {
 }
 add_action( 'wp_ajax_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
 add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
+
+// =============================================================================
+//  Área de técnicos — backend
+// =============================================================================
+
+/**
+ * Crea la tabla rc_download_log si no existe.
+ */
+function rc_create_download_log_table(): void {
+	global $wpdb;
+	$table   = $wpdb->prefix . 'rc_download_log';
+	$charset = $wpdb->get_charset_collate();
+	$sql     = "CREATE TABLE IF NOT EXISTS {$table} (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+		file_key VARCHAR(64) NOT NULL,
+		user_login VARCHAR(128) NOT NULL,
+		ip VARCHAR(45) NOT NULL,
+		ua VARCHAR(255) NOT NULL DEFAULT '',
+		downloaded_at DATETIME NOT NULL,
+		PRIMARY KEY (id),
+		KEY idx_user (user_login),
+		KEY idx_file (file_key),
+		KEY idx_date (downloaded_at)
+	) {$charset};";
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta( $sql );
+}
+add_action( 'after_setup_theme', 'rc_create_download_log_table' );
+
+function rc_log_download( string $key, string $user_login, string $ip ): void {
+	global $wpdb;
+	$wpdb->insert(
+		$wpdb->prefix . 'rc_download_log',
+		array(
+			'file_key'      => $key,
+			'user_login'    => $user_login,
+			'ip'            => $ip,
+			'ua'            => substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ), 0, 255 ),
+			'downloaded_at' => current_time( 'mysql' ),
+		),
+		array( '%s', '%s', '%s', '%s', '%s' )
+	);
+}
+
+/**
+ * Metadata real de cada fichero descargable (size + sha256 + mtime).
+ * Cacheado 5 min para no recalcular el hash en cada visita.
+ */
+function rc_get_download_meta( string $key ): array {
+	$cache_key = "rc_dl_meta_{$key}";
+	$cached    = get_transient( $cache_key );
+	if ( is_array( $cached ) ) {
+		return $cached;
+	}
+
+	$files = array(
+		'windows' => 'install-servicios.ps1',
+		'linux'   => 'install-servicios.sh',
+		'kit'     => 'resolvecore-kit.zip',
+	);
+	if ( ! isset( $files[ $key ] ) ) {
+		return array();
+	}
+
+	$dir  = defined( 'RC_DOWNLOADS_PATH' ) ? RC_DOWNLOADS_PATH : '/opt/resolvecore-downloads';
+	$path = trailingslashit( $dir ) . $files[ $key ];
+
+	if ( ! file_exists( $path ) ) {
+		$meta = array(
+			'exists' => false,
+			'size'   => 0,
+			'sha256' => '',
+			'mtime'  => 0,
+		);
+		set_transient( $cache_key, $meta, 60 );
+		return $meta;
+	}
+
+	$meta = array(
+		'exists' => true,
+		'size'   => filesize( $path ),
+		'sha256' => hash_file( 'sha256', $path ),
+		'mtime'  => filemtime( $path ),
+	);
+	set_transient( $cache_key, $meta, 5 * MINUTE_IN_SECONDS );
+	return $meta;
+}
+
+/**
+ * Formato humano de bytes.
+ */
+function rc_format_bytes( int $bytes ): string {
+	if ( $bytes <= 0 ) {
+		return '—';
+	}
+	$units = array( 'B', 'KB', 'MB', 'GB' );
+	$i     = (int) floor( log( $bytes, 1024 ) );
+	$i     = min( $i, count( $units ) - 1 );
+	return round( $bytes / pow( 1024, $i ), 1 ) . ' ' . $units[ $i ];
+}
+
+/**
+ * AJAX: estado de infraestructura (mantis, nginx, fleet).
+ * Cacheado 60s — no machaca backends.
+ */
+function rc_tech_infra_status(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+
+	$cached = get_transient( 'rc_tech_infra_status' );
+	if ( is_array( $cached ) ) {
+		wp_send_json_success( $cached );
+	}
+
+	$targets = array(
+		'mantis' => 'https://mantis.resolvecore.website/',
+		'web'    => home_url( '/' ),
+		'fleet'  => home_url( '/fleet-status/' ),
+	);
+
+	$out = array();
+	foreach ( $targets as $name => $url ) {
+		$t0  = microtime( true );
+		$res = wp_remote_head(
+			$url,
+			array(
+				'timeout'     => 4,
+				'redirection' => 2,
+				'sslverify'   => true,
+			)
+		);
+		$ms  = (int) ( ( microtime( true ) - $t0 ) * 1000 );
+		if ( is_wp_error( $res ) ) {
+			$out[ $name ] = array( 'ok' => false, 'code' => 0, 'ms' => $ms, 'err' => $res->get_error_message() );
+		} else {
+			$code         = wp_remote_retrieve_response_code( $res );
+			$out[ $name ] = array( 'ok' => $code >= 200 && $code < 400, 'code' => $code, 'ms' => $ms );
+		}
+	}
+	$out['checked_at'] = gmdate( 'c' );
+
+	set_transient( 'rc_tech_infra_status', $out, MINUTE_IN_SECONDS );
+	wp_send_json_success( $out );
+}
+add_action( 'wp_ajax_rc_tech_infra_status', 'rc_tech_infra_status' );
+
+/**
+ * AJAX: tickets asignados / reportados por el técnico actual en MantisBT.
+ */
+function rc_tech_my_tickets(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
+	}
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
+
+	if ( ! function_exists( 'rc_mantis_get_api' ) ) {
+		wp_send_json_error( array( 'msg' => 'Integración MantisBT no disponible.' ) );
+	}
+	$api = rc_mantis_get_api();
+	if ( ! $api ) {
+		wp_send_json_error( array( 'msg' => 'MantisBT no configurado.' ) );
+	}
+
+	$user      = wp_get_current_user();
+	$user_hint = strtolower( $user->user_login );
+
+	$cache_key = 'rc_tech_tickets_' . $user->ID;
+	$cached    = get_transient( $cache_key );
+	if ( is_array( $cached ) ) {
+		wp_send_json_success( $cached );
+	}
+
+	if ( ! method_exists( $api, 'list_issues' ) ) {
+		wp_send_json_success( array( 'tickets' => array(), 'note' => 'API sin list_issues' ) );
+	}
+
+	$res = $api->list_issues( array( 'page_size' => 25 ) );
+	if ( is_wp_error( $res ) ) {
+		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
+	}
+
+	$issues   = $res['issues'] ?? array();
+	$filtered = array();
+	foreach ( $issues as $iss ) {
+		$status_id = (int) ( $iss['status']['id'] ?? 0 );
+		if ( $status_id >= 90 ) {
+			continue; // cerrados fuera
+		}
+		$handler  = strtolower( (string) ( $iss['handler']['name'] ?? '' ) );
+		$reporter = strtolower( (string) ( $iss['reporter']['name'] ?? '' ) );
+		if ( $handler === $user_hint || $reporter === $user_hint ) {
+			$filtered[] = array(
+				'id'       => (int) ( $iss['id'] ?? 0 ),
+				'summary'  => (string) ( $iss['summary'] ?? '' ),
+				'status'   => (string) ( $iss['status']['name'] ?? '' ),
+				'priority' => (string) ( $iss['priority']['name'] ?? '' ),
+				'updated'  => (string) ( $iss['updated_at'] ?? '' ),
+			);
+		}
+	}
+
+	$out = array( 'tickets' => array_slice( $filtered, 0, 10 ) );
+	set_transient( $cache_key, $out, 2 * MINUTE_IN_SECONDS );
+	wp_send_json_success( $out );
+}
+add_action( 'wp_ajax_rc_tech_my_tickets', 'rc_tech_my_tickets' );
+
+/**
+ * AJAX: genera README-cliente.txt personalizado (cliente + ticket).
+ * Devuelve texto plano descargable.
+ */
+function rc_tech_build_readme(): void {
+	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
+		wp_die( 'forbidden', 'error', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'rc_tech_readme' );
+
+	$cliente   = sanitize_text_field( wp_unslash( $_POST['cliente'] ?? '' ) );
+	$ticket_id = absint( $_POST['ticket'] ?? 0 );
+	$tecnico   = wp_get_current_user()->display_name;
+
+	if ( $cliente === '' ) {
+		wp_die( 'Falta nombre del cliente', 'error', array( 'response' => 400 ) );
+	}
+
+	$ticket_line = $ticket_id ? "Incidencia MantisBT: #{$ticket_id}" : 'Incidencia MantisBT: (pendiente)';
+	$fecha       = wp_date( 'Y-m-d H:i' );
+
+	$txt = <<<TXT
+================================================================
+  ResolveCore — Kit de soporte para {$cliente}
+================================================================
+
+Hola {$cliente},
+
+Tu técnico asignado es {$tecnico}.
+{$ticket_line}
+Fecha de entrega: {$fecha}
+
+----------------------------------------------------------------
+  Cómo iniciar la sesión de soporte remoto
+----------------------------------------------------------------
+
+1. Haz doble clic en "anydesk-portable.exe"
+2. Espera a que aparezca tu ID AnyDesk (9-10 dígitos)
+3. Llama o envía un WhatsApp a tu técnico con ese ID
+4. El técnico te pedirá aceptar la conexión: pulsa "Aceptar"
+
+Cuando la sesión termine, simplemente cierra AnyDesk.
+
+----------------------------------------------------------------
+  Privacidad y RGPD
+----------------------------------------------------------------
+
+- El técnico solo accede mientras AnyDesk está abierto.
+- Puedes cerrar la conexión en cualquier momento.
+- No se instala nada permanente: AnyDesk es portable.
+- Se generará un informe técnico que recibirás por email.
+
+----------------------------------------------------------------
+  Contacto
+----------------------------------------------------------------
+
+Web:    https://resolvecore.website
+Email:  fvidalmateo@gmail.com
+
+ResolveCore — Solución a tus problemas informáticos.
+TXT;
+
+	$filename = 'README-' . sanitize_file_name( strtolower( $cliente ) ) . '.txt';
+	header( 'Content-Type: text/plain; charset=UTF-8' );
+	header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+	header( 'X-Content-Type-Options: nosniff' );
+	echo $txt; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	exit;
+}
+add_action( 'admin_post_rc_tech_build_readme', 'rc_tech_build_readme' );
+
+/**
+ * Estadísticas rápidas del técnico (descargas propias últimas 30d).
+ */
+function rc_tech_my_stats(): array {
+	global $wpdb;
+	$user  = wp_get_current_user();
+	$table = $wpdb->prefix . 'rc_download_log';
+	$row   = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at
+			 FROM {$table}
+			 WHERE user_login = %s
+			   AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+			$user->user_login
+		),
+		ARRAY_A
+	);
+	return array(
+		'total'   => (int) ( $row['total'] ?? 0 ),
+		'last_at' => (string) ( $row['last_at'] ?? '' ),
+	);
+}
