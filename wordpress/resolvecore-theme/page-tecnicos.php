@@ -25,15 +25,15 @@ $downloads = array(
 		'label'   => 'Windows — install-servicios.ps1',
 		'size'    => '~12 KB',
 		'desc'    => 'Instala: Chocolatey · WSL · jq · AnyDesk portable',
-		'oneliner'=> 'iwr -useb https://resolvecore.website/downloads/install-servicios.ps1 | iex',
+		'oneliner'=> 'irm https://resolvecore.website/install.ps1 | iex',
 		'note'    => 'Requiere PowerShell como Administrador',
 	),
 	'linux' => array(
 		'label'   => 'Linux — install-servicios.sh',
 		'size'    => '~6 KB',
 		'desc'    => 'Instala: jq · curl · btrfs-progs · snapper. Compatible: Ubuntu 22.04+, Debian 11+, Fedora 37+, Arch.',
-		'oneliner'=> 'curl -sSL https://resolvecore.website/downloads/install-servicios.sh | bash',
-		'note'    => 'Puede requerir sudo. El script lo pide cuando es necesario.',
+		'oneliner'=> 'curl -fsSL https://resolvecore.website/install.sh | sudo bash',
+		'note'    => 'Requiere sudo (instala paquetes del sistema).',
 	),
 	'kit' => array(
 		'label'   => 'Kit cliente — resolvecore-kit.zip',
