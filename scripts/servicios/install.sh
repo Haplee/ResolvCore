@@ -8,7 +8,7 @@
 #   - curl (integracion MantisBT)
 #
 # Uso rapido:
-#   curl -sSL https://resolvecore.website/downloads/install-servicios.sh | bash
+#   curl -fsSL https://resolvecore.website/install.sh | sudo bash
 # O local:
 #   bash scripts/servicios/install.sh
 #
