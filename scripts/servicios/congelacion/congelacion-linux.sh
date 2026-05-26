@@ -101,8 +101,6 @@ emit_json() {
         args+=(--arg "$1" "$2")
         shift 2
     done
-    # Construir objeto a partir de los pares clave/valor
-    local script='. as $in | reduce range(0; ($in | length); 2) as $i ({}; .[$in[$i]] = $in[$i+1])'
     jq -n "${args[@]}" \
         '$ARGS.named' 2>/dev/null || jq -n "${args[@]}" '$ARGS.named'
 }

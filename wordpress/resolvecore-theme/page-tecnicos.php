@@ -3,7 +3,7 @@
 
 // Redirige a login si no está autenticado
 if ( ! is_user_logged_in() ) {
-	wp_redirect( wp_login_url( get_permalink() ) );
+	wp_safe_redirect( wp_login_url( get_permalink() ) );
 	exit;
 }
 
@@ -21,10 +21,10 @@ $build_date = '2026-05-26';
 $nonce_ajax = wp_create_nonce( 'rc_tech_nonce' );
 $nonce_kit  = wp_create_nonce( 'rc_tech_readme' );
 
-$meta_win   = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'windows' ) : array();
-$meta_lin   = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'linux' )   : array();
-$meta_kit   = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'kit' )     : array();
-$stats      = function_exists( 'rc_tech_my_stats' )    ? rc_tech_my_stats()                 : array( 'total' => 0, 'last_at' => '' );
+$meta_win = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'windows' ) : array();
+$meta_lin = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'linux' ) : array();
+$meta_kit = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'kit' ) : array();
+$stats    = function_exists( 'rc_tech_my_stats' ) ? rc_tech_my_stats() : array( 'total' => 0, 'last_at' => '' );
 
 $downloads = array(
 	'windows' => array(
@@ -142,9 +142,24 @@ get_header();
 
 	<?php
 	$platforms = array(
-		'windows' => array( 'icon_class' => 'rc-dl-icon--win',   'title' => 'Windows 10 / 11', 'sub' => 'PowerShell 5.1+ · Requiere Administrador', 'badge' => array( 'green', 'Listo' ) ),
-		'linux'   => array( 'icon_class' => 'rc-dl-icon--linux', 'title' => 'Linux',           'sub' => 'Ubuntu 22.04+ · Debian 11+ · Fedora 37+ · Arch', 'badge' => array( 'green', 'Listo' ) ),
-		'kit'     => array( 'icon_class' => 'rc-dl-icon--kit',   'title' => 'Kit de implantación', 'sub' => 'AnyDesk + scripts + README + MANIFEST', 'badge' => array( 'blue',  'Entrega' ) ),
+		'windows' => array(
+			'icon_class' => 'rc-dl-icon--win',
+			'title'      => 'Windows 10 / 11',
+			'sub'        => 'PowerShell 5.1+ · Requiere Administrador',
+			'badge'      => array( 'green', 'Listo' ),
+		),
+		'linux'   => array(
+			'icon_class' => 'rc-dl-icon--linux',
+			'title'      => 'Linux',
+			'sub'        => 'Ubuntu 22.04+ · Debian 11+ · Fedora 37+ · Arch',
+			'badge'      => array( 'green', 'Listo' ),
+		),
+		'kit'     => array(
+			'icon_class' => 'rc-dl-icon--kit',
+			'title'      => 'Kit de implantación',
+			'sub'        => 'AnyDesk + scripts + README + MANIFEST',
+			'badge'      => array( 'blue', 'Entrega' ),
+		),
 	);
 	foreach ( $platforms as $key => $plat ) :
 		$dl     = $downloads[ $key ];
@@ -156,8 +171,8 @@ get_header();
 		$sha    = $exists ? $meta['sha256'] : '';
 		$mtime  = $exists ? wp_date( 'Y-m-d H:i', (int) $meta['mtime'] ) : '—';
 	?>
-	<div id="tab-<?php echo esc_attr( $key ); ?>" class="rc-tab-panel<?php echo $active; ?>"
-	     role="tabpanel" aria-labelledby="btn-<?php echo esc_attr( $key ); ?>" <?php echo $hidden; ?>>
+	<div id="tab-<?php echo esc_attr( $key ); ?>" class="rc-tab-panel<?php echo esc_attr( $active ); ?>"
+	     role="tabpanel" aria-labelledby="btn-<?php echo esc_attr( $key ); ?>" <?php echo $hidden ? 'hidden' : ''; ?>>
 
 		<div class="rc-dl-card rc-dl-card--<?php echo esc_attr( $key ); ?>">
 			<div class="rc-dl-card-bar" aria-hidden="true"></div>
@@ -196,8 +211,7 @@ get_header();
 				<div class="rc-terminal-actions">
 					<small class="rc-terminal-note"><?php echo esc_html( $dl['note'] ); ?></small>
 					<div class="rc-terminal-btns">
-						<button class="rc-mini-btn rc-copy-btn" type="button"
-						        data-copy="<?php echo esc_attr( $dl['oneliner'] ); ?>" aria-label="Copiar comando">
+						<button class="rc-mini-btn rc-copy-btn" type="button" data-copy="<?php echo esc_attr( $dl['oneliner'] ); ?>" aria-label="Copiar comando">
 							<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
 							Copiar
 						</button>
@@ -209,7 +223,7 @@ get_header();
 			<?php endif; ?>
 
 			<div class="rc-dl-btn-wrap">
-				<a href="<?php echo esc_url( add_query_arg( 'rc_download', $key, $dl_base ) ); ?>"
+				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'rc_download', $key, $dl_base ), 'rc_download' ) ); ?>"
 				   class="rc-dl-btn" download>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 					Descargar <?php echo esc_html( basename( $dl['label'] ) ); ?>
@@ -232,8 +246,7 @@ get_header();
 					<dd>
 						<?php if ( $sha ) : ?>
 						<code class="rc-sha"><?php echo esc_html( $sha ); ?></code>
-						<button class="rc-mini-btn rc-copy-btn" type="button"
-						        data-copy="<?php echo esc_attr( $sha ); ?>" aria-label="Copiar hash">
+						<button class="rc-mini-btn rc-copy-btn" type="button" data-copy="<?php echo esc_attr( $sha ); ?>" aria-label="Copiar hash">
 							<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
 						</button>
 						<?php else : ?>
@@ -356,7 +369,7 @@ get_header();
 					?>
 					<li>
 						<label>
-							<input type="checkbox" data-step="<?php echo $i; ?>">
+							<input type="checkbox" data-step="<?php echo (int) $i; ?>">
 							<span><?php echo esc_html( $step ); ?></span>
 						</label>
 					</li>
@@ -1423,7 +1436,8 @@ get_header();
 		var tarifa  = parseFloat(document.getElementById('rc-fact-tarifa').value) || 35;
 		var url = '<?php echo esc_js( home_url( '/tecnicos/' ) ); ?>?rc_factura=' + pinned.id
 			+ '&cliente=' + encodeURIComponent(cliente)
-			+ '&horas=' + horas + '&tarifa=' + tarifa;
+			+ '&horas=' + horas + '&tarifa=' + tarifa
+			+ '&_wpnonce=<?php echo esc_js( wp_create_nonce( 'rc_factura' ) ); ?>';
 		window.open(url, '_blank');
 	});
 
