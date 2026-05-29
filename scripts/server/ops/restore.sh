@@ -1,118 +1,105 @@
 #!/usr/bin/env bash
-# =============================================================================
-# ResolveCore — restore.sh
+# ─────────────────────────────────────────────────────────────────────────────
+# ResolveCore — Restauración del stack desde un backup.
 #
-# Restaura un backup creado por backup.sh. Verifica MANIFEST.txt (SHA256) antes
-# de tocar nada.
+# Lee una carpeta de backup generada por backup.sh, verifica los hashes del
+# MANIFEST.txt y restaura base de datos + ficheros de WordPress y/o MantisBT.
+#
+# Es DESTRUCTIVO: sobreescribe las bases y los ficheros actuales. Por eso
+# exige --confirm explícito (mismo criterio que los scripts de limpieza).
 #
 # Uso (como root):
-#   bash restore.sh --from /var/backups/resolvecore/<ts> --target {wp|mantis|all} --confirm
+#     bash restore.sh --confirm <dir-backup> <wp|mantis|all>
+#
+# Ejemplo:
+#     bash restore.sh --confirm /var/backups/resolvecore/20260527-125103 all
 #
 # Exit codes:
-#   0 — restore OK
-#   1 — argumentos inválidos / falta root
-#   2 — fallo de verificación MANIFEST
-# =============================================================================
+#     0  OK
+#     1  error de uso / requisitos
+#     2  MANIFEST inválido (los .gz no cuadran con los hashes)
+#
+# Credenciales BBDD: /etc/resolvecore/mysql-backup.cnf
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
-
-[[ $EUID -eq 0 ]] || { echo "ERROR: requiere root" >&2; exit 1; }
-
-LOG_DIR=/var/log/resolvecore
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/restore.log"
-exec > >(tee -a "$LOG_FILE") 2>&1
 
 log()  { printf '\e[1;32m[+]\e[0m %s\n' "$*"; }
 warn() { printf '\e[1;33m[!]\e[0m %s\n' "$*"; }
 err()  { printf '\e[1;31m[x]\e[0m %s\n' "$*" >&2; }
 
-FROM=""
-TARGET=""
-CONFIRM=false
+if [ "$EUID" -ne 0 ]; then
+    err "Este script tiene que correr como root."
+    exit 1
+fi
 
-usage() {
-    sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
-    exit "${1:-1}"
-}
+# El primer argumento SIEMPRE debe ser --confirm. Restaurar pisa datos en
+# producción, así que no quiero que se lance sin querer.
+if [ "${1:-}" != "--confirm" ]; then
+    echo "Uso: $0 --confirm <dir-backup> <wp|mantis|all>"
+    echo ""
+    echo "ATENCIÓN: sobreescribe BBDD y ficheros actuales. Sin vuelta atrás."
+    exit 1
+fi
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --from)    FROM="$2"; shift 2 ;;
-        --target)  TARGET="$2"; shift 2 ;;
-        --confirm) CONFIRM=true; shift ;;
-        -h|--help) usage 0 ;;
-        *) err "Opción desconocida: $1"; usage 1 ;;
-    esac
-done
+BACKUP_DIR="${2:-}"
+TARGET="${3:-all}"
 
-[[ -z "$FROM" || -z "$TARGET" ]] && { err "--from y --target son obligatorios"; usage 1; }
-[[ "$CONFIRM" == "true" ]]      || { err "Falta --confirm (operación destructiva)"; exit 1; }
-[[ -d "$FROM" ]]                || { err "Directorio no existe: $FROM"; exit 1; }
+[ -d "$BACKUP_DIR" ]              || { err "No existe la carpeta: $BACKUP_DIR"; exit 1; }
+[ -f "$BACKUP_DIR/MANIFEST.txt" ] || { err "Falta MANIFEST.txt en $BACKUP_DIR"; exit 1; }
 
-case "$TARGET" in
-    wp|mantis|all) ;;
-    *) err "--target inválido: $TARGET (wp|mantis|all)"; exit 1 ;;
-esac
 
-# Entorno
-[[ -r /etc/resolvecore/env ]] && source /etc/resolvecore/env
+# ── Verificación de integridad ──────────────────────────────────────────────
+# Antes de tocar nada comprobamos que los .gz no estén corruptos. Si el
+# hash no cuadra abortamos: mejor no restaurar que restaurar basura.
+
+log "Verificando hashes del MANIFEST..."
+( cd "$BACKUP_DIR" \
+    && grep -E '^[0-9a-f]{64} ' MANIFEST.txt | sha256sum --check --status ) \
+    || { err "MANIFEST inválido — backup corrupto, no continúo."; exit 2; }
+
+
+# ── Entorno ─────────────────────────────────────────────────────────────────
+
+[ -r /etc/resolvecore/env ] && source /etc/resolvecore/env
+
 WP_DIR="${WP_DIR:-/var/www/wp}"
 MANTIS_DIR="${MANTIS_DIR:-/var/www/mantis}"
-MYSQL_CNF="/etc/resolvecore/mysql-backup.cnf"
+MYSQL_CNF="${MYSQL_CNF:-/etc/resolvecore/mysql-backup.cnf}"
 
-[[ -r "$MYSQL_CNF" ]] || { err "Falta $MYSQL_CNF"; exit 1; }
-[[ -r "$FROM/MANIFEST.txt" ]] || { err "Falta MANIFEST.txt en $FROM"; exit 1; }
+# Mismo truco que en backup.sh: leemos el nombre real de la DB del config en
+# vez de hardcodearlo, por si la instalación lo cambió.
+DB_WP=$(grep -oP "DB_NAME'\s*,\s*'\K[^']+" "$WP_DIR/wp-config.php" 2>/dev/null || echo "wp_resolvecore")
+DB_MANTIS=$(grep -oP "g_database_name\s*=\s*'\K[^']+" "$MANTIS_DIR/config/config_inc.php" 2>/dev/null || echo "mantisbt")
 
-# Verificar MANIFEST (solo líneas con sha256sum, ignora cabeceras de tamaños)
-log "Verificando MANIFEST.txt (SHA256)…"
-(
-    cd "$FROM"
-    grep -E '^[0-9a-f]{64} ' MANIFEST.txt | sha256sum --check --status
-) || { err "MANIFEST inválido — abortando"; exit 2; }
-log "MANIFEST OK"
 
-# Detectar nombres reales DBs (fallback)
-DB_WP_NAME="wp_resolvecore"
-DB_MANTIS_NAME="mantisbt"
-if [[ -r "$WP_DIR/wp-config.php" ]]; then
-    real=$(grep -oP "define\(\s*'DB_NAME'\s*,\s*'\K[^']+" "$WP_DIR/wp-config.php" || true)
-    [[ -n "$real" ]] && DB_WP_NAME="$real"
-fi
-if [[ -r "$MANTIS_DIR/config/config_inc.php" ]]; then
-    real=$(grep -oP "\\\$g_database_name\s*=\s*'\K[^']+" "$MANTIS_DIR/config/config_inc.php" || true)
-    [[ -n "$real" ]] && DB_MANTIS_NAME="$real"
-fi
+# ── Funciones de restauración ───────────────────────────────────────────────
+# --overwrite en tar para que pise los ficheros existentes sin quejarse.
+# El chown final hace falta porque tar conserva el uid del backup.
 
-WP_PARENT=$(dirname "$WP_DIR")
-MANTIS_PARENT=$(dirname "$MANTIS_DIR")
-
-restore_wp() {
-    log "Restaurando WordPress…"
-    gunzip < "$FROM/wp.sql.gz" | mysql --defaults-file="$MYSQL_CNF" "$DB_WP_NAME"
-    tar -xzf "$FROM/wp-files.tar.gz" -C "$WP_PARENT" --overwrite
+restaurar_wp() {
+    log "Restaurando WordPress (DB=$DB_WP)..."
+    gunzip < "$BACKUP_DIR/wp.sql.gz" | mysql --defaults-file="$MYSQL_CNF" "$DB_WP"
+    tar -xzf "$BACKUP_DIR/wp-files.tar.gz" -C "$(dirname "$WP_DIR")" --overwrite
     chown -R www-data:www-data "$WP_DIR"
 }
 
-restore_mantis() {
-    log "Restaurando MantisBT…"
-    gunzip < "$FROM/mantisbt.sql.gz" | mysql --defaults-file="$MYSQL_CNF" "$DB_MANTIS_NAME"
-    tar -xzf "$FROM/mantis-files.tar.gz" -C "$MANTIS_PARENT" --overwrite
+restaurar_mantis() {
+    log "Restaurando MantisBT (DB=$DB_MANTIS)..."
+    gunzip < "$BACKUP_DIR/mantis.sql.gz" | mysql --defaults-file="$MYSQL_CNF" "$DB_MANTIS"
+    tar -xzf "$BACKUP_DIR/mantis-files.tar.gz" -C "$(dirname "$MANTIS_DIR")" --overwrite
     chown -R www-data:www-data "$MANTIS_DIR"
 }
 
 case "$TARGET" in
-    wp)     restore_wp ;;
-    mantis) restore_mantis ;;
-    all)    restore_wp; restore_mantis ;;
+    wp)     restaurar_wp ;;
+    mantis) restaurar_mantis ;;
+    all)    restaurar_wp; restaurar_mantis ;;
+    *)      err "Target inválido: $TARGET (usa wp|mantis|all)"; exit 1 ;;
 esac
 
-# Reload nginx (los ficheros pueden incluir cambios en config sites-enabled vía symlink)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -x "$SCRIPT_DIR/nginx-reload-safe.sh" ]]; then
-    bash "$SCRIPT_DIR/nginx-reload-safe.sh"
-else
-    warn "nginx-reload-safe.sh no encontrado — recarga manual con: nginx -t && systemctl reload nginx"
-fi
+# TODO: tras restaurar WP estaría bien lanzar 'wp cache flush' por si quedan
+#       transients viejos apuntando a rutas del backup.
 
-log "Restore completado desde $FROM (target=$TARGET)"
+nginx -t && systemctl reload nginx
+log "Restore completado (target=$TARGET)"
