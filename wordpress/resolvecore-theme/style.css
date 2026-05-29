@@ -452,3 +452,136 @@ section[style] > div,
   justify-content: center !important;
   padding: 0 2rem !important;
 }
+
+/* ============================================================
+   PÁGINA GENÉRICA (page.php)
+============================================================ */
+.rc-page { padding: 4rem 1.5rem 5rem; }
+.rc-page-inner { max-width: 900px; margin: 0 auto; }
+.rc-page-header { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rc-border); }
+.rc-page-title { font-family: var(--rc-mono); font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 700; line-height: 1.2; }
+.rc-page-content { color: var(--rc-text); font-size: 1rem; line-height: 1.7; }
+.rc-page-content h2 { font-family: var(--rc-mono); font-size: 1.3rem; margin: 2rem 0 .8rem; }
+.rc-page-content p { margin-bottom: 1rem; color: var(--rc-muted); }
+.rc-page-content a { color: var(--rc-accent); }
+
+/* ============================================================
+   DASHBOARD CLIENTE (page-dashboard.php + [rc_cliente_dashboard])
+============================================================ */
+.rc-dash-page { padding-bottom: 5rem; }
+.rc-dash-hero { background: linear-gradient(180deg, var(--rc-surface) 0%, var(--rc-bg) 100%);
+                padding: 4rem 1.5rem 3rem; border-bottom: 1px solid var(--rc-border); }
+.rc-dash-hero-inner { max-width: 1000px; margin: 0 auto; text-align: left; }
+.rc-dash-hero-title { font-family: var(--rc-mono); font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700;
+                      margin: .4rem 0 .6rem; line-height: 1.15; }
+.rc-dash-hero-sub { color: var(--rc-muted); font-size: 1rem; max-width: 620px; line-height: 1.6; }
+
+.rc-dash-body { padding: 2.5rem 1.5rem 0; }
+.rc-dash-wrap { max-width: 1000px; margin: 0 auto; }
+
+/* Estados / mensajes */
+.rc-cliente-msg { padding: .9rem 1.2rem; border-radius: 6px; font-size: .95rem; margin-bottom: 1.5rem;
+                  border: 1px solid var(--rc-border); }
+.rc-cliente-msg--ok  { background: rgba(0,229,160,.08); color: var(--rc-accent);
+                       border-color: rgba(0,229,160,.3); }
+.rc-cliente-msg--err { background: rgba(255,107,53,.08); color: #ff8a5c;
+                       border-color: rgba(255,107,53,.3); }
+
+/* Stats arriba — tres cards lado a lado */
+.rc-cliente-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+                    margin-bottom: 2rem; }
+.rc-stat { background: var(--rc-surface); border: 1px solid var(--rc-border); border-radius: 8px;
+           padding: 1.3rem 1.4rem; }
+.rc-stat-num { font-family: var(--rc-mono); font-size: 2.1rem; font-weight: 700;
+               line-height: 1; color: var(--rc-text); margin-bottom: .35rem; }
+.rc-stat-num--warn { color: var(--rc-accent2); }
+.rc-stat-num--ok   { color: var(--rc-accent); }
+.rc-stat-label { font-size: .82rem; color: var(--rc-muted); letter-spacing: .02em;
+                 text-transform: uppercase; }
+
+/* Formulario solicitud */
+.rc-cliente-solicitar { background: var(--rc-surface); border: 1px solid var(--rc-border);
+                        border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2.5rem; }
+.rc-cliente-solicitar summary { cursor: pointer; font-size: 1rem; color: var(--rc-text);
+                                list-style: none; outline: none; }
+.rc-cliente-solicitar summary::-webkit-details-marker { display: none; }
+.rc-cliente-solicitar summary::before { content: '+ '; color: var(--rc-accent);
+                                        font-family: var(--rc-mono); font-weight: 700; }
+.rc-cliente-solicitar[open] summary::before { content: '− '; }
+.rc-cliente-form { display: grid; gap: 1.2rem; margin-top: 1.4rem; }
+.rc-cliente-label { display: block; font-size: .85rem; color: var(--rc-muted);
+                    letter-spacing: .02em; }
+.rc-cliente-form input,
+.rc-cliente-form textarea { width: 100%; margin-top: .4rem; padding: .7rem .9rem;
+                            background: var(--rc-bg); color: var(--rc-text);
+                            border: 1px solid var(--rc-border2); border-radius: 5px;
+                            font-family: inherit; font-size: 14px;
+                            transition: border-color .2s; }
+.rc-cliente-form input:focus,
+.rc-cliente-form textarea:focus { outline: none; border-color: var(--rc-accent); }
+.rc-cliente-form textarea { resize: vertical; min-height: 110px; }
+.rc-cliente-form button { justify-self: start; }
+
+.rc-cliente-h3 { font-family: var(--rc-mono); font-size: 1.1rem; font-weight: 700;
+                 margin: 0 0 1.2rem; color: var(--rc-text); }
+
+.rc-cliente-empty { background: var(--rc-surface); border: 1px solid var(--rc-border);
+                    border-radius: 8px; padding: 2.5rem 1.5rem; text-align: center;
+                    color: var(--rc-muted); font-size: .95rem; }
+
+/* Tarjetas de tickets */
+.rc-cliente-tickets { list-style: none; padding: 0; margin: 0;
+                      display: grid; gap: 1rem; }
+.rc-cliente-ticket { background: var(--rc-surface); border: 1px solid var(--rc-border);
+                     border-radius: 8px; padding: 1.2rem 1.4rem;
+                     transition: border-color .2s, transform .2s; }
+.rc-cliente-ticket:hover { border-color: var(--rc-border2); transform: translateY(-1px); }
+.rc-ticket-head { display: flex; justify-content: space-between; align-items: center;
+                  margin-bottom: .7rem; }
+.rc-ticket-id { font-family: var(--rc-mono); font-size: .95rem; font-weight: 700;
+                color: var(--rc-accent); }
+.rc-ticket-status { font-family: var(--rc-mono); font-size: 11px;
+                    padding: 3px 12px; border-radius: 999px;
+                    background: var(--rc-surface2); color: var(--rc-muted);
+                    border: 1px solid var(--rc-border2); letter-spacing: .04em; }
+.rc-status--closed   { background: rgba(0,229,160,.1); color: var(--rc-accent);
+                       border-color: rgba(0,229,160,.3); }
+.rc-status--resolved { background: rgba(0,153,255,.1); color: var(--rc-accent2);
+                       border-color: rgba(0,153,255,.3); }
+.rc-ticket-summary { font-size: 1rem; color: var(--rc-text); margin-bottom: .35rem; }
+.rc-ticket-meta { font-size: .82rem; color: var(--rc-muted); margin-bottom: .8rem; }
+.rc-ticket-attachments { background: var(--rc-bg); border: 1px solid var(--rc-border);
+                         border-radius: 5px; padding: .7rem 1rem; margin-bottom: .8rem; }
+.rc-ticket-attachments strong { display: block; font-size: .8rem;
+                                color: var(--rc-muted); margin-bottom: .4rem;
+                                text-transform: uppercase; letter-spacing: .04em; }
+.rc-ticket-attachments ul { list-style: none; padding: 0; margin: 0; }
+.rc-ticket-attachments li { padding: .25rem 0; font-size: .9rem; }
+.rc-ticket-attachments a { color: var(--rc-accent); }
+.rc-ticket-link { display: inline-block; font-size: .85rem; color: var(--rc-accent);
+                  margin-top: .3rem; }
+
+/* Login wall — cuando entra sin sesión */
+.rc-cliente-login { background: var(--rc-surface); border: 1px solid var(--rc-border);
+                    border-radius: 8px; padding: 2.5rem 2rem; text-align: center;
+                    color: var(--rc-muted); }
+.rc-cliente-login p { margin-bottom: 1.2rem; }
+.rc-cliente-login-actions { display: flex; gap: .8rem; justify-content: center;
+                            flex-wrap: wrap; }
+.rc-cliente-login .rc-btn { margin: 0; }
+
+/* Botones reutilizados — por si la página los necesita sin tema cargado */
+.rc-btn { display: inline-block; padding: .65rem 1.3rem; border-radius: 5px;
+          font-family: var(--rc-mono); font-size: 13px; font-weight: 700;
+          letter-spacing: .04em; text-decoration: none; cursor: pointer;
+          border: 1px solid var(--rc-border2); background: var(--rc-surface2);
+          color: var(--rc-text); transition: background .2s, transform .2s; }
+.rc-btn:hover { background: var(--rc-border2); text-decoration: none; transform: translateY(-1px); }
+.rc-btn--accent { background: var(--rc-accent); color: #000; border-color: var(--rc-accent); }
+.rc-btn--accent:hover { background: #00ffb3; color: #000; }
+
+@media (max-width: 700px) {
+  .rc-cliente-stats { grid-template-columns: 1fr; }
+  .rc-dash-hero { padding: 3rem 1.5rem 2rem; }
+  .rc-dash-body { padding: 2rem 1rem 0; }
+}
