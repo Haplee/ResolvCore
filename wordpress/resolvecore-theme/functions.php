@@ -202,7 +202,7 @@ function resolvecore_scripts() {
 		array(),
 		null
 	);
-	wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), array(), '3.1.3' );
+	wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), array(), '3.1.4' );
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_scripts' );
 
