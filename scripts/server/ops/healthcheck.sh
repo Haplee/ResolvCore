@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # ─────────────────────────────────────────────────────────────────────────────
 # ResolveCore — Healthcheck del VPS.
 #

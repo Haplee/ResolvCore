@@ -162,7 +162,11 @@
       "Bash(scp /tmp/theme-restore.tar.gz /tmp/plugins-restore.tar.gz root@212.227.95.116:/tmp/)",
       "Bash(scp /tmp/rc-core.tar.gz root@212.227.95.116:/tmp/)",
       "Bash(find . -path ./node_modules -prune -o -name \"page-dashboard.php\" -print)",
-      "Bash(find . -name \"rc-core.php\" -not -path \"*/node_modules/*\")"
+      "Bash(find . -name \"rc-core.php\" -not -path \"*/node_modules/*\")",
+      "Bash(gh run *)",
+      "Bash(command -v shellcheck)",
+      "Bash(shellcheck scripts/server/ops/sync-wp.sh)",
+      "Bash(claude plugin *)"
     ]
   }
 }

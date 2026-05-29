@@ -1,5 +1,6 @@
 # =============================================================================
 # ResolveCore — Subir código del repo al VPS Ionos
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 #
 # Uso (desde C:\Users\franc\proyecto\ResolvCore en Windows local):
 #   .\scripts\server\upload-to-vps.ps1 -Host <IP_O_DOMINIO> -User root

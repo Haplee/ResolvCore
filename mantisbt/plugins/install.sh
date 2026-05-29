@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # ============================================================
 # ResolveCore — MantisBT Plugin Installer
 # Uso: bash mantisbt/plugins/install.sh /var/www/mantis

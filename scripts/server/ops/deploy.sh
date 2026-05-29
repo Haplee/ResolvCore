@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # ─────────────────────────────────────────────────────────────────────────────
 # ResolveCore — Despliegue de código en el VPS desde el repositorio git.
 #
