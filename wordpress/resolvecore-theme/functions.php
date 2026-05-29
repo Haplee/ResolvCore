@@ -267,71 +267,48 @@ function resolvecore_handle_contact() {
 		wp_send_json_error( array( 'msg' => 'El mensaje supera 500 caracteres.' ) );
 	}
 
-	// 1) Crear ticket en MantisBT (canal primario)
-	$ticket_id  = 0;
-	$ticket_err = '';
-	if ( function_exists( 'rc_mantis_create_ticket' ) ) {
-		$ticket = rc_mantis_create_ticket(
-			array(
-				'name'    => $name,
-				'email'   => $email,
-				'type'    => $type,
-				'message' => $message,
-			)
-		);
-		if ( is_wp_error( $ticket ) ) {
-			$ticket_err = $ticket->get_error_message();
-			error_log( '[resolvecore_handle_contact] Mantis: ' . $ticket_err );
-		} elseif ( (int) $ticket > 0 ) {
-			$ticket_id = (int) $ticket;
-		}
+	// 1) Alta de cuenta de cliente + email de activación (fijar contraseña).
+	// La home NO crea tickets: el cliente los genera luego desde su dashboard.
+	// Idempotente: si ya tiene cuenta, no hace nada.
+	$cuenta_creada = false;
+	if ( function_exists( 'rc_crear_cuenta_cliente' ) ) {
+		$cuenta        = rc_crear_cuenta_cliente( $email, $name );
+		$cuenta_creada = ! empty( $cuenta['created'] );
 	}
 
-	// 2) Email al técnico (canal secundario, no bloquea respuesta)
+	// 2) Aviso al admin — lead de solicitud de acceso (no bloquea respuesta).
 	$admin_email = get_option( 'admin_email' );
-	$subject     = sprintf(
-		'[ResolveCore] %s%s — %s',
-		$ticket_id ? "#{$ticket_id} " : '',
-		$type,
-		$name
-	);
+	$subject     = sprintf( '[ResolveCore] Solicitud de acceso — %s', $name );
 	$body        = "Nombre: {$name}\n";
 	$body       .= "Email: {$email}\n";
 	$body       .= "Tipo: {$type}\n";
-	if ( $ticket_id ) {
-		$body .= "Ticket MantisBT: #{$ticket_id}\n";
-	}
-	$body     .= "\nMensaje:\n{$message}\n";
-	$headers   = array(
+	$body       .= 'Cuenta creada: ' . ( $cuenta_creada ? 'sí' : 'no (ya existía o error)' ) . "\n";
+	$body       .= "\nMensaje:\n{$message}\n";
+	$headers     = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		sprintf( 'Reply-To: %s <%s>', $name, $email ),
 	);
-	$mail_sent = @wp_mail( $admin_email, $subject, $body, $headers );
+	$mail_sent   = @wp_mail( $admin_email, $subject, $body, $headers );
 
-	// 2b) Email de confirmación al cliente — incidencia + seguimiento.
-	// Canal informativo: si falla, solo se registra; no altera la respuesta.
-	resolvecore_send_client_confirmation( $email, $name, $ticket_id, $type, $message );
-
-	// 3) Respuesta — éxito si AL MENOS uno funcionó
-	if ( ! $ticket_id && ! $mail_sent ) {
+	// 3) Respuesta — éxito si se creó cuenta O se avisó al admin.
+	if ( ! $cuenta_creada && ! $mail_sent ) {
 		wp_send_json_error(
 			array(
-				'msg'   => 'No pudimos procesar tu mensaje. Escríbenos directamente a ' . esc_html( $admin_email ) . '.',
-				'debug' => $ticket_err ?: 'mail_failed',
+				'msg'   => 'No pudimos procesar tu solicitud. Escríbenos directamente a ' . esc_html( $admin_email ) . '.',
+				'debug' => 'no_account_no_mail',
 			)
 		);
 	}
 
-	$msg = $ticket_id
-		? sprintf( '¡Mensaje recibido! Ticket #%d creado, te responderemos en menos de 2 horas.', $ticket_id )
-		: '¡Mensaje recibido! Te responderemos en menos de 2 horas.';
+	$msg = $cuenta_creada
+		? '¡Solicitud recibida! Te hemos enviado un email para fijar tu contraseña y acceder a tu panel.'
+		: '¡Solicitud recibida! Si ya tienes cuenta, inicia sesión; si no, te contactaremos en menos de 2 horas.';
 
 	wp_send_json_success(
 		array_filter(
 			array(
-				'msg'          => $msg,
-				'ticket_id'    => $ticket_id ?: null,
-				'ticket_token' => $ticket_id ? resolvecore_ticket_token( $ticket_id ) : null,
+				'msg'    => $msg,
+				'cuenta' => $cuenta_creada ? 1 : null,
 			)
 		)
 	);
