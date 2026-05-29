@@ -4,8 +4,8 @@
  * Plugin URI:  https://resolvecore.website
  * Description: Funciones específicas del cliente — shortcodes [rc_cliente_dashboard]
  *              (tickets + solicitar informes) y [rc_registro_cliente] (alta de
- *              cuenta rol rc_cliente con credenciales por email).
- * Version:     1.3.0
+ *              cuenta rol rc_cliente con enlace de activación por email).
+ * Version:     1.4.0
  * Author:      Francisco Vidal Mateo
  * Author URI:  https://github.com/Haplee
  * Text Domain: rc-core
@@ -597,12 +597,13 @@ function rc_registro_cliente_procesar() {
 		$n++;
 	}
 
-	$password = wp_generate_password( 16, true );
-	$user_id  = wp_insert_user(
+	// Contraseña aleatoria fuerte que NUNCA se envía: el cliente fija la suya
+	// vía el enlace de activación (flujo nativo de WordPress).
+	$user_id = wp_insert_user(
 		array(
 			'user_login'   => $login,
 			'user_email'   => $email,
-			'user_pass'    => $password,
+			'user_pass'    => wp_generate_password( 24, true ),
 			'display_name' => $nombre,
 			'first_name'   => $nombre,
 			'role'         => 'rc_cliente',
@@ -614,30 +615,46 @@ function rc_registro_cliente_procesar() {
 		return array( 'tipo' => 'err', 'msg' => 'No se pudo crear la cuenta. Inténtalo más tarde.' );
 	}
 
-	rc_registro_cliente_email( $email, $nombre, $login, $password );
+	// Enlace de fijar contraseña: clave de reset nativa + URL de wp-login.
+	$user = get_user_by( 'id', $user_id );
+	$key  = get_password_reset_key( $user );
+	if ( is_wp_error( $key ) ) {
+		error_log( '[rc-core] reset key fallida: ' . $key->get_error_message() );
+		return array(
+			'tipo' => 'err',
+			'msg'  => 'Cuenta creada, pero no se pudo generar el enlace de activación. Usa "He olvidado mi contraseña" en el login.',
+		);
+	}
+	$reset_url = network_site_url(
+		'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user->user_login ),
+		'login'
+	);
+
+	rc_registro_cliente_email( $email, $nombre, $login, $reset_url );
 
 	return array(
 		'tipo' => 'ok',
-		'msg'  => 'Cuenta creada. Te hemos enviado tus credenciales de acceso a ' . $email . '.',
+		'msg'  => 'Cuenta creada. Te hemos enviado un email a ' . $email . ' para que fijes tu contraseña y accedas.',
 	);
 }
 
 /**
- * Envía al cliente sus credenciales recién creadas.
+ * Envía al cliente el email de activación con el enlace para fijar su contraseña.
  *
- * El usuario eligió entrega de contraseña autogenerada por email. La clave
- * viaja en claro por correo (riesgo aceptado por diseño); se recomienda al
- * cliente cambiarla tras el primer acceso.
+ * No se envía ninguna contraseña: el enlace usa la clave de reset nativa de
+ * WordPress, que caduca y es de un solo uso.
  *
+ * @param string $email
+ * @param string $nombre
+ * @param string $login      Nombre de usuario asignado.
+ * @param string $reset_url  URL de fijar contraseña (wp-login action=rp).
  * @return bool true si wp_mail aceptó el envío.
  */
-function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
+function rc_registro_cliente_email( $email, $nombre, $login, $reset_url ) {
 
-	$login_url = wp_login_url( home_url( '/dashboard/' ) );
-	$e_nombre  = esc_html( $nombre );
-	$e_login   = esc_html( $login );
-	$e_pass    = esc_html( $password );
-	$e_url     = esc_url( $login_url );
+	$e_nombre = esc_html( $nombre );
+	$e_login  = esc_html( $login );
+	$e_url    = esc_url( $reset_url );
 
 	$html =
 			'<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
@@ -654,31 +671,27 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 		. '</td></tr>'
 		. '<tr><td style="padding:32px;">'
 		. '<h1 style="margin:0 0 6px;color:#f5f6f8;font-family:Arial,sans-serif;font-size:21px;">'
-		. 'Tu cuenta está lista</h1>'
+		. 'Activa tu cuenta</h1>'
 		. '<p style="margin:0 0 20px;color:#c5c8cf;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;">'
 		. 'Hola <strong>' . $e_nombre . '</strong>, hemos creado tu cuenta de cliente en ResolveCore. '
-		. 'Usa estas credenciales para acceder a tu dashboard:</p>'
+		. 'Tu usuario es el siguiente; pulsa el botón para fijar tu contraseña y entrar:</p>'
 		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
 		. 'style="margin:0 0 24px;border:1px solid rgba(0,229,160,.3);border-radius:10px;background:#0f1f1a;">'
 		. '<tr><td style="padding:18px 22px;">'
 		. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
 		. 'text-transform:uppercase;">Usuario</div>'
-		. '<div style="color:#00e5a0;font-family:monospace;font-size:16px;font-weight:700;margin:4px 0 12px;">'
-		. $e_login . '</div>'
-		. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
-		. 'text-transform:uppercase;">Contraseña</div>'
 		. '<div style="color:#00e5a0;font-family:monospace;font-size:16px;font-weight:700;margin:4px 0 0;">'
-		. $e_pass . '</div>'
+		. $e_login . '</div>'
 		. '</td></tr></table>'
 		. '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">'
 		. '<tr><td style="border-radius:8px;background:#00e5a0;">'
 		. '<a href="' . $e_url . '" style="display:inline-block;padding:13px 26px;color:#05140f;'
 		. 'font-size:14px;font-weight:700;text-decoration:none;font-family:Arial,sans-serif;">'
-		. 'Acceder a mi dashboard &rarr;</a>'
+		. 'Fijar mi contraseña &rarr;</a>'
 		. '</td></tr></table>'
 		. '<p style="margin:20px 0 0;color:#7a7f8e;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;">'
-		. 'Por seguridad, te recomendamos cambiar la contraseña tras el primer acceso '
-		. 'desde tu perfil.</p>'
+		. 'El enlace caduca y es de un solo uso. Si expira, usa '
+		. '«He olvidado mi contraseña» en la pantalla de acceso.</p>'
 		. '</td></tr>'
 		. '<tr><td style="padding:18px 32px;background:#0a0c10;border-top:1px solid #1f232c;">'
 		. '<p style="margin:0;color:#5a5f6c;font-family:Arial,sans-serif;font-size:11px;line-height:1.6;">'
@@ -687,12 +700,12 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 		. '</td></tr>'
 		. '</table></td></tr></table></body></html>';
 
-	$text  = "Tu cuenta está lista\n\n";
+	$text  = "Activa tu cuenta\n\n";
 	$text .= 'Hola ' . $nombre . ", hemos creado tu cuenta de cliente en ResolveCore.\n\n";
-	$text .= 'Usuario: ' . $login . "\n";
-	$text .= 'Contraseña: ' . $password . "\n\n";
-	$text .= 'Accede a tu dashboard: ' . $login_url . "\n\n";
-	$text .= "Por seguridad, cambia la contraseña tras el primer acceso.\n\n";
+	$text .= 'Usuario: ' . $login . "\n\n";
+	$text .= "Fija tu contraseña y entra desde este enlace (un solo uso, caduca):\n";
+	$text .= $reset_url . "\n\n";
+	$text .= "Si expira, usa 'He olvidado mi contraseña' en la pantalla de acceso.\n\n";
 	$text .= "—\nEste correo es automático.\nResolveCore — Solución a tus problemas informáticos.\n";
 
 	$headers = array(
@@ -704,7 +717,7 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 		$phpmailer->AltBody = $text;
 	};
 	add_action( 'phpmailer_init', $alt_body );
-	$sent = @wp_mail( $email, 'ResolveCore — Tus credenciales de acceso', $html, $headers );
+	$sent = @wp_mail( $email, 'ResolveCore — Activa tu cuenta', $html, $headers );
 	remove_action( 'phpmailer_init', $alt_body );
 
 	if ( ! $sent ) {
