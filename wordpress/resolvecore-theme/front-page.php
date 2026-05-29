@@ -1898,16 +1898,6 @@ function submitForm(e) {
 		if (res.success) {
 		msg.className = 'rc-form-msg success';
 		msg.textContent = res.data.msg;
-		if (res.data.ticket_id) {
-			const link = document.createElement('a');
-			link.href = '#';
-			link.className = 'rc-ticket-link';
-			link.dataset.ticket = res.data.ticket_id;
-			link.dataset.token = res.data.ticket_token || '';
-			link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;cursor:pointer;text-decoration:underline;';
-			link.textContent = '[VER TICKET #' + res.data.ticket_id + ']';
-			msg.appendChild(link);
-		}
 		form.reset();
 		charCount.textContent = '0 / ' + MAX_CHARS;
 		} else {

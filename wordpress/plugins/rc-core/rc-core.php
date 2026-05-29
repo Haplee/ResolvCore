@@ -585,6 +585,42 @@ function rc_registro_cliente_procesar() {
 		);
 	}
 
+	$res = rc_crear_cuenta_cliente( $email, $nombre );
+
+	if ( $res['created'] ) {
+		return array(
+			'tipo' => 'ok',
+			'msg'  => 'Cuenta creada. Te hemos enviado un email a ' . $email . ' para que fijes tu contraseña y accedas.',
+		);
+	}
+
+	return array(
+		'tipo' => 'err',
+		'msg'  => $res['msg'] ?? 'No se pudo crear la cuenta. Inténtalo más tarde.',
+	);
+}
+
+/**
+ * Crea (si no existe) la cuenta de cliente rol rc_cliente y le envía el email
+ * de activación con el enlace para fijar contraseña.
+ *
+ * Reutilizable: lo usan el shortcode [rc_registro_cliente] y el formulario de
+ * contacto de la home (functions.php). Idempotente por email: si ya hay cuenta
+ * no hace nada y devuelve created=false, reason=exists.
+ *
+ * @param string $email  Email ya validado.
+ * @param string $nombre Nombre del cliente (ya saneado).
+ * @return array{created:bool, reason?:string, msg?:string, user_id?:int}
+ */
+function rc_crear_cuenta_cliente( $email, $nombre ) {
+
+	if ( ! is_email( $email ) ) {
+		return array( 'created' => false, 'reason' => 'invalid', 'msg' => 'Email inválido.' );
+	}
+	if ( email_exists( $email ) ) {
+		return array( 'created' => false, 'reason' => 'exists' );
+	}
+
 	// Username derivado del email, garantizando unicidad.
 	$base_login = sanitize_user( current( explode( '@', $email ) ), true );
 	if ( $base_login === '' ) {
@@ -604,7 +640,7 @@ function rc_registro_cliente_procesar() {
 			'user_login'   => $login,
 			'user_email'   => $email,
 			'user_pass'    => wp_generate_password( 24, true ),
-			'display_name' => $nombre,
+			'display_name' => $nombre !== '' ? $nombre : $login,
 			'first_name'   => $nombre,
 			'role'         => 'rc_cliente',
 		)
@@ -612,7 +648,7 @@ function rc_registro_cliente_procesar() {
 
 	if ( is_wp_error( $user_id ) ) {
 		error_log( '[rc-core] alta cliente fallida: ' . $user_id->get_error_message() );
-		return array( 'tipo' => 'err', 'msg' => 'No se pudo crear la cuenta. Inténtalo más tarde.' );
+		return array( 'created' => false, 'reason' => 'error', 'msg' => 'No se pudo crear la cuenta.' );
 	}
 
 	// Enlace de fijar contraseña: clave de reset nativa + URL de wp-login.
@@ -621,8 +657,10 @@ function rc_registro_cliente_procesar() {
 	if ( is_wp_error( $key ) ) {
 		error_log( '[rc-core] reset key fallida: ' . $key->get_error_message() );
 		return array(
-			'tipo' => 'err',
-			'msg'  => 'Cuenta creada, pero no se pudo generar el enlace de activación. Usa "He olvidado mi contraseña" en el login.',
+			'created' => true,
+			'user_id' => (int) $user_id,
+			'reason'  => 'no_key',
+			'msg'     => 'Cuenta creada, pero no se pudo generar el enlace. Usa "He olvidado mi contraseña" en el login.',
 		);
 	}
 	$reset_url = network_site_url(
@@ -632,10 +670,7 @@ function rc_registro_cliente_procesar() {
 
 	rc_registro_cliente_email( $email, $nombre, $login, $reset_url );
 
-	return array(
-		'tipo' => 'ok',
-		'msg'  => 'Cuenta creada. Te hemos enviado un email a ' . $email . ' para que fijes tu contraseña y accedas.',
-	);
+	return array( 'created' => true, 'user_id' => (int) $user_id );
 }
 
 /**
