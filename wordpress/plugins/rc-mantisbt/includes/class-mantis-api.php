@@ -117,7 +117,7 @@ class RC_Mantis_API {
 				'page_size' => max( 1, min( $page_size, 100 ) ),
 			)
 		);
-		$res = $this->request( 'GET', $endpoint );
+		$res      = $this->request( 'GET', $endpoint );
 		if ( is_wp_error( $res ) ) {
 			return $res;
 		}

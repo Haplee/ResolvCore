@@ -33,6 +33,7 @@ fi
 
 DOMAIN="$1"
 EMAIL="$2"
+# shellcheck disable=SC2034  # reservado para el TODO de automatizar wp-config.php
 DEPLOY_USER="$3"
 PHP_VERSION="8.3"
 
