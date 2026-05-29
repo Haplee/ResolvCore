@@ -96,6 +96,35 @@ class RC_Mantis_API {
 	}
 
 	/**
+	 * Busca issues por texto libre (resumen + descripción).
+	 *
+	 * Mantis REST no expone filtro nativo por email del reporter, así que se
+	 * usa el parámetro `search`. Como al crear el ticket metemos el email en la
+	 * descripción, buscar por email devuelve los tickets de ese cliente.
+	 *
+	 * @param string $query     Texto a buscar (p.ej. email del cliente).
+	 * @param int    $page_size Máximo de resultados (default 50).
+	 * @return array|WP_Error   Array de issues (vacío si no hay), o WP_Error.
+	 */
+	public function search_issues( string $query, int $page_size = 50 ): array|WP_Error {
+		$query = trim( $query );
+		if ( $query === '' ) {
+			return array();
+		}
+		$endpoint = '/api/rest/issues?' . http_build_query(
+			array(
+				'search'    => $query,
+				'page_size' => max( 1, min( $page_size, 100 ) ),
+			)
+		);
+		$res = $this->request( 'GET', $endpoint );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		return $res['issues'] ?? array();
+	}
+
+	/**
 	 * Añade una nota (comentario) al ticket.
 	 *
 	 * @param int    $issue_id
