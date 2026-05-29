@@ -13,7 +13,10 @@ get_header();
 
 <main id="main-content" class="rc-page">
 	<div class="rc-page-inner">
-	<?php while ( have_posts() ) : the_post(); ?>
+	<?php
+	while ( have_posts() ) :
+		the_post();
+		?>
 		<article <?php post_class( 'rc-page-article' ); ?>>
 			<header class="rc-page-header">
 				<h1 class="rc-page-title"><?php the_title(); ?></h1>

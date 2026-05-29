@@ -33,9 +33,12 @@ $current_user = is_user_logged_in() ? wp_get_current_user() : null;
 
 	<section class="rc-dash-body">
 		<div class="rc-dash-wrap">
-		<?php while ( have_posts() ) : the_post(); ?>
-			<?php the_content(); ?>
-		<?php endwhile; ?>
+		<?php
+		while ( have_posts() ) :
+			the_post();
+			the_content();
+		endwhile;
+		?>
 		</div>
 	</section>
 
