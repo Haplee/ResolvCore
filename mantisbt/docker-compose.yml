@@ -1,27 +1,54 @@
-version: '3'
+# MantisBT — Stack Docker para desarrollo LOCAL.
+#
+# En producción NO usamos Docker: el VPS Ionos corre nginx + PHP-FPM +
+# MariaDB nativos. Este compose es solo para que el alumno (FranVi)
+# pueda probar cambios en el config_inc.php o en el plugin de branding
+# sin tocar el VPS.
+#
+# Uso:
+#   cp .env.example .env  (rellenar)
+#   docker compose up -d
+#   abrir http://localhost:8989
+#
+# Notas:
+#   - La imagen vimagick/mantisbt monta el config como volumen.
+#   - El volumen mantis_db persiste la BBDD entre reinicios.
+
 services:
   mantisbt:
     image: vimagick/mantisbt
     ports:
       - "8989:80"
+    environment:
+      # Estas vars las lee nuestro config_inc.php con getenv()
+      - MANTIS_DB_HOST=db
+      - MANTIS_DB_NAME=${MANTIS_DB_NAME}
+      - MANTIS_DB_USER=${MANTIS_DB_USER}
+      - MANTIS_DB_PASS=${MANTIS_DB_PASS}
+      - MANTIS_SALT=${MANTIS_SALT}
+    volumes:
+      - ./config/config_inc.php:/var/www/html/config/config_inc.php:ro
     depends_on:
       - db
     networks:
       - mantis_net
     restart: unless-stopped
+
   db:
     image: mysql:5.7
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mantis
-      MYSQL_USER: mantis
-      MYSQL_PASSWORD: mantis
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MANTIS_DB_NAME}
+      MYSQL_USER: ${MANTIS_DB_USER}
+      MYSQL_PASSWORD: ${MANTIS_DB_PASS}
     volumes:
       - mantis_db:/var/lib/mysql
     networks:
       - mantis_net
     restart: unless-stopped
+
 networks:
   mantis_net:
+
 volumes:
   mantis_db:

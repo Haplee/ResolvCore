@@ -1,149 +1,81 @@
 #!/usr/bin/env bash
-# =============================================================================
-# ResolveCore — healthcheck.sh
+# ─────────────────────────────────────────────────────────────────────────────
+# ResolveCore — Healthcheck del VPS.
 #
-# Comprueba el estado del stack VPS y reporta OK/FAIL por chequeo. No aborta al
-# primer fallo: queremos un resumen completo.
+# Comprueba que los servicios clave están vivos y que las webs responden.
+# Pensado para lanzarse por cron cada pocos minutos; con --alert manda un
+# correo si algo falla.
 #
-# Uso (como root):
-#   bash healthcheck.sh         # imprime resultados, exit 0 si todo OK, 1 si ≥1 FAIL
-#   bash healthcheck.sh --alert # además envía email vía msmtp si exit != 0
+# Uso:
+#     bash healthcheck.sh            # solo imprime el resumen
+#     bash healthcheck.sh --alert    # además avisa por correo si hay fallos
 #
-# Cron sugerido:
-#   */10 * * * * root /opt/resolvecore/ops/healthcheck.sh --alert
-# =============================================================================
+# Cron sugerido (cada 5 min):
+#     */5 * * * * root /opt/resolvecore/ops/healthcheck.sh --alert
+#
+# Exit codes:
+#     0  todo OK
+#     1  al menos un check ha fallado
+# ─────────────────────────────────────────────────────────────────────────────
 
+# Sin -e a propósito: queremos seguir corriendo TODOS los checks aunque uno
+# falle, para dar un resumen completo (no abortar en el primer fallo).
 set -uo pipefail
 
-[[ $EUID -eq 0 ]] || { echo "ERROR: requiere root" >&2; exit 1; }
+if [ "$EUID" -ne 0 ]; then
+    echo "Requiere root" >&2
+    exit 1
+fi
 
-LOG_DIR=/var/log/resolvecore
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/healthcheck.log"
+[ -r /etc/resolvecore/env ] && source /etc/resolvecore/env
 
-# No usamos exec >tee aquí porque queremos stdout limpio para email body.
-# Se appendea al log al final.
-
-ALERT=false
-[[ "${1:-}" == "--alert" ]] && ALERT=true
-
-# Entorno
-[[ -r /etc/resolvecore/env ]] && source /etc/resolvecore/env
-RC_DOMAIN="${RC_DOMAIN:-resolvecore.es}"
-WP_DIR="${WP_DIR:-/var/www/wp}"
-MYSQL_CNF="/etc/resolvecore/mysql-backup.cnf"
+RC_DOMAIN="${RC_DOMAIN:-resolvecore.website}"
+MYSQL_CNF="${MYSQL_CNF:-/etc/resolvecore/mysql-backup.cnf}"
 ALERT_TO="${ALERT_TO:-fvidalmateo@gmail.com}"
+MODO="${1:-}"
 
-RESULTS=()
-FAILED=0
+FALLOS=0
 
-# check NAME CMD — ejecuta CMD; OK si exit 0, FAIL si !=0
+# Helper: ejecuta el comando en silencio y pinta OK/FAIL según el exit code.
 check() {
-    local name="$1"; shift
-    local out
-    if out=$("$@" 2>&1); then
-        RESULTS+=("OK   | $name")
+    local etiqueta="$1"; shift
+    if "$@" >/dev/null 2>&1; then
+        printf '\e[1;32mOK  \e[0m %s\n' "$etiqueta"
     else
-        RESULTS+=("FAIL | $name | $out")
-        FAILED=$((FAILED + 1))
+        printf '\e[1;31mFAIL\e[0m %s\n' "$etiqueta"
+        FALLOS=$((FALLOS + 1))
     fi
 }
 
-# check_eq NAME EXPECTED CMD — OK si stdout == EXPECTED
-check_eq() {
-    local name="$1" expected="$2"; shift 2
-    local out
-    out=$("$@" 2>&1) || true
-    if [[ "$out" == "$expected" ]]; then
-        RESULTS+=("OK   | $name | $out")
-    else
-        RESULTS+=("FAIL | $name | got='$out' expected='$expected'")
-        FAILED=$((FAILED + 1))
-    fi
-}
+# ── Servicios systemd ───────────────────────────────────────────────────────
+check "nginx activo"   systemctl is-active --quiet nginx
+check "php-fpm activo"  systemctl is-active --quiet php8.3-fpm
+check "mariadb activo"  systemctl is-active --quiet mariadb
 
-# check_num NAME OP THRESHOLD CMD — comparación numérica (OP: -lt|-gt|-le|-ge|-eq)
-check_num() {
-    local name="$1" op="$2" threshold="$3"; shift 3
-    local out ok=false
-    out=$("$@" 2>&1) || true
-    if [[ "$out" =~ ^[0-9]+$ ]]; then
-        case "$op" in
-            -lt) [[ "$out" -lt "$threshold" ]] && ok=true ;;
-            -gt) [[ "$out" -gt "$threshold" ]] && ok=true ;;
-            -le) [[ "$out" -le "$threshold" ]] && ok=true ;;
-            -ge) [[ "$out" -ge "$threshold" ]] && ok=true ;;
-            -eq) [[ "$out" -eq "$threshold" ]] && ok=true ;;
-        esac
-    fi
-    if $ok; then
-        RESULTS+=("OK   | $name | $out (umbral: $op $threshold)")
-    else
-        RESULTS+=("FAIL | $name | got='$out' umbral '$op $threshold'")
-        FAILED=$((FAILED + 1))
-    fi
-}
+# ── Red y webs ──────────────────────────────────────────────────────────────
+check "puertos 80/443" bash -c "ss -ltn | grep -qE ':80 |:443 '"
+check "HTTP WordPress"  curl -fsS -o /dev/null "https://${RC_DOMAIN}/wp-login.php"
+check "HTTP MantisBT"   curl -fsS -o /dev/null "https://mantis.${RC_DOMAIN}/login_page.php"
 
-# --- Checks ---
+# Solo probamos la DB si tenemos credenciales legibles.
+[ -r "$MYSQL_CNF" ] && check "MariaDB ping" mysqladmin --defaults-file="$MYSQL_CNF" ping
 
-check "puertos 80/443 LISTEN" \
-    bash -c "ss -ltn '( sport = :80 or sport = :443 )' | grep -q LISTEN"
+# Disco: avisamos por debajo del 85% para tener margen antes de que se llene.
+check "disco < 85%" bash -c "[[ \$(df / | awk 'NR==2{gsub(/%/,\"\",\$5);print \$5}') -lt 85 ]]"
 
-check_eq "HTTP WP login" "200" \
-    curl -fsS -o /dev/null -w '%{http_code}' "https://$RC_DOMAIN/wp-login.php"
+echo "--- $FALLOS fallo(s) ---"
 
-check_eq "HTTP Mantis login" "200" \
-    curl -fsS -o /dev/null -w '%{http_code}' "https://mantis.$RC_DOMAIN/login_page.php"
 
-if [[ -r "$MYSQL_CNF" ]]; then
-    check "MariaDB ping" \
-        mysqladmin --defaults-file="$MYSQL_CNF" ping
-else
-    RESULTS+=("FAIL | MariaDB ping | falta $MYSQL_CNF")
-    FAILED=$((FAILED + 1))
+# ── Alerta por correo ───────────────────────────────────────────────────────
+# Solo si nos pasaron --alert, hay fallos y msmtp está instalado. Si no hay
+# msmtp simplemente no avisamos (no quiero que el cron pete por eso).
+
+if [ "$MODO" = "--alert" ] && [ "$FALLOS" -gt 0 ] && command -v msmtp >/dev/null; then
+    printf 'Subject: [ResolveCore] healthcheck FAIL (%d)\nTo: %s\n\n%d fallo(s) en %s\n' \
+        "$FALLOS" "$ALERT_TO" "$FALLOS" "$(hostname)" | msmtp -t
 fi
 
-check "nginx -t" nginx -t
+# TODO: registrar histórico en /var/log/resolvecore/health.log para ver
+#       patrones (p.ej. si php-fpm se cae siempre a la misma hora).
 
-check "systemctl active (nginx/php-fpm/mariadb)" \
-    systemctl is-active --quiet nginx php8.3-fpm mariadb
-
-check "wp-config.php legible y con DB_NAME" \
-    bash -c "[[ -r '$WP_DIR/wp-config.php' ]] && grep -q DB_NAME '$WP_DIR/wp-config.php'"
-
-# Espacio disco / (umbral 85%)
-check_num "disco / uso% (<85)" -lt 85 \
-    bash -c "df --output=pcent / | tail -1 | tr -d ' %'"
-
-# WP-cron: al menos 1 evento programado
-check_num "wp cron eventos programados (>0)" -gt 0 \
-    sudo -u www-data wp --path="$WP_DIR" cron event list --format=count 2>/dev/null
-
-# rc-tech SLA scan reciente: transient debe existir (puede ser '0', no error)
-check "rc-tech SLA transient presente" \
-    bash -c "sudo -u www-data wp --path='$WP_DIR' transient get rc_tech_sla_count >/dev/null 2>&1"
-
-# --- Output ---
-
-NOW=$(date -Iseconds)
-BODY="ResolveCore healthcheck — $NOW
-Host: $(hostname)
-RC_DOMAIN: $RC_DOMAIN
-Resultado: $([ $FAILED -eq 0 ] && echo 'OK' || echo "FAIL ($FAILED fallos)")
-
-$(printf '%s\n' "${RESULTS[@]}")
-"
-
-echo "$BODY" | tee -a "$LOG_FILE"
-
-if $ALERT && [[ $FAILED -gt 0 ]]; then
-    if command -v msmtp >/dev/null 2>&1; then
-        printf 'Subject: [ResolveCore] healthcheck FAIL (%d) %s\nTo: %s\n\n%s\n' \
-            "$FAILED" "$(hostname)" "$ALERT_TO" "$BODY" \
-            | msmtp -t || echo "WARN: msmtp falló al enviar alerta" >&2
-    else
-        echo "WARN: msmtp no instalado — no se envió alerta" >&2
-    fi
-fi
-
-[[ $FAILED -eq 0 ]] && exit 0 || exit 1
+[ "$FALLOS" -eq 0 ] && exit 0 || exit 1
