@@ -1,0 +1,10 @@
+/* Mini barra del preview (no es CSS del proyecto). */
+.pv-bar{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;gap:6px;flex-wrap:wrap;
+  background:#000;border-bottom:1px solid var(--rc-accent);padding:8px 12px;
+  font-family:var(--rc-mono);font-size:12px}
+.pv-bar a{color:var(--rc-muted);border:1px solid var(--rc-border2);padding:5px 10px;border-radius:5px;text-decoration:none}
+.pv-bar a:hover,.pv-bar a.on{color:var(--rc-accent);border-color:var(--rc-accent)}
+.pv-bar b{color:var(--rc-accent);margin-right:auto;align-self:center}
+.pv-top{padding-top:48px}
+.pv-note{max-width:1000px;margin:0 auto;padding:14px 1.5rem;color:var(--rc-warn);
+  font-family:var(--rc-mono);font-size:12px}

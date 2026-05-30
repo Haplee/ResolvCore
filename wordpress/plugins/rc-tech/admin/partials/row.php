@@ -24,9 +24,9 @@ $score_color = rc_tech_score_color( isset( $row['host_score'] ) ? (int) $row['ho
     <td><strong><?php echo esc_html( $row['summary'] ); ?></strong><br><small><?php echo esc_html( $row['category'] ); ?></small></td>
     <td><?php echo esc_html( $row['reporter'] ); ?><br><small><?php echo esc_html( $row['reporter_email'] ); ?></small></td>
     <td><span class="rc-tech-os rc-tech-os-<?php echo esc_attr( $row['os'] ); ?>"><?php echo esc_html( $row['os'] ?: '—' ); ?></span></td>
-    <td><?php if ( $row['anydesk'] ): ?><code><?php echo esc_html( $row['anydesk'] ); ?></code><?php else: echo '—'; endif; ?></td>
+    <td class="col-anydesk"><?php if ( $row['anydesk'] ): ?><code><?php echo esc_html( $row['anydesk'] ); ?></code><?php else: echo '—'; endif; ?></td>
     <td class="<?php echo esc_attr( $sla_class ); ?>"><?php echo esc_html( rc_tech_format_countdown( $row['seconds_left'] ) ); ?></td>
-    <td><?php if ( $row['host_score'] !== null ): ?>
+    <td class="col-score"><?php if ( $row['host_score'] !== null ): ?>
         <span class="rc-tech-score rc-tech-score-<?php echo esc_attr( $score_color ); ?>"><?php echo (int) $row['host_score']; ?></span>
     <?php else: echo '—'; endif; ?></td>
     <td class="rc-tech-actions">
