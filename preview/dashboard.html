@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResolveCore — Dashboard cliente (preview)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wordpress/resolvecore-theme/style.css">
+<link rel="stylesheet" href="_nav.css">
+</head>
+<body>
+<nav class="pv-bar">
+  <b>PREVIEW</b>
+  <a href="index.html">Índice</a>
+  <a href="home.html">Home</a>
+  <a href="registro.html">Registro</a>
+  <a class="on" href="dashboard.html">Dashboard</a>
+  <a href="tech.html">Panel técnico</a>
+  <a href="mantis.html">MantisBT</a>
+</nav>
+<div class="pv-top"></div>
+<div class="pv-note">DASHBOARD CLIENTE · page-dashboard.php — stats auto-fit (sin salto 3→1), cards con gradiente/sombra.</div>
+
+<div class="rc-dash-page">
+  <section class="rc-dash-hero"><div class="rc-dash-hero-inner">
+    <p class="rc-section-label">MI CUENTA</p>
+    <h1 class="rc-dash-hero-title">Hola, Ana</h1>
+    <p class="rc-dash-hero-sub">Resumen de tus incidencias.</p>
+  </div></section>
+  <section class="rc-dash-body"><div class="rc-dash-wrap">
+    <div class="rc-cliente-stats">
+      <div class="rc-stat"><div class="rc-stat-num rc-stat-num--warn">2</div><div class="rc-stat-label">Abiertos</div></div>
+      <div class="rc-stat"><div class="rc-stat-num">5</div><div class="rc-stat-label">Totales</div></div>
+      <div class="rc-stat"><div class="rc-stat-num rc-stat-num--ok">3</div><div class="rc-stat-label">Resueltos</div></div>
+    </div>
+    <h3 class="rc-cliente-h3">Tus tickets</h3>
+    <ul class="rc-cliente-tickets">
+      <li class="rc-cliente-ticket">
+        <div class="rc-ticket-head"><span class="rc-ticket-id">#1042</span><span class="rc-ticket-status">EN PROGRESO</span></div>
+        <div class="rc-ticket-summary">Equipo lento tras actualización</div>
+        <div class="rc-ticket-meta">Windows 11 · abierto hace 2 días</div>
+        <a class="rc-ticket-link" href="#">Ver detalle →</a>
+      </li>
+      <li class="rc-cliente-ticket">
+        <div class="rc-ticket-head"><span class="rc-ticket-id">#1038</span><span class="rc-ticket-status rc-status--resolved">RESUELTO</span></div>
+        <div class="rc-ticket-summary">Limpieza de disco y arranque</div>
+        <div class="rc-ticket-meta">Linux · cerrado</div>
+        <a class="rc-ticket-link" href="#">Ver informe PDF →</a>
+      </li>
+    </ul>
+  </div></section>
+</div>
+</body>
+</html>

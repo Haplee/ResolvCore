@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResolveCore — Registro (preview)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wordpress/resolvecore-theme/style.css">
+<link rel="stylesheet" href="_nav.css">
+</head>
+<body>
+<nav class="pv-bar">
+  <b>PREVIEW</b>
+  <a href="index.html">Índice</a>
+  <a href="home.html">Home</a>
+  <a class="on" href="registro.html">Registro</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="tech.html">Panel técnico</a>
+  <a href="mantis.html">MantisBT</a>
+</nav>
+<div class="pv-top"></div>
+<div class="pv-note">REGISTRO · page-registro.php — tarjeta con gradiente/sombra, max-width responsivo (no desborda en móvil).</div>
+
+<div class="rc-dash-page">
+  <section class="rc-dash-hero"><div class="rc-dash-hero-inner">
+    <p class="rc-section-label">CUENTA</p>
+    <h1 class="rc-dash-hero-title">Crea tu cuenta</h1>
+    <p class="rc-dash-hero-sub">Regístrate para solicitar soporte y seguir tus tickets.</p>
+  </div></section>
+  <section class="rc-dash-body"><div class="rc-dash-wrap">
+    <div class="rc-registro rc-auth">
+      <div class="rc-auth-tabs" role="tablist">
+        <button type="button" class="rc-auth-tab active" data-tab="registro">Crear cuenta</button>
+        <button type="button" class="rc-auth-tab" data-tab="login">Iniciar sesión</button>
+      </div>
+
+      <div class="rc-auth-panel" data-panel="registro">
+        <form class="rc-cliente-form rc-registro-form">
+          <label class="rc-cliente-label">Nombre<input type="text" value="Ana Técnico"></label>
+          <label class="rc-cliente-label">Email<input type="email" value="ana@ejemplo.com"></label>
+          <label class="rc-cliente-label">Contraseña<input type="password" value="········"></label>
+          <label class="rc-cliente-label">Repetir contraseña<input type="password" value="········"></label>
+          <button type="button" class="rc-btn rc-btn--accent">CREAR CUENTA</button>
+          <p class="rc-registro-nota">¿Ya tienes cuenta? <a href="#" class="rc-auth-switch" data-tab="login">Inicia sesión</a>.</p>
+        </form>
+      </div>
+
+      <div class="rc-auth-panel" data-panel="login" hidden>
+        <form id="rc-login-form">
+          <p class="login-username"><label>Email o usuario<input type="text" value="ana@ejemplo.com"></label></p>
+          <p class="login-password"><label>Contraseña<input type="password" value="········"></label></p>
+          <p class="login-remember"><label><input type="checkbox"> Recordarme</label></p>
+          <p class="login-submit"><input type="submit" value="Entrar"></p>
+        </form>
+        <p class="rc-registro-nota"><a href="#">¿Olvidaste tu contraseña?</a> · ¿No tienes cuenta? <a href="#" class="rc-auth-switch" data-tab="registro">Crea una</a>.</p>
+      </div>
+    </div>
+    <script>
+      var root=document.querySelector('.rc-auth');
+      root.addEventListener('click',function(e){var t=e.target.closest('[data-tab]');if(!t)return;
+        if(t.classList.contains('rc-auth-switch'))e.preventDefault();var tab=t.dataset.tab;
+        root.querySelectorAll('.rc-auth-tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+        root.querySelectorAll('.rc-auth-panel').forEach(function(p){p.hidden=(p.dataset.panel!==tab);});});
+    </script>
+  </div></section>
+</div>
+</body>
+</html>

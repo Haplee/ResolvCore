@@ -3,7 +3,7 @@
  * Plugin Name:       ResolveCore — Tech Panel
  * Plugin URI:        https://github.com/Haplee/ResolveCore
  * Description:       Panel técnico unificado: cola priorizada de tickets Mantis con quick-actions (Asignarme, Diag, PDF, Resolver), alertas SLA proactivas y timeline ticket+host.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.0
  * Tested up to:      6.5
  * Requires PHP:      8.0
@@ -16,7 +16,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'RC_TECH_VERSION',          '0.1.0' );
+define( 'RC_TECH_VERSION',          '0.2.0' );
 define( 'RC_TECH_DIR',              plugin_dir_path( __FILE__ ) );
 define( 'RC_TECH_URL',              plugin_dir_url( __FILE__ ) );
 define( 'RC_TECH_QUEUE_CACHE_TTL',  30 );
