@@ -261,6 +261,115 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 
 ---
 
+# 6. Auditoría 2026-05-29 — regresión de vendor + secretos
+
+> Segunda pasada tras el trabajo de registro de clientes. El repo había vuelto a
+> inflarse: de 67 ficheros propios pasó a **3285 trackeados, 3119 (95 %) en `wp/`**.
+
+### `A1` — WordPress core entero versionado en `wp/`  ✅
+- **Severidad**: alta · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `wp/` traía 3119 ficheros — 2592 son `wp-includes`/`wp-admin` (core puro), más `akismet`, tema `twentytwentyfive` y `sqlite-database-integration`. Repite el problema de `E1` con WP en vez de Mantis. `wp/` no estaba en `.gitignore`. El código fuente del proyecto vive en `wordpress/`, no en `wp/`.
+- **Acciones**:
+  - [x] `wp/` añadido a `.gitignore`.
+  - [x] `git rm -r --cached wp/` (3119 ficheros fuera del índice; locales intactos). Repo: 3285 → **165** ficheros trackeados.
+
+### `A2` — Secretos en `wp-config.php` versionado  ✅ (parcial — falta rotar token)
+- **Severidad**: alta (seguridad) · **Esfuerzo**: bajo · **Reversible**: el destrackeo sí; la **filtración del token no** (queda en histórico)
+- **Por qué**: `wp-config.php` (raíz) y `wp/wp-config.php` estaban trackeados con `define('RC_MANTIS_TOKEN', …)`. El token de la API Mantis quedó **filtrado en git**, anulando el objetivo de `W1`. Viola CLAUDE.md (*"No modificar wp-config.php con credenciales reales"*). El root usa salts reales; `wp/` los deriva de `hash(__FILE__)` (predecibles).
+- **Acciones**:
+  - [x] `git rm --cached wp-config.php` + `wp/wp-config.php` (vía regla `wp/`).
+  - [x] `.gitignore`: `wp-config.php` (ya estaba) + `wp/`.
+  - [ ] **ROTAR el token Mantis** — asumir comprometido; está en el histórico de git. Regenerar en MantisBT y actualizar la constante en el `wp-config.php` del VPS (fuera de git).
+  - [ ] (Opcional) `git filter-repo` para purgar el token del histórico.
+
+### `A3` — Alta de cuenta pública sin verificación de email  ✅
+- **Severidad**: media · **Esfuerzo**: medio · **Reversible**: sí
+- **Por qué**: el form de la home crea usuario `rc_cliente` para cualquier email. Honeypot + rate-limit 3/h mitigan, pero no se verifica propiedad del email → spam de cuentas + emails de activación a terceros.
+- **Enfoque**: la activación ya **es** verificación de email (la cuenta es inservible hasta clicar el enlace de reset, que solo llega al buzón real). Se cierra el resto del riesgo con throttle por-email + purga de cuentas no activadas, sin añadir captcha/infra externa.
+- **Acciones** (`rc-core.php` 1.4.0 → **1.5.0**):
+  - [x] Throttle **por-email** en `rc_crear_cuenta_cliente()`: 1 email de activación/hora por dirección (transient con `wp_salt`). Frena el email-bombing a una víctima dentro del rate-limit por IP.
+  - [x] Marca `rc_pending_activation` (timestamp) al crear la cuenta.
+  - [x] `after_password_reset` → `rc_cliente_on_password_reset()` borra el marcador al fijar contraseña (cuenta verificada).
+  - [x] Cron diario `rc_cliente_purga_evento` → `rc_cliente_purgar_pendientes()` borra cuentas `rc_cliente` no activadas tras 7 días. Programado/desprogramado en activación/desactivación del plugin.
+
+### `A4` — Modelo de deploy con tres repos en el VPS
+- **Severidad**: media · **Esfuerzo**: medio · **Reversible**: sí
+- **Por qué**: en el VPS coexisten `/opt/resolvecore-git` (rama feature), `/opt/resolvecore-repo` (main) y `/opt/resolvecore-source` (sin `.git`). `deploy.sh` asume `/var/www/wp/.git`, que no existe. Fuente de verdad ambigua.
+- [x] `scripts/server/ops/sync-wp.sh` creado (autodetecta el repo canónico, rsync tema+plugins a `/var/www/wp/wp-content`).
+- [x] Documentada la consolidación en `docs/tecnica/despliegue-ionos.md` §8.0: `/opt/resolvecore-repo` (main) = **canónico**; `git reset --hard origin/main` + `sync-wp.sh`; borrar `-git` y `-source`. Comandos de borrado incluidos.
+- [ ] Ejecutar el borrado en el VPS (`rm -rf /opt/resolvecore-git /opt/resolvecore-source`) — acción manual de ops.
+
+### `A5` — Copia stale de plugins en `wp/wp-content/plugins`
+- **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `wp/` traía `rc-mantisbt` pero no `rc-core` → fuente de verdad doble y desincronizada. Los edits van a `wordpress/plugins/`.
+- [x] Resuelto por `A1` (al destrackear `wp/`).
+
+### `A6` — Autor mezclado en cabeceras de scripts  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: 6 scripts con `(FranVi)`, 12 con `(GitHub: Haplee)`. Nombre presente en todos, formato inconsistente.
+- [x] Unificado a `Francisco Vidal Mateo (GitHub: Haplee)` (formato canónico de `CLAUDE.md`) en los 8 ficheros con `(FranVi)`: `scripts/windows/{diagnostico,optimizacion}.ps1`, `scripts/linux/{diagnostico,optimizacion}.sh`, `scripts/android/{diagnostico,optimizacion}.sh`, `scripts/common/buscar_vulnerabilidades.py`, `mantisbt/plugins/ResolveCoreBranding/ResolveCoreBranding.php`.
+
+### `A7` — Código muerto tras separar flujos (home capta / dashboard tickea)  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `resolvecore_send_client_confirmation()`, el modal de seguimiento de ticket y `resolvecore_handle_ticket_status` quedaron huérfanos en `functions.php`/`front-page.php`.
+- [x] Eliminada `resolvecore_send_client_confirmation()` (~185 líneas, sin callers tras separar flujos; el alta de cliente envía su propio email desde `rc_crear_cuenta_cliente()`). Sustituida por nota-docblock que explica la decisión.
+- [x] **Conservado** el tracker público de tickets (`resolvecore_handle_ticket_status` + modal + `?rc_ticket=N&rc_t=TOKEN`): no es muerto, es feature funcional vía URL firmada (HMAC `resolvecore_ticket_token`). Decisión "reutilizar", no "eliminar" — reutilizable desde el dashboard.
+
+---
+
+# 7. Auditoría 2026-05-30 — lógica del flujo de cliente/técnico
+
+> Tercera pasada, centrada en la **lógica** del trabajo de registro/dashboard
+> (`rc-core` 1.5.0) y panel técnico (`functions.php`). 9 hallazgos, todos
+> corregidos. PHP `-l` limpio. `rc-core` 1.5.0 → **1.5.1**.
+
+### `L1` — Rate-limit consumido por errores de formulario  ✅
+- **Severidad**: media (UX) · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `rc_registro_cliente_procesar()` incrementaba el transient de rate-limit (3/h por IP) **antes** de validar nombre/email/contraseñas. Un usuario que corrige "las contraseñas no coinciden" 3 veces quedaba bloqueado 1 h sin haber creado ninguna cuenta.
+- **Fix**: el incremento se mueve a **después** de validar y de `email_exists`, justo antes de `rc_crear_cuenta_cliente()`. Solo cuentan altas reales, no submits con typos.
+
+### `L2` — Stats del dashboard por nombre de estado localizado  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `rc_cliente_calcular_stats()` comparaba `status['name']` contra `'closed'`/`'resolved'` en inglés literal. Si Mantis devuelve nombres localizados (es), todo caía a "abiertos".
+- **Fix**: conteo por `status['id'] >= 80` (enum Mantis: 80 resolved, 90 closed). Coherente con `functions.php:411`.
+
+### `L3` — Auto-login fallido tras alta sin feedback  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: tras crear cuenta, si `wp_signon()` fallaba se renderizaba el form con un mensaje engañoso ("ya puedes iniciar sesión") pero sin sesión y sin explicación.
+- **Fix**: redirección a `/registro/?tab=login&alta=ok` con mensaje de confirmación explícito en la pestaña de login.
+
+### `L4` — `<details>` del form colapsa tras cualquier POST  ✅
+- **Severidad**: baja (cosmético) · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `rc_cliente_render_form()` abría/cerraba el `<details>` con `empty($_POST)`, así que cualquier POST del sitio lo colapsaba.
+- **Fix**: solo colapsa si se envió **este** formulario (`isset($_POST['rc_solicitar_informe'])`).
+
+### `L5` — `dbDelta` en cada request  ✅
+- **Severidad**: media (perf) · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `rc_create_download_log_table()` colgaba `dbDelta` de `after_setup_theme` → `SHOW TABLES`/`SHOW COLUMNS` en cada carga de cada visitante.
+- **Fix**: guard de versión (`get_option('rc_dl_log_schema_ver')` vs constante `RC_DL_LOG_SCHEMA_VER`). El esquema solo se evalúa la primera vez y al cambiar la versión. Añadido hook `after_switch_theme`.
+
+### `L6` — `RESOLVECORE_MAINTENANCE` redefine constante  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `define('RESOLVECORE_MAINTENANCE', false)` sin guard → notice "constant already defined" si se define en `wp-config.php`, y ganaba el del tema.
+- **Fix**: envuelto en `if (!defined(...))`. Ahora `wp-config.php` puede forzar el modo mantenimiento.
+
+### `L7` — `rc_tech_infra_status` sin nonce  ✅
+- **Severidad**: baja (CSRF read-only) · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: único endpoint AJAX del panel técnico sin `check_ajax_referer('rc_tech_nonce')`; los otros 4 sí lo tenían.
+- **Fix**: añadido el nonce server-side + `fd.append('nonce', nonce)` en `fetchInfra()` de `page-tecnicos.php` (sin el fix JS el endpoint quedaba roto).
+
+### `L8` — Panel técnico vacío sin explicación  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `rc_tech_my_tickets` filtra `handler/reporter` de Mantis contra `user_login` de WP. Si los logins difieren, devuelve lista vacía sin avisar de la causa.
+- **Fix**: si hay tickets en Mantis pero ninguno casa con el usuario, se devuelve `note` explicando el mismatch de login.
+
+### `L9` — Factura sin clamp de horas/tarifa  ✅
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `rc_tech_factura_inline` tomaba `horas`/`tarifa` de GET sin tope; un enlace manipulado generaba cifras absurdas.
+- **Fix**: clamp de cordura `0–1000` en ambos.
+
+---
+
 # Orden recomendado de ejecución
 
 Por **ROI** (impacto / esfuerzo):
@@ -286,4 +395,7 @@ Por **ROI** (impacto / esfuerzo):
 | 2026-05-09  | S3 (Linux) parcial: jq -n + json_num + fix bug apt grep -c. S6 nuevo y resuelto. |
 | 2026-05-09  | S3 cerrado: Android refactor (2.0.0 → 2.1.0) + macOS stub hardening. Versiones actualizadas en schema-diagnostico.md. |
 | 2026-05-09  | W1 + W2 cerrados: token Mantis externalizable a `RC_MANTIS_TOKEN` (constante > wp_options), nonce CSRF en "Verificar conexión", aviso de duplicado, helpers `rc_mantis_get_*()`. D1 cerrado: `docs/flujo-sistema.md` con 7 fases. D2 parcial: migración 0001 (rc_vulnerabilities + sync) + `docs/schema-vulnerabilidades.md`. S1 + S2 cerrados: shebangs `#!/usr/bin/env bash` en linux/, `set -uo pipefail` en launchers, política Bash documentada en CLAUDE.md, target real PS5.1 alineado en CLAUDE.md/README, fix typo `# Requires` en ResolveCore.ps1. |
+| 2026-05-29  | **Segunda auditoría — regresión vendor + secretos**. **A1** cerrado: `wp/` (WordPress core, 3119 ficheros = 95 % del repo) destrackeado y añadido a `.gitignore`; repo 3285 → **165** ficheros. **A2** parcial: `wp-config.php` + `wp/wp-config.php` (con `RC_MANTIS_TOKEN` filtrado) destrackeados y en `.gitignore` — **pendiente ROTAR el token** (sigue en histórico). **A5** cerrado por A1 (copia stale de plugins en `wp/`). Abiertos: **A3** alta pública sin verificación de email, **A4** consolidar 3 repos del VPS (`sync-wp.sh` ya creado), **A6** unificar formato de autor en cabeceras, **A7** código muerto tras separar flujos home/dashboard. |
+| 2026-05-29  | **Cierre 2ª auditoría (sin rotar token, decisión del autor)**. **A3** cerrado: throttle por-email + `rc_pending_activation` + `after_password_reset` (verificación) + cron de purga a 7 días en `rc-core` 1.4.0→**1.5.0**. **A6** cerrado: 8 cabeceras `(FranVi)`→`(GitHub: Haplee)`. **A7** cerrado: borrada `resolvecore_send_client_confirmation()` (sin callers); tracker de tickets conservado como feature viva. **A4** documentado en `despliegue-ionos.md` §8.0 (repo canónico `-repo`, comandos de consolidación) — falta solo el `rm -rf` manual en el VPS. **A2**: token NO rotado por decisión del autor (riesgo asumido; sigue en histórico). |
+| 2026-05-30  | **Tercera auditoría — lógica del flujo cliente/técnico (§7)**. 9 hallazgos corregidos en `rc-core` (1.5.0→**1.5.1**) + `functions.php` + `page-tecnicos.php`. **L1** rate-limit incrementado tras validar (no antes) — los typos ya no bloquean. **L2** stats del dashboard por `status.id>=80` en vez de nombre localizado. **L3** auto-login fallido redirige a login con `?alta=ok` + mensaje. **L4** `<details>` colapsa solo tras enviar su form. **L5** `dbDelta` con guard de versión (`rc_dl_log_schema_ver`) — fin del `SHOW` en cada request. **L6** `RESOLVECORE_MAINTENANCE` con `if(!defined)`. **L7** `check_ajax_referer` en `rc_tech_infra_status` + nonce en `fetchInfra()`. **L8** `my_tickets` devuelve `note` si el filtro por login deja la lista vacía. **L9** clamp 0–1000 en horas/tarifa de la factura. PHP `-l` limpio. |
 | 2026-05-23  | Bloque quick-wins + CI cerrado: **E4** `.editorconfig` (UTF-8/LF + CRLF para PS1 + idents YAML/Makefile). **E5** `LICENSE` GPL-3.0 oficial. **D3** sección "Versiones por componente" en README con regla de paridad `_meta.version`. **S4** verificado: `<script type="application/json">` + `JSON.parse()` con escape `</`→`<\/` en 4 puntos de inyección (PS1, linux.sh, android.sh, PHP). **W3** `strlen`→`mb_strlen` en `sanitize_summary/description` (sync wordpress/ + wp/). **W4** cabeceras WP `Requires at least/Tested up to/Requires PHP/License URI`, license alineada a GPL-3.0. **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en setup Mantis. **C1** `.github/workflows/lint.yml` con jobs shellcheck/PSScriptAnalyzer/phpcs WP/ruff+py_compile. **C2** `.pre-commit-config.yaml` con pre-commit-hooks + shellcheck-py + ruff + local phpcs opcional. |

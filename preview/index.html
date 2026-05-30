@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResolveCore — Preview (índice)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wordpress/resolvecore-theme/style.css">
+<style>
+  body{background:var(--rc-bg);color:var(--rc-text);font-family:var(--rc-mono);min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem}
+  body{background-image:var(--rc-grad-hero)}
+  h1{font-size:clamp(1.6rem,5vw,2.4rem);text-align:center}
+  h1 .a{color:var(--rc-accent)}
+  p{color:var(--rc-muted);max-width:540px;text-align:center;font-size:13px;line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;width:min(720px,100%)}
+  a.card{display:block;background:var(--rc-grad-surface);border:1px solid var(--rc-border2);
+    border-radius:var(--rc-radius-lg);padding:1.25rem 1.5rem;text-decoration:none;color:var(--rc-text);
+    box-shadow:var(--rc-shadow);transition:.2s}
+  a.card:hover{border-color:var(--rc-accent);box-shadow:var(--rc-shadow-lg)}
+  a.card b{color:var(--rc-accent);display:block;margin-bottom:.35rem}
+  a.card span{color:var(--rc-muted);font-size:12px}
+</style>
+</head>
+<body>
+  <h1>ResolveCore — <span class="a">Preview visual</span></h1>
+  <p>Cada superficie en su propio archivo (URL separada), igual que en WordPress: <code>/</code>, <code>/registro</code>, <code>/dashboard</code> y el panel técnico en wp-admin. CSS real del proyecto, datos de ejemplo.</p>
+  <div class="grid">
+    <a class="card" href="home.html"><b>Home</b><span>front-page.php · /</span></a>
+    <a class="card" href="registro.html"><b>Registro</b><span>page-registro.php · /registro</span></a>
+    <a class="card" href="dashboard.html"><b>Dashboard cliente</b><span>page-dashboard.php · /dashboard</span></a>
+    <a class="card" href="tech.html"><b>Panel técnico</b><span>rc-tech · wp-admin</span></a>
+    <a class="card" href="mantis.html"><b>MantisBT</b><span>ResolveCoreBranding</span></a>
+  </div>
+</body>
+</html>

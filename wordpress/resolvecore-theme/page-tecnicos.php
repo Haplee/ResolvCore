@@ -1202,6 +1202,7 @@ get_header();
 	function fetchInfra() {
 		var fd = new FormData();
 		fd.append('action', 'rc_tech_infra_status');
+		fd.append('nonce', nonce);
 		fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
 			.then(function (r) { return r.json(); })
 			.then(function (j) { if (j && j.success) paintInfra(j.data); })

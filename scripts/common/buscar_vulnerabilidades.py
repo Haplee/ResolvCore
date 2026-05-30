@@ -15,7 +15,7 @@ Uso:
     python3 buscar_vulnerabilidades.py 192.168.1.10
     python3 buscar_vulnerabilidades.py resolvecore.website
 
-Autor:   Francisco Vidal Mateo (FranVi)
+Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 Versión: 2.0
 """
 

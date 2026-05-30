@@ -242,16 +242,47 @@
     else if ( e.target.id === 'rc-tech-refresh' ) {
       refresh();
     }
-    else if ( e.target.id === 'rc-tech-toggle-view' ) {
-      const cur = e.target.dataset.view;
-      const next = cur === 'table' ? 'kanban' : 'table';
-      e.target.dataset.view = next;
-      e.target.textContent = next === 'kanban' ? 'Vista Tabla' : 'Vista Kanban';
-      document.querySelector( '.rc-tech-table' ).hidden = ( next === 'kanban' );
-      document.getElementById( 'rc-tech-kanban' ).hidden = ( next === 'table' );
-      refresh();
+    else if ( e.target.classList.contains( 'rc-tech-view-btn' ) ) {
+      switchView( e.target.dataset.view );
     }
   } );
+
+  // ── Cambio de vista: Cola (tabla) / Kanban / MantisBT (iframe) ──────────────
+  function switchView( view ) {
+    document.querySelectorAll( '.rc-tech-view-btn' ).forEach(
+      b => b.classList.toggle( 'active', b.dataset.view === view )
+    );
+    const tableWrap = document.querySelector( '.rc-tech-table-wrap' );
+    const kanban    = document.getElementById( 'rc-tech-kanban' );
+    const mantis    = document.getElementById( 'rc-tech-mantis' );
+    if ( tableWrap ) tableWrap.hidden = ( view !== 'table' );
+    if ( kanban )    kanban.hidden    = ( view !== 'kanban' );
+    if ( mantis )    mantis.hidden    = ( view !== 'mantis' );
+
+    if ( view === 'mantis' ) {
+      loadMantis();
+    } else {
+      refresh(); // tabla/kanban se repueblan; el iframe Mantis no necesita polling.
+    }
+  }
+
+  // Carga diferida del iframe Mantis. Si no dispara 'load' en 5s → fallback.
+  let mantisLoaded = false;
+  function loadMantis() {
+    const frame = document.getElementById( 'rc-tech-mantis-frame' );
+    if ( ! frame || mantisLoaded ) return;
+    mantisLoaded = true;
+    const fallback = document.getElementById( 'rc-tech-mantis-fallback' );
+    const timer = setTimeout( () => { if ( fallback ) fallback.hidden = false; }, 5000 );
+    frame.addEventListener( 'load', () => {
+      // Si cargó (no quedó en about:blank) ocultamos el fallback.
+      if ( frame.src !== 'about:blank' ) {
+        clearTimeout( timer );
+        if ( fallback ) fallback.hidden = true;
+      }
+    } );
+    frame.src = frame.dataset.src;
+  }
 
   document.addEventListener( 'change', e => {
     if ( e.target.matches( '#rc-tech-os, #rc-tech-only-mine, #rc-tech-only-unassigned' ) ) refresh();
