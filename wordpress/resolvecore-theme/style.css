@@ -20,8 +20,8 @@ Text Domain: resolvecore
   --rc-surface2:#1a1d24;
   --rc-border:  rgba(255,255,255,0.07);
   --rc-border2: rgba(255,255,255,0.13);
-  --rc-accent:  #00e5a0;
-  --rc-accent2: #0099ff;
+  --rc-accent:  #3d8bff;
+  --rc-accent2: #6ea8ff;
   --rc-warn:    #ff6b35;
   --rc-text:    #e8eaf0;
   --rc-muted:   #7a7f8e;
@@ -38,8 +38,7 @@ Text Domain: resolvecore
   --rc-shadow-lg:0 12px 40px rgba(0,0,0,.45);
 
   /* gradientes de marca (sutiles) */
-  --rc-grad-hero:radial-gradient(1200px 600px at 70% -10%, rgba(0,229,160,.10), transparent 60%),
-                 radial-gradient(900px 500px at 0% 10%, rgba(0,153,255,.08), transparent 55%);
+  --rc-grad-hero:radial-gradient(1100px 520px at 72% -12%, rgba(61,139,255,.06), transparent 62%);
   --rc-grad-surface:linear-gradient(180deg, var(--rc-surface), var(--rc-bg));
 
   /* breakpoints documentados: 1100 desktop · 760 tablet · 460 móvil */
