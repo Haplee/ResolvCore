@@ -11,7 +11,7 @@
 # Uso:
 #   sudo bash optimizacion.sh --confirm
 #
-# Autor:   Francisco Vidal Mateo (FranVi)
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # Versión: 2.0
 # ─────────────────────────────────────────────────────────────────────────────
 

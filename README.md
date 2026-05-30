@@ -325,11 +325,15 @@ Sin dependencias `pip` — solo Python 3.8+ stdlib.
 
 ### 4. Plugin WordPress: rc-mantisbt
 
-Cliente REST para MantisBT 2.x. Cuando el usuario envía el formulario de contacto, el plugin crea automáticamente un ticket en MantisBT y devuelve el número al cliente:
-
-> *"¡Mensaje enviado! Ticket #42 creado. Te responderemos pronto."*
+Cliente REST para MantisBT 2.x. Provee el transporte (`RC_Mantis_API`) que crea tickets, adjunta informes y consulta estado vía la API REST de MantisBT.
 
 Panel de configuración en **Ajustes → MantisBT**: URL, API Token, ID de proyecto.
+
+### 4c. Plugin WordPress: rc-core
+
+Funciones de cliente. El formulario público de la home **da de alta una cuenta `rc_cliente`** (no crea ticket) y envía un email de activación con enlace para fijar contraseña. Los tickets se crean luego desde el **dashboard del cliente** (`[rc_cliente_dashboard]`); el alta usa `[rc_registro_cliente]`. Throttle por IP y por email, honeypot anti-spam y purga cron de cuentas no activadas.
+
+> *"¡Solicitud recibida! Te hemos enviado un email para fijar tu contraseña y acceder a tu panel."*
 
 ### 4b. Servicios adicionales (congelación · clonación · kit)
 
@@ -500,6 +504,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Producto (release tag) | repo root | `1.2.0-beta` | SemVer; bump al cerrar hito de roadmap |
 | Tema WordPress | `wordpress/resolvecore-theme/` | `3.2.0` | SemVer; bump al cambiar layout o paleta |
 | Plugin WP (rc-mantisbt) | `wordpress/plugins/rc-mantisbt/` | `1.0.0` | SemVer; bump al cambiar payload Mantis o API REST consumida |
+| Plugin WP (rc-core) | `wordpress/plugins/rc-core/` | `1.5.1` | SemVer; alta de clientes `rc_cliente`, dashboard + registro, integración Mantis |
 | Diagnóstico Windows | `scripts/windows/diagnostico.ps1` | `4.1.0` | SemVer; **major** rompe schema JSON |
 | Optimización Windows | `scripts/windows/optimizacion.ps1` | `3.2.0` | SemVer; **major** cambia comportamiento `--undo` |
 | Diagnóstico Linux | `scripts/linux/diagnostico.sh` | `3.2.0` | SemVer; **major** rompe schema JSON |

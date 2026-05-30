@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResolveCore — Panel técnico (preview)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wordpress/plugins/rc-tech/assets/tech-panel.css">
+<style>
+  /* Simula el chrome claro de wp-admin (donde realmente vive el panel). */
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#f0f0f1;color:#1d2327}
+  .pv-bar{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;gap:6px;flex-wrap:wrap;
+    background:#1d2327;border-bottom:1px solid #00e5a0;padding:8px 12px;font-family:monospace;font-size:12px}
+  .pv-bar a{color:#a7aaad;border:1px solid #3c434a;padding:5px 10px;border-radius:5px;text-decoration:none}
+  .pv-bar a:hover,.pv-bar a.on{color:#00e5a0;border-color:#00e5a0}
+  .pv-bar b{color:#00e5a0;margin-right:auto;align-self:center}
+  .pv-admin{padding:64px 24px 48px;max-width:1100px;margin:0 auto}
+  .pv-admin h1{font-size:23px;font-weight:400;margin:0}
+  .pv-admin .description{color:#646970;margin:.3rem 0 0}
+  .pv-note{color:#b45309;font-size:12px;margin:12px 0;font-family:monospace}
+  /* wp-admin botones (aprox) */
+  .button{background:#f6f7f7;border:1px solid #2271b1;color:#2271b1;border-radius:3px;padding:4px 8px;
+    font-size:12px;cursor:pointer;margin-right:2px}
+  .button-primary{background:#2271b1;border-color:#2271b1;color:#fff}
+  input[type=search]{padding:5px 8px;border:1px solid #8c8f94;border-radius:4px}
+</style>
+</head>
+<body>
+<nav class="pv-bar">
+  <b>PREVIEW</b>
+  <a href="index.html">Índice</a>
+  <a href="home.html">Home</a>
+  <a href="registro.html">Registro</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a class="on" href="tech.html">Panel técnico</a>
+  <a href="mantis.html">MantisBT</a>
+</nav>
+
+<div class="pv-admin rc-tech-wrap">
+  <h1>Panel Técnico ResolveCore</h1>
+  <p class="description">Cola priorizada · refresco cada 30s</p>
+  <div class="pv-note">PANEL TÉCNICO · rc-tech — render sobre chrome claro de wp-admin (como en producción). KPIs/kanban auto-fit, tabla con scroll, cols AnyDesk/Host se ocultan &lt;760px.</div>
+
+  <div class="rc-tech-kpis">
+    <div class="kpi"><span class="num">7</span><span class="lbl">Abiertos</span></div>
+    <div class="kpi"><span class="num">3</span><span class="lbl">Míos</span></div>
+    <div class="kpi red"><span class="num">2</span><span class="lbl">SLA vencidos</span></div>
+    <div class="kpi"><span class="num">82</span><span class="lbl">Score flota</span></div>
+  </div>
+
+  <div class="rc-tech-toolbar">
+    <select><option>SO (todos)</option></select>
+    <label><input type="checkbox"> Solo míos</label>
+    <input type="search" placeholder="Buscar resumen…">
+    <button class="button">↻ Refrescar</button>
+    <button class="button">Vista Kanban</button>
+    <span class="rc-tech-updated">Actualizado hace 1 min</span>
+  </div>
+
+  <nav class="rc-tech-views" aria-label="Vistas del panel">
+    <button type="button" class="rc-tech-view-btn active" data-view="table">Cola</button>
+    <button type="button" class="rc-tech-view-btn" data-view="kanban">Kanban</button>
+    <button type="button" class="rc-tech-view-btn" data-view="mantis">MantisBT</button>
+  </nav>
+
+  <section id="rc-tech-mantis" class="rc-tech-mantis" hidden>
+    <div class="rc-tech-mantis-bar">
+      <span>MantisBT embebido</span>
+      <a class="button" href="mantis.html" target="_blank" rel="noopener">⇱ Abrir en pestaña nueva</a>
+    </div>
+    <iframe class="rc-tech-mantis-frame" title="MantisBT" src="mantis.html" loading="lazy"></iframe>
+  </section>
+
+  <div class="rc-tech-table-wrap">
+    <table class="wp-list-table widefat fixed striped rc-tech-table" style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th>#</th><th>Prio</th><th>Resumen</th><th>Cliente</th><th>SO</th>
+        <th class="col-anydesk">AnyDesk</th><th>SLA</th><th class="col-score">Host</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="#">#1042</a></td>
+          <td><span class="rc-tech-prio rc-tech-prio-red">urgent</span></td>
+          <td><strong>Equipo lento</strong><br><small>rendimiento</small></td>
+          <td>Ana<br><small>ana@ejemplo.com</small></td>
+          <td><span class="rc-tech-os rc-tech-os-windows">windows</span></td>
+          <td class="col-anydesk"><code>123 456 789</code></td>
+          <td class="sla-overdue">-00:15</td>
+          <td class="col-score"><span class="rc-tech-score rc-tech-score-red">41</span></td>
+          <td class="rc-tech-actions"><button class="button button-small">Asignarme</button><button class="button button-small">Diag</button><button class="button button-small">PDF</button><button class="button button-small button-primary">Resolver</button></td>
+        </tr>
+        <tr>
+          <td><a href="#">#1038</a></td>
+          <td><span class="rc-tech-prio rc-tech-prio-blue">normal</span></td>
+          <td><strong>Limpieza disco</strong><br><small>optimización</small></td>
+          <td>Luis<br><small>luis@ejemplo.com</small></td>
+          <td><span class="rc-tech-os rc-tech-os-linux">linux</span></td>
+          <td class="col-anydesk"><code>987 654 321</code></td>
+          <td class="sla-warn">00:22</td>
+          <td class="col-score"><span class="rc-tech-score rc-tech-score-green">88</span></td>
+          <td class="rc-tech-actions"><button class="button button-small">Asignarme</button><button class="button button-small">Diag</button><button class="button button-small">PDF</button><button class="button button-small button-primary">Resolver</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rc-tech-kanban" hidden>
+    <div class="lane"><h3>Nuevos</h3><div class="card"><span class="id">#1042</span> Equipo lento</div></div>
+    <div class="lane"><h3>Reconocidos</h3></div>
+    <div class="lane"><h3>Asignados</h3><div class="card sla-warn"><span class="id">#1038</span> Limpieza disco</div></div>
+    <div class="lane"><h3>Resueltos</h3></div>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.rc-tech-view-btn').forEach(btn => btn.addEventListener('click', () => {
+    const v = btn.dataset.view;
+    document.querySelectorAll('.rc-tech-view-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelector('.rc-tech-table-wrap').hidden = (v !== 'table');
+    document.querySelector('.rc-tech-kanban').hidden = (v !== 'kanban');
+    document.getElementById('rc-tech-mantis').hidden = (v !== 'mantis');
+  }));
+</script>
+</body>
+</html>

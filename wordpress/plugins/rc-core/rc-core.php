@@ -4,8 +4,8 @@
  * Plugin URI:  https://resolvecore.website
  * Description: Funciones específicas del cliente — shortcodes [rc_cliente_dashboard]
  *              (tickets + solicitar informes) y [rc_registro_cliente] (alta de
- *              cuenta rol rc_cliente con credenciales por email).
- * Version:     1.3.0
+ *              cuenta rol rc_cliente con enlace de activación por email).
+ * Version:     1.5.1
  * Author:      Francisco Vidal Mateo
  * Author URI:  https://github.com/Haplee
  * Text Domain: rc-core
@@ -262,8 +262,10 @@ function rc_cliente_calcular_stats( $tickets ) {
 	$cerrados  = 0;
 
 	foreach ( $tickets as $t ) {
-		$status = isset( $t['status']['name'] ) ? $t['status']['name'] : '';
-		if ( $status === 'closed' || $status === 'resolved' ) {
+		// Por ID, no por nombre: Mantis localiza los nombres de estado (es/en) y
+		// comparar strings rompía el conteo. 80=resolved, 90=closed (enum Mantis).
+		$status_id = isset( $t['status']['id'] ) ? (int) $t['status']['id'] : 0;
+		if ( $status_id >= 80 ) {
 			$cerrados++;
 		} else {
 			$abiertos++;
@@ -301,7 +303,13 @@ function rc_cliente_render_stats( $stats ) {
 function rc_cliente_render_form() {
 	ob_start();
 	?>
-	<details class="rc-cliente-solicitar" <?php echo empty( $_POST ) ? 'open' : ''; ?>>
+	<?php
+	// Abierto por defecto. Solo lo colapsamos si se acaba de enviar ESTE
+	// formulario (no cualquier POST del sitio). El nonce ya lo validó
+	// rc_cliente_procesar_form() antes de llegar aquí.
+	$rc_form_enviado = isset( $_POST['rc_solicitar_informe'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	?>
+	<details class="rc-cliente-solicitar" <?php echo $rc_form_enviado ? '' : 'open'; ?>>
 		<summary><strong>Solicitar nuevo informe</strong></summary>
 
 		<form method="post" class="rc-cliente-form">
@@ -480,6 +488,65 @@ function rc_cliente_ip_hash() {
 add_shortcode( 'rc_registro_cliente', 'rc_registro_cliente_render' );
 
 /**
+ * Procesa el alta de cliente ANTES de renderizar (en template_redirect), para
+ * poder iniciar sesión (set-cookie) y redirigir sin "headers already sent".
+ * El resultado se guarda en $GLOBALS['rc_registro_resultado'] para que el
+ * shortcode lo pinte (errores) sin reprocesar el POST.
+ */
+add_action(
+	'template_redirect',
+	function () {
+		if ( ! isset( $_POST['rc_crear_cuenta'] ) ) {
+			return;
+		}
+		$res = rc_registro_cliente_procesar();
+		$GLOBALS['rc_registro_resultado'] = $res;
+
+		// Alta correcta con contraseña: login + redirección al dashboard.
+		if ( ! empty( $res['tipo'] ) && 'ok' === $res['tipo'] && ! empty( $res['user_id'] ) && ! empty( $res['pass'] ) ) {
+			$user   = get_userdata( (int) $res['user_id'] );
+			$signon = $user ? wp_signon(
+				array(
+					'user_login'    => $user->user_login,
+					'user_password' => $res['pass'],
+					'remember'      => true,
+				),
+				is_ssl()
+			) : null;
+			if ( $signon && ! is_wp_error( $signon ) ) {
+				wp_safe_redirect( home_url( '/dashboard/' ) );
+				exit;
+			}
+			// Alta OK pero el auto-login falló: no dejamos al usuario con un mensaje
+			// engañoso. Lo mandamos a la pestaña de login con la cuenta ya creada.
+			wp_safe_redirect(
+				add_query_arg(
+					array( 'tab' => 'login', 'alta' => 'ok' ),
+					home_url( '/registro/' )
+				)
+			);
+			exit;
+		}
+	}
+);
+
+/**
+ * Si el login falla y venía de nuestra página /registro, devolvemos al usuario
+ * a esa página con ?login=failed para mostrar el error en la pestaña de login
+ * (en vez de mandarlo a wp-login.php). Mantiene el flujo dentro del sitio.
+ */
+add_action(
+	'wp_login_failed',
+	function () {
+		$ref = wp_get_referer();
+		if ( $ref && false !== strpos( $ref, '/registro' ) ) {
+			wp_safe_redirect( add_query_arg( array( 'tab' => 'login', 'login' => 'failed' ), $ref ) );
+			exit;
+		}
+	}
+);
+
+/**
  * Render del formulario de alta de cliente (CTA separado del soporte).
  *
  * Procesa el POST en el propio render (mismo patrón que el dashboard). Crea el
@@ -497,11 +564,33 @@ function rc_registro_cliente_render() {
 			. '</div>';
 	}
 
-	$resultado = rc_registro_cliente_procesar();
+	// El POST ya lo procesó rc_registro_handle_post() en template_redirect; aquí
+	// solo leemos el resultado para pintarlo (si lo hay).
+	$resultado = isset( $GLOBALS['rc_registro_resultado'] ) ? (array) $GLOBALS['rc_registro_resultado'] : array();
+
+	// Tras un alta correcta abrimos la pestaña de registro (muestra el OK);
+	// si llega ?tab=login o hubo un error de login, abrimos Iniciar sesión.
+	$tab   = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'registro';
+	$login = isset( $_GET['login'] ) ? sanitize_key( wp_unslash( $_GET['login'] ) ) : '';
+	if ( 'failed' === $login ) {
+		$tab = 'login';
+	}
+	$is_login = ( 'login' === $tab );
+
+	$dash = home_url( '/dashboard/' );
 
 	ob_start();
 	?>
-	<div class="rc-cliente rc-registro">
+	<div class="rc-cliente rc-registro rc-auth">
+
+		<div class="rc-auth-tabs" role="tablist">
+			<button type="button" class="rc-auth-tab<?php echo $is_login ? '' : ' active'; ?>"
+					role="tab" aria-selected="<?php echo $is_login ? 'false' : 'true'; ?>"
+					data-tab="registro">Crear cuenta</button>
+			<button type="button" class="rc-auth-tab<?php echo $is_login ? ' active' : ''; ?>"
+					role="tab" aria-selected="<?php echo $is_login ? 'true' : 'false'; ?>"
+					data-tab="login">Iniciar sesión</button>
+		</div>
 
 		<?php if ( ! empty( $resultado['msg'] ) ) : ?>
 			<div class="rc-cliente-msg rc-cliente-msg--<?php echo esc_attr( $resultado['tipo'] ); ?>">
@@ -509,38 +598,113 @@ function rc_registro_cliente_render() {
 			</div>
 		<?php endif; ?>
 
-		<?php if ( empty( $resultado ) || $resultado['tipo'] !== 'ok' ) : ?>
-		<form method="post" class="rc-cliente-form rc-registro-form">
-			<?php wp_nonce_field( 'rc_registro_cliente' ); ?>
-
-			<label class="rc-cliente-label">
-				Nombre
-				<input type="text" name="rc_nombre" maxlength="80" required>
-			</label>
-
-			<label class="rc-cliente-label">
-				Email
-				<input type="email" name="rc_email" maxlength="120" required>
-			</label>
-
-			<?php // Honeypot anti-spam — los bots rellenan campos ocultos. ?>
-			<label class="rc-hp" aria-hidden="true" style="position:absolute;left:-9999px;" tabindex="-1">
-				No rellenar
-				<input type="text" name="rc_website" tabindex="-1" autocomplete="off">
-			</label>
-
-			<button type="submit" name="rc_crear_cuenta" value="1" class="rc-btn rc-btn--accent">
-				Crear cuenta
-			</button>
-
-			<p class="rc-registro-nota">
-				Te enviaremos tus credenciales de acceso por email. ¿Ya tienes cuenta?
-				<a href="<?php echo esc_url( wp_login_url( home_url( '/dashboard/' ) ) ); ?>">Inicia sesión</a>.
-			</p>
-		</form>
+		<?php if ( 'failed' === $login ) : ?>
+			<div class="rc-cliente-msg rc-cliente-msg--err">
+				Usuario o contraseña incorrectos. Inténtalo de nuevo.
+			</div>
 		<?php endif; ?>
 
+		<?php // Alta correcta pero el auto-login no entró: confirmamos y pedimos login. ?>
+		<?php if ( isset( $_GET['alta'] ) && 'ok' === sanitize_key( wp_unslash( $_GET['alta'] ) ) ) : ?>
+			<div class="rc-cliente-msg rc-cliente-msg--ok">
+				Cuenta creada correctamente. Inicia sesión con tu email y contraseña.
+			</div>
+		<?php endif; ?>
+
+		<?php // ── Panel: Crear cuenta ───────────────────────────────────── ?>
+		<div class="rc-auth-panel rc-auth-panel--registro" data-panel="registro"<?php echo $is_login ? ' hidden' : ''; ?>>
+		<?php if ( empty( $resultado ) || $resultado['tipo'] !== 'ok' ) : ?>
+			<form method="post" class="rc-cliente-form rc-registro-form">
+				<?php wp_nonce_field( 'rc_registro_cliente' ); ?>
+
+				<label class="rc-cliente-label">
+					Nombre
+					<input type="text" name="rc_nombre" maxlength="80" required>
+				</label>
+
+				<label class="rc-cliente-label">
+					Email
+					<input type="email" name="rc_email" maxlength="120" required>
+				</label>
+
+				<label class="rc-cliente-label">
+					Contraseña
+					<input type="password" name="rc_pass" minlength="8" maxlength="72" autocomplete="new-password" required>
+				</label>
+
+				<label class="rc-cliente-label">
+					Repetir contraseña
+					<input type="password" name="rc_pass2" minlength="8" maxlength="72" autocomplete="new-password" required>
+				</label>
+
+				<?php // Honeypot anti-spam — los bots rellenan campos ocultos. ?>
+				<label class="rc-hp" aria-hidden="true" style="position:absolute;left:-9999px;" tabindex="-1">
+					No rellenar
+					<input type="text" name="rc_website" tabindex="-1" autocomplete="off">
+				</label>
+
+				<button type="submit" name="rc_crear_cuenta" value="1" class="rc-btn rc-btn--accent">
+					Crear cuenta
+				</button>
+
+				<p class="rc-registro-nota">
+					Te enviaremos tus credenciales de acceso por email. ¿Ya tienes cuenta?
+					<a href="#" class="rc-auth-switch" data-tab="login">Inicia sesión</a>.
+				</p>
+			</form>
+		<?php endif; ?>
+		</div>
+
+		<?php // ── Panel: Iniciar sesión ─────────────────────────────────── ?>
+		<div class="rc-auth-panel rc-auth-panel--login" data-panel="login"<?php echo $is_login ? '' : ' hidden'; ?>>
+			<?php
+			wp_login_form(
+				array(
+					'echo'           => true,
+					'redirect'       => $dash,
+					'form_id'        => 'rc-login-form',
+					'label_username' => 'Email o usuario',
+					'label_password' => 'Contraseña',
+					'label_remember' => 'Recordarme',
+					'label_log_in'   => 'Entrar',
+					'remember'       => true,
+				)
+			);
+			?>
+			<p class="rc-registro-nota">
+				<a href="<?php echo esc_url( wp_lostpassword_url( $dash ) ); ?>">¿Olvidaste tu contraseña?</a>
+				· ¿No tienes cuenta?
+				<a href="#" class="rc-auth-switch" data-tab="registro">Crea una</a>.
+			</p>
+		</div>
+
 	</div>
+
+	<script>
+	( function () {
+		var root = document.currentScript.previousElementSibling;
+		if ( ! root || ! root.classList.contains( 'rc-auth' ) ) {
+			root = document.querySelector( '.rc-auth' );
+		}
+		if ( ! root ) return;
+		function show( tab ) {
+			root.querySelectorAll( '.rc-auth-tab' ).forEach( function ( b ) {
+				var on = b.dataset.tab === tab;
+				b.classList.toggle( 'active', on );
+				b.setAttribute( 'aria-selected', on ? 'true' : 'false' );
+			} );
+			root.querySelectorAll( '.rc-auth-panel' ).forEach( function ( p ) {
+				p.hidden = ( p.dataset.panel !== tab );
+			} );
+		}
+		root.addEventListener( 'click', function ( e ) {
+			var t = e.target.closest( '[data-tab]' );
+			if ( ! t ) return;
+			if ( t.classList.contains( 'rc-auth-switch' ) ) e.preventDefault();
+			show( t.dataset.tab );
+		} );
+	} )();
+	</script>
 	<?php
 	return ob_get_clean();
 }
@@ -563,19 +727,31 @@ function rc_registro_cliente_procesar() {
 		return array( 'tipo' => 'err', 'msg' => 'No se pudo procesar el registro.' );
 	}
 
-	// Rate limit: máx. 3 altas por IP por hora.
+	// Rate limit: máx. 3 altas por IP por hora. Solo COMPROBAMOS aquí; el
+	// incremento se hace más abajo, justo antes de crear la cuenta, para que un
+	// error de formulario (contraseñas que no coinciden, email mal escrito) no
+	// gaste la cuota y bloquee a un usuario legítimo que está corrigiendo.
 	$rate_key = 'rc_registro_' . rc_cliente_ip_hash();
 	$intentos = (int) get_transient( $rate_key );
 	if ( $intentos >= 3 ) {
 		return array( 'tipo' => 'err', 'msg' => 'Demasiados intentos. Espera un rato antes de volver a probar.' );
 	}
-	set_transient( $rate_key, $intentos + 1, HOUR_IN_SECONDS );
 
 	$nombre = isset( $_POST['rc_nombre'] ) ? sanitize_text_field( wp_unslash( $_POST['rc_nombre'] ) ) : '';
 	$email  = isset( $_POST['rc_email'] ) ? sanitize_email( wp_unslash( $_POST['rc_email'] ) ) : '';
+	// La contraseña NO se sanea (alteraría caracteres válidos); se valida tal cual.
+	$pass   = isset( $_POST['rc_pass'] ) ? (string) wp_unslash( $_POST['rc_pass'] ) : '';
+	$pass2  = isset( $_POST['rc_pass2'] ) ? (string) wp_unslash( $_POST['rc_pass2'] ) : '';
 
 	if ( strlen( $nombre ) < 2 || ! is_email( $email ) ) {
 		return array( 'tipo' => 'err', 'msg' => 'Revisa el nombre y el email: son obligatorios y deben ser válidos.' );
+	}
+
+	if ( strlen( $pass ) < 8 ) {
+		return array( 'tipo' => 'err', 'msg' => 'La contraseña debe tener al menos 8 caracteres.' );
+	}
+	if ( $pass !== $pass2 ) {
+		return array( 'tipo' => 'err', 'msg' => 'Las contraseñas no coinciden.' );
 	}
 
 	if ( email_exists( $email ) ) {
@@ -583,6 +759,63 @@ function rc_registro_cliente_procesar() {
 			'tipo' => 'err',
 			'msg'  => 'Ya existe una cuenta con ese email. Inicia sesión o recupera tu contraseña.',
 		);
+	}
+
+	// Datos válidos: ahora sí consumimos cuota antes del alta real.
+	set_transient( $rate_key, $intentos + 1, HOUR_IN_SECONDS );
+
+	$res = rc_crear_cuenta_cliente( $email, $nombre, $pass );
+
+	if ( $res['created'] ) {
+		// Devolvemos user_id + la contraseña en claro SOLO para que el handler de
+		// template_redirect (rc_registro_handle_post) haga el login y la redirección
+		// antes de que se envíen las cabeceras. No se persiste en ningún sitio.
+		return array(
+			'tipo'    => 'ok',
+			'msg'     => 'Cuenta creada. Ya puedes iniciar sesión con tu email y contraseña.',
+			'user_id' => (int) $res['user_id'],
+			'pass'    => $pass,
+		);
+	}
+
+	return array(
+		'tipo' => 'err',
+		'msg'  => $res['msg'] ?? 'No se pudo crear la cuenta. Inténtalo más tarde.',
+	);
+}
+
+/**
+ * Crea (si no existe) la cuenta de cliente rol rc_cliente y le envía el email
+ * de activación con el enlace para fijar contraseña.
+ *
+ * Reutilizable: lo usan el shortcode [rc_registro_cliente] y el formulario de
+ * contacto de la home (functions.php). Idempotente por email: si ya hay cuenta
+ * no hace nada y devuelve created=false, reason=exists.
+ *
+ * @param string $email    Email ya validado.
+ * @param string $nombre   Nombre del cliente (ya saneado).
+ * @param string $password Contraseña elegida por el cliente. Si está vacía se
+ *                         usa el flujo passwordless (email con enlace de activación);
+ *                         si se pasa, la cuenta queda activa al instante.
+ * @return array{created:bool, reason?:string, msg?:string, user_id?:int}
+ */
+function rc_crear_cuenta_cliente( $email, $nombre, $password = '' ) {
+
+	if ( ! is_email( $email ) ) {
+		return array( 'created' => false, 'reason' => 'invalid', 'msg' => 'Email inválido.' );
+	}
+	if ( email_exists( $email ) ) {
+		return array( 'created' => false, 'reason' => 'exists' );
+	}
+
+	$has_password = ( '' !== $password );
+
+	// A3 (auditoría): throttle por-email. Solo aplica al flujo passwordless, que
+	// envía email: sin esto un atacante podría bombardear el buzón de una víctima.
+	// Con contraseña elegida no se envía email de activación, así que no aplica.
+	$email_key = 'rc_alta_email_' . hash( 'sha256', strtolower( $email ) . wp_salt( 'auth' ) );
+	if ( ! $has_password && get_transient( $email_key ) ) {
+		return array( 'created' => false, 'reason' => 'throttled', 'msg' => 'Ya enviamos un email de activación a esa dirección hace poco. Revisa tu bandeja (y spam).' );
 	}
 
 	// Username derivado del email, garantizando unicidad.
@@ -597,13 +830,14 @@ function rc_registro_cliente_procesar() {
 		$n++;
 	}
 
-	$password = wp_generate_password( 16, true );
-	$user_id  = wp_insert_user(
+	// Con contraseña elegida usamos esa; sin ella, una aleatoria fuerte que NUNCA
+	// se envía (el cliente la fija vía el enlace de activación).
+	$user_id = wp_insert_user(
 		array(
 			'user_login'   => $login,
 			'user_email'   => $email,
-			'user_pass'    => $password,
-			'display_name' => $nombre,
+			'user_pass'    => $has_password ? $password : wp_generate_password( 24, true ),
+			'display_name' => $nombre !== '' ? $nombre : $login,
 			'first_name'   => $nombre,
 			'role'         => 'rc_cliente',
 		)
@@ -611,33 +845,59 @@ function rc_registro_cliente_procesar() {
 
 	if ( is_wp_error( $user_id ) ) {
 		error_log( '[rc-core] alta cliente fallida: ' . $user_id->get_error_message() );
-		return array( 'tipo' => 'err', 'msg' => 'No se pudo crear la cuenta. Inténtalo más tarde.' );
+		return array( 'created' => false, 'reason' => 'error', 'msg' => 'No se pudo crear la cuenta.' );
 	}
 
-	rc_registro_cliente_email( $email, $nombre, $login, $password );
+	// Flujo con contraseña: cuenta activa al instante, sin email de activación.
+	if ( $has_password ) {
+		return array( 'created' => true, 'user_id' => (int) $user_id );
+	}
 
-	return array(
-		'tipo' => 'ok',
-		'msg'  => 'Cuenta creada. Te hemos enviado tus credenciales de acceso a ' . $email . '.',
+	// Flujo passwordless: marca la cuenta como pendiente de activación (verificación
+	// de email). Se limpia en rc_cliente_on_password_reset() al fijar contraseña vía
+	// el enlace. rc_cliente_purgar_pendientes() (cron) borra las que nunca se activan.
+	update_user_meta( $user_id, 'rc_pending_activation', time() );
+	set_transient( $email_key, 1, HOUR_IN_SECONDS );
+
+	// Enlace de fijar contraseña: clave de reset nativa + URL de wp-login.
+	$user = get_user_by( 'id', $user_id );
+	$key  = get_password_reset_key( $user );
+	if ( is_wp_error( $key ) ) {
+		error_log( '[rc-core] reset key fallida: ' . $key->get_error_message() );
+		return array(
+			'created' => true,
+			'user_id' => (int) $user_id,
+			'reason'  => 'no_key',
+			'msg'     => 'Cuenta creada, pero no se pudo generar el enlace. Usa "He olvidado mi contraseña" en el login.',
+		);
+	}
+	$reset_url = network_site_url(
+		'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user->user_login ),
+		'login'
 	);
+
+	rc_registro_cliente_email( $email, $nombre, $login, $reset_url );
+
+	return array( 'created' => true, 'user_id' => (int) $user_id );
 }
 
 /**
- * Envía al cliente sus credenciales recién creadas.
+ * Envía al cliente el email de activación con el enlace para fijar su contraseña.
  *
- * El usuario eligió entrega de contraseña autogenerada por email. La clave
- * viaja en claro por correo (riesgo aceptado por diseño); se recomienda al
- * cliente cambiarla tras el primer acceso.
+ * No se envía ninguna contraseña: el enlace usa la clave de reset nativa de
+ * WordPress, que caduca y es de un solo uso.
  *
+ * @param string $email
+ * @param string $nombre
+ * @param string $login      Nombre de usuario asignado.
+ * @param string $reset_url  URL de fijar contraseña (wp-login action=rp).
  * @return bool true si wp_mail aceptó el envío.
  */
-function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
+function rc_registro_cliente_email( $email, $nombre, $login, $reset_url ) {
 
-	$login_url = wp_login_url( home_url( '/dashboard/' ) );
-	$e_nombre  = esc_html( $nombre );
-	$e_login   = esc_html( $login );
-	$e_pass    = esc_html( $password );
-	$e_url     = esc_url( $login_url );
+	$e_nombre = esc_html( $nombre );
+	$e_login  = esc_html( $login );
+	$e_url    = esc_url( $reset_url );
 
 	$html =
 			'<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
@@ -654,31 +914,27 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 		. '</td></tr>'
 		. '<tr><td style="padding:32px;">'
 		. '<h1 style="margin:0 0 6px;color:#f5f6f8;font-family:Arial,sans-serif;font-size:21px;">'
-		. 'Tu cuenta está lista</h1>'
+		. 'Activa tu cuenta</h1>'
 		. '<p style="margin:0 0 20px;color:#c5c8cf;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;">'
 		. 'Hola <strong>' . $e_nombre . '</strong>, hemos creado tu cuenta de cliente en ResolveCore. '
-		. 'Usa estas credenciales para acceder a tu dashboard:</p>'
+		. 'Tu usuario es el siguiente; pulsa el botón para fijar tu contraseña y entrar:</p>'
 		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
 		. 'style="margin:0 0 24px;border:1px solid rgba(0,229,160,.3);border-radius:10px;background:#0f1f1a;">'
 		. '<tr><td style="padding:18px 22px;">'
 		. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
 		. 'text-transform:uppercase;">Usuario</div>'
-		. '<div style="color:#00e5a0;font-family:monospace;font-size:16px;font-weight:700;margin:4px 0 12px;">'
-		. $e_login . '</div>'
-		. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
-		. 'text-transform:uppercase;">Contraseña</div>'
 		. '<div style="color:#00e5a0;font-family:monospace;font-size:16px;font-weight:700;margin:4px 0 0;">'
-		. $e_pass . '</div>'
+		. $e_login . '</div>'
 		. '</td></tr></table>'
 		. '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">'
 		. '<tr><td style="border-radius:8px;background:#00e5a0;">'
 		. '<a href="' . $e_url . '" style="display:inline-block;padding:13px 26px;color:#05140f;'
 		. 'font-size:14px;font-weight:700;text-decoration:none;font-family:Arial,sans-serif;">'
-		. 'Acceder a mi dashboard &rarr;</a>'
+		. 'Fijar mi contraseña &rarr;</a>'
 		. '</td></tr></table>'
 		. '<p style="margin:20px 0 0;color:#7a7f8e;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;">'
-		. 'Por seguridad, te recomendamos cambiar la contraseña tras el primer acceso '
-		. 'desde tu perfil.</p>'
+		. 'El enlace caduca y es de un solo uso. Si expira, usa '
+		. '«He olvidado mi contraseña» en la pantalla de acceso.</p>'
 		. '</td></tr>'
 		. '<tr><td style="padding:18px 32px;background:#0a0c10;border-top:1px solid #1f232c;">'
 		. '<p style="margin:0;color:#5a5f6c;font-family:Arial,sans-serif;font-size:11px;line-height:1.6;">'
@@ -687,12 +943,12 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 		. '</td></tr>'
 		. '</table></td></tr></table></body></html>';
 
-	$text  = "Tu cuenta está lista\n\n";
+	$text  = "Activa tu cuenta\n\n";
 	$text .= 'Hola ' . $nombre . ", hemos creado tu cuenta de cliente en ResolveCore.\n\n";
-	$text .= 'Usuario: ' . $login . "\n";
-	$text .= 'Contraseña: ' . $password . "\n\n";
-	$text .= 'Accede a tu dashboard: ' . $login_url . "\n\n";
-	$text .= "Por seguridad, cambia la contraseña tras el primer acceso.\n\n";
+	$text .= 'Usuario: ' . $login . "\n\n";
+	$text .= "Fija tu contraseña y entra desde este enlace (un solo uso, caduca):\n";
+	$text .= $reset_url . "\n\n";
+	$text .= "Si expira, usa 'He olvidado mi contraseña' en la pantalla de acceso.\n\n";
 	$text .= "—\nEste correo es automático.\nResolveCore — Solución a tus problemas informáticos.\n";
 
 	$headers = array(
@@ -704,7 +960,7 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 		$phpmailer->AltBody = $text;
 	};
 	add_action( 'phpmailer_init', $alt_body );
-	$sent = @wp_mail( $email, 'ResolveCore — Tus credenciales de acceso', $html, $headers );
+	$sent = @wp_mail( $email, 'ResolveCore — Activa tu cuenta', $html, $headers );
 	remove_action( 'phpmailer_init', $alt_body );
 
 	if ( ! $sent ) {
@@ -712,3 +968,67 @@ function rc_registro_cliente_email( $email, $nombre, $login, $password ) {
 	}
 	return (bool) $sent;
 }
+
+/**
+ * A3 — Activación = verificación de email. Al fijar la contraseña vía el enlace
+ * de reset (que solo llega al buzón real), la cuenta queda verificada: se borra
+ * el marcador `rc_pending_activation` para que el cron no la purgue.
+ *
+ * @param WP_User $user Usuario que acaba de resetear/fijar su contraseña.
+ */
+function rc_cliente_on_password_reset( $user ) {
+	if ( $user instanceof WP_User ) {
+		delete_user_meta( $user->ID, 'rc_pending_activation' );
+	}
+}
+add_action( 'after_password_reset', 'rc_cliente_on_password_reset' );
+
+/**
+ * A3 — Limpieza de cuentas nunca activadas. Las altas públicas que no se confirman
+ * (nadie clicó el enlace de email) son ruido en wp_users y posible spam dirigido a
+ * terceros. Se borran las cuentas rc_cliente con `rc_pending_activation` de más de
+ * 7 días. Programado por wp-cron diario (registrado en la activación del plugin).
+ */
+function rc_cliente_purgar_pendientes() {
+	$limite = time() - ( 7 * DAY_IN_SECONDS );
+	$users  = get_users(
+		array(
+			'role'       => 'rc_cliente',
+			'meta_key'   => 'rc_pending_activation',
+			'meta_value' => $limite,
+			'meta_type'  => 'NUMERIC',
+			'meta_compare' => '<',
+			'fields'     => 'ID',
+		)
+	);
+	if ( empty( $users ) ) {
+		return;
+	}
+	require_once ABSPATH . 'wp-admin/includes/user.php';
+	foreach ( $users as $uid ) {
+		wp_delete_user( (int) $uid );
+	}
+	error_log( '[rc-core] purga de cuentas no activadas: ' . count( $users ) . ' eliminadas.' );
+}
+add_action( 'rc_cliente_purga_evento', 'rc_cliente_purgar_pendientes' );
+
+/**
+ * Programa el evento de purga al activar el plugin. Idempotente.
+ */
+function rc_cliente_programar_purga() {
+	if ( ! wp_next_scheduled( 'rc_cliente_purga_evento' ) ) {
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'rc_cliente_purga_evento' );
+	}
+}
+register_activation_hook( __FILE__, 'rc_cliente_programar_purga' );
+
+/**
+ * Desprograma el evento al desactivar el plugin.
+ */
+function rc_cliente_desprogramar_purga() {
+	$ts = wp_next_scheduled( 'rc_cliente_purga_evento' );
+	if ( $ts ) {
+		wp_unschedule_event( $ts, 'rc_cliente_purga_evento' );
+	}
+}
+register_deactivation_hook( __FILE__, 'rc_cliente_desprogramar_purga' );

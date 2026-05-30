@@ -4,7 +4,7 @@ Theme URI: https://github.com/Haplee
 Author: Francisco Vidal Mateo
 Author URI: https://github.com/Haplee
 Description: Tema landing page para ResolveCore — plataforma cross-platform de mantenimiento y optimización de sistemas.
-Version: 3.1.3
+Version: 3.2.1
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tags: one-page, dark, full-width-template, custom-colors
@@ -27,6 +27,22 @@ Text Domain: resolvecore
   --rc-muted:   #7a7f8e;
   --rc-mono:    'Space Mono', monospace;
   --rc-sans:    'DM Sans', sans-serif;
+
+  /* espaciado (escala 4px) */
+  --rc-s1:.25rem; --rc-s2:.5rem; --rc-s3:.75rem; --rc-s4:1rem;
+  --rc-s5:1.5rem; --rc-s6:2rem; --rc-s7:3rem; --rc-s8:4rem; --rc-s9:6rem;
+
+  /* radios y sombras */
+  --rc-radius:10px; --rc-radius-lg:16px;
+  --rc-shadow:0 1px 2px rgba(0,0,0,.4);
+  --rc-shadow-lg:0 12px 40px rgba(0,0,0,.45);
+
+  /* gradientes de marca (sutiles) */
+  --rc-grad-hero:radial-gradient(1200px 600px at 70% -10%, rgba(0,229,160,.10), transparent 60%),
+                 radial-gradient(900px 500px at 0% 10%, rgba(0,153,255,.08), transparent 55%);
+  --rc-grad-surface:linear-gradient(180deg, var(--rc-surface), var(--rc-bg));
+
+  /* breakpoints documentados: 1100 desktop · 760 tablet · 460 móvil */
 }
 
 /* ============================================================
@@ -174,10 +190,10 @@ a:hover { text-decoration: underline; }
 /* ============================================================
    RESPONSIVE
 ============================================================ */
-@media (max-width: 768px) {
+@media (max-width: 760px) {
   .rc-docs-layout, .rc-cl-layout { grid-template-columns: 1fr; }
   .rc-docs-sidebar, .rc-cl-sidebar { display: none; }
-  .rc-docs-main, .rc-cl-main { margin-left: 0; padding: 1.5rem; }
+  .rc-docs-main, .rc-cl-main { margin-left: 0; padding: var(--rc-s5); }
 }
 
 /* ── Fixes globales ───── */
@@ -260,7 +276,7 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 6px 18px rgba(0,229,160,.25);
   text-decoration: none;
 }
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .rc-header-cta { font-size: 11px; padding: 7px 12px; }
   .rc-nav__links { display: none; }
 }
@@ -469,8 +485,8 @@ section[style] > div,
    DASHBOARD CLIENTE (page-dashboard.php + [rc_cliente_dashboard])
 ============================================================ */
 .rc-dash-page { padding-bottom: 5rem; }
-.rc-dash-hero { background: linear-gradient(180deg, var(--rc-surface) 0%, var(--rc-bg) 100%);
-                padding: 4rem 1.5rem 3rem; border-bottom: 1px solid var(--rc-border); }
+.rc-dash-hero { background: var(--rc-grad-hero), linear-gradient(180deg, var(--rc-surface) 0%, var(--rc-bg) 100%);
+                padding: var(--rc-s8) var(--rc-s5) var(--rc-s7); border-bottom: 1px solid var(--rc-border); }
 .rc-dash-hero-inner { max-width: 1000px; margin: 0 auto; text-align: left; }
 .rc-dash-hero-title { font-family: var(--rc-mono); font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700;
                       margin: .4rem 0 .6rem; line-height: 1.15; }
@@ -488,10 +504,10 @@ section[style] > div,
                        border-color: rgba(255,107,53,.3); }
 
 /* Stats arriba — tres cards lado a lado */
-.rc-cliente-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
-                    margin-bottom: 2rem; }
-.rc-stat { background: var(--rc-surface); border: 1px solid var(--rc-border); border-radius: 8px;
-           padding: 1.3rem 1.4rem; }
+.rc-cliente-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--rc-s4);
+                    margin-bottom: var(--rc-s6); }
+.rc-stat { background: var(--rc-grad-surface); border: 1px solid var(--rc-border); border-radius: var(--rc-radius);
+           padding: var(--rc-s5); box-shadow: var(--rc-shadow); }
 .rc-stat-num { font-family: var(--rc-mono); font-size: 2.1rem; font-weight: 700;
                line-height: 1; color: var(--rc-text); margin-bottom: .35rem; }
 .rc-stat-num--warn { color: var(--rc-accent2); }
@@ -532,10 +548,11 @@ section[style] > div,
 /* Tarjetas de tickets */
 .rc-cliente-tickets { list-style: none; padding: 0; margin: 0;
                       display: grid; gap: 1rem; }
-.rc-cliente-ticket { background: var(--rc-surface); border: 1px solid var(--rc-border);
-                     border-radius: 8px; padding: 1.2rem 1.4rem;
-                     transition: border-color .2s, transform .2s; }
-.rc-cliente-ticket:hover { border-color: var(--rc-border2); transform: translateY(-1px); }
+.rc-cliente-ticket { background: var(--rc-grad-surface); border: 1px solid var(--rc-border);
+                     border-radius: var(--rc-radius); padding: var(--rc-s5);
+                     transition: border-color .2s, transform .2s, box-shadow .2s; }
+.rc-cliente-ticket:hover { border-color: var(--rc-border2); transform: translateY(-1px);
+                     box-shadow: var(--rc-shadow-lg); }
 .rc-ticket-head { display: flex; justify-content: space-between; align-items: center;
                   margin-bottom: .7rem; }
 .rc-ticket-id { font-family: var(--rc-mono); font-size: .95rem; font-weight: 700;
@@ -580,8 +597,63 @@ section[style] > div,
 .rc-btn--accent { background: var(--rc-accent); color: #000; border-color: var(--rc-accent); }
 .rc-btn--accent:hover { background: #00ffb3; color: #000; }
 
-@media (max-width: 700px) {
-  .rc-cliente-stats { grid-template-columns: 1fr; }
-  .rc-dash-hero { padding: 3rem 1.5rem 2rem; }
-  .rc-dash-body { padding: 2rem 1rem 0; }
+/* ============================================================
+   REGISTRO CLIENTE ([rc_registro_cliente])
+============================================================ */
+.rc-registro { max-width: min(460px, 100% - var(--rc-s6)); margin: 0 auto; }
+
+/* Auth con pestañas: Crear cuenta / Iniciar sesión */
+.rc-auth-tabs { display: flex; gap: var(--rc-s2); margin-bottom: var(--rc-s5);
+                background: var(--rc-surface); border: 1px solid var(--rc-border2);
+                border-radius: var(--rc-radius); padding: var(--rc-s1); }
+.rc-auth-tab { flex: 1; padding: .7rem 1rem; border: 0; background: none; cursor: pointer;
+               font-family: var(--rc-mono); font-size: 12px; letter-spacing: .05em;
+               text-transform: uppercase; color: var(--rc-muted); border-radius: calc(var(--rc-radius) - 3px);
+               transition: background .2s, color .2s; }
+.rc-auth-tab:hover { color: var(--rc-text); }
+.rc-auth-tab.active { background: var(--rc-accent); color: #000; font-weight: 700; }
+.rc-auth-panel[hidden] { display: none; }
+/* Login nativo (wp_login_form) repintado para igualar la tarjeta de registro */
+#rc-login-form { background: var(--rc-grad-surface); border: 1px solid var(--rc-border2);
+                 border-radius: var(--rc-radius-lg); padding: var(--rc-s6) var(--rc-s6) var(--rc-s7);
+                 box-shadow: var(--rc-shadow-lg); display: grid; gap: var(--rc-s4); }
+#rc-login-form label { font-size: .76rem; text-transform: uppercase; letter-spacing: .06em;
+                       color: var(--rc-muted); display: block; }
+#rc-login-form input[type="text"],
+#rc-login-form input[type="password"] { width: 100%; margin-top: var(--rc-s2); padding: .7rem .9rem;
+                 background: var(--rc-surface2); border: 1px solid var(--rc-border2);
+                 border-radius: var(--rc-radius); color: var(--rc-text); }
+#rc-login-form input:focus { outline: none; border-color: var(--rc-accent);
+                 box-shadow: 0 0 0 3px rgba(0,229,160,.12); }
+#rc-login-form .login-remember label { text-transform: none; letter-spacing: 0; color: var(--rc-text);
+                 display: flex; align-items: center; gap: var(--rc-s2); }
+#rc-login-form .login-remember input { margin: 0; width: auto; }
+#rc-login-form .login-submit input { width: 100%; text-align: center; padding: .85rem 1.3rem;
+                 font-size: 14px; background: var(--rc-accent); color: #000; border: 0;
+                 border-radius: var(--rc-radius); font-weight: 700; cursor: pointer; }
+#rc-login-form .login-submit input:hover { background: #00ffb3; }
+.rc-registro-form { background: var(--rc-grad-surface); border: 1px solid var(--rc-border2);
+                    border-radius: var(--rc-radius-lg); padding: var(--rc-s6) var(--rc-s6) var(--rc-s7); gap: var(--rc-s5);
+                    margin-top: 0; box-shadow: var(--rc-shadow-lg); }
+.rc-registro-form .rc-cliente-label { font-size: .76rem; text-transform: uppercase;
+                    letter-spacing: .06em; color: var(--rc-muted); }
+.rc-registro-form input { margin-top: var(--rc-s2); }
+.rc-registro-form input:focus { outline: none; border-color: var(--rc-accent);
+                    box-shadow: 0 0 0 3px rgba(0,229,160,.12); }
+.rc-registro-form .rc-btn--accent { justify-self: stretch; width: 100%; text-align: center;
+                    padding: .85rem 1.3rem; font-size: 14px; }
+.rc-registro-nota { font-size: .82rem; color: var(--rc-muted); text-align: center;
+                    margin: .2rem 0 0; line-height: 1.6; }
+.rc-registro-nota a { color: var(--rc-accent); }
+.rc-hp { position: absolute !important; left: -9999px !important; }
+
+@media (max-width: 760px) {
+  .rc-dash-hero { padding: var(--rc-s7) var(--rc-s5) var(--rc-s6); }
+  .rc-dash-body { padding: var(--rc-s6) var(--rc-s4) 0; }
+}
+@media (max-width: 460px) {
+  .rc-registro-form { padding: var(--rc-s5); }
+  .rc-registro-form input,
+  .rc-cliente-form input,
+  .rc-cliente-form textarea { font-size: 16px; } /* iOS: evita zoom al enfocar */
 }
