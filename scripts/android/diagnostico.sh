@@ -12,7 +12,7 @@
 #   bash diagnostico.sh <serial>                 # dispositivo concreto
 #   bash diagnostico.sh <serial> /tmp            # salida en /tmp
 #
-# Autor:   Francisco Vidal Mateo (FranVi)
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # Versión: 2.0
 # ─────────────────────────────────────────────────────────────────────────────
 

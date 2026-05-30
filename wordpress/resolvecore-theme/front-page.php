@@ -55,20 +55,7 @@
 		RESET & VARIABLES
 	============================================================ */
 	*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-	:root {
-		--rc-bg:      #0a0c10;
-		--rc-surface: #111318;
-		--rc-surface2:#1a1d24;
-		--rc-border:  rgba(255,255,255,0.07);
-		--rc-border2: rgba(255,255,255,0.13);
-		--rc-accent:  #00e5a0;
-		--rc-accent2: #0099ff;
-		--rc-warn:    #ff6b35;
-		--rc-text:    #e8eaf0;
-		--rc-muted:   #7a7f8e;
-		--rc-mono:    'Space Mono', monospace;
-		--rc-sans:    'DM Sans', sans-serif;
-	}
+	/* Tokens (:root) viven en style.css — encolado vía wp_head() antes de este bloque. */
 	html { scroll-behavior: smooth; }
 	body {
 		background: var(--rc-bg); color: var(--rc-text);
@@ -200,6 +187,13 @@
 		padding: 8px 18px; text-decoration: none; transition: all .25s;
 	}
 	.rc-nav-cta:hover { background: var(--rc-accent); color: #000; }
+	.rc-nav-access {
+		font-family: var(--rc-mono); font-size: 12px; letter-spacing: .04em;
+		color: var(--rc-muted); text-decoration: none; padding: 8px 14px;
+		margin-right: .5rem; border-radius: var(--rc-radius); transition: color .25s, background .25s;
+	}
+	.rc-nav-access:hover { color: var(--rc-accent); background: var(--rc-surface2); }
+	.rc-mobile-access { color: var(--rc-accent) !important; font-weight: 600; }
 	.rc-hamburger {
 		display: none; flex-direction: column; gap: 5px;
 		cursor: pointer; background: none; border: none; padding: 4px;
@@ -226,6 +220,7 @@
 		display: flex; align-items: center; justify-content: center;
 		padding: 80px 2.5rem 0; overflow: hidden;
 		text-align: center;
+		background: var(--rc-grad-hero);
 	}
 	.rc-hero-grid {
 		position: absolute; inset: 0;
@@ -329,10 +324,10 @@
 		padding-top: 2rem; border-top: 1px solid var(--rc-border);
 		animation: rcFadeUp .8s .4s ease both;
 	}
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.rc-hero-stats { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
 	}
-	@media (max-width: 380px) {
+	@media (max-width: 460px) {
 		.rc-hero-stats { grid-template-columns: 1fr; gap: 1rem; }
 	}
 	.rc-stat-num {
@@ -364,10 +359,10 @@
 		50%  { transform: translateY(8px); opacity: .35; }
 		100% { transform: translateY(0);   opacity: 1;  }
 	}
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.rc-hero-scroll { left: 1rem; bottom: 1.5rem; font-size: 8px; }
 	}
-	@media (max-width: 480px) {
+	@media (max-width: 460px) {
 		.rc-hero-scroll { display: none; }
 	}
 
@@ -418,7 +413,7 @@
 		background: var(--rc-surface); padding: 2rem 1.75rem;
 		transition: background .25s; position: relative; overflow: hidden; cursor: default;
 	}
-	.rc-service-card:hover { background: var(--rc-surface2); }
+	.rc-service-card:hover { background: var(--rc-surface2); box-shadow: var(--rc-shadow-lg); }
 	.rc-service-card::before {
 		content: ''; position: absolute; top: 0; left: 0;
 		width: 3px; height: 100%; background: transparent; transition: background .25s;
@@ -529,7 +524,7 @@
 		border: 1px solid var(--rc-accent); padding: 11px 22px; text-decoration: none; transition: all .25s;
 	}
 	.rc-demo-cta:hover { background: var(--rc-accent); color: #000; }
-	@media (max-width: 880px) {
+	@media (max-width: 760px) {
 		.rc-demo-result-grid { grid-template-columns: 1fr; }
 	}
 
@@ -708,7 +703,7 @@
 	}
 	.rc-cta-band-stats { display: flex; gap: 2.5rem; flex-shrink: 0; }
 	.rc-cta-stat { text-align: center; }
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.rc-cta-band { grid-template-columns: 1fr; }
 		.rc-cta-band-stats { gap: 1.5rem; }
 	}
@@ -743,10 +738,10 @@
 		color: var(--rc-border2); font-size: 18px; flex-shrink: 0;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.rc-demo-layout, .rc-contact-layout { grid-template-columns: 1fr; }
 		.rc-nav-links { display: none; }
-		.rc-nav-cta { display: none; }
+		.rc-nav-cta, .rc-nav-access { display: none; }
 		.rc-hamburger { display: flex; }
 		.rc-form-row { grid-template-columns: 1fr; }
 		.rc-download-github { flex-direction: column; }
@@ -760,13 +755,13 @@
 		.rc-hero-sub { font-size: 1rem; }
 		.rc-hero-actions { flex-direction: column; align-items: stretch; gap: .75rem; }
 		.rc-hero-actions a { text-align: center; width: 100%; padding: 14px; }
-		.rc-services-grid { grid-template-columns: 1fr; }
+		.rc-services-grid { grid-template-columns: repeat(2, 1fr); }
 		.rc-pricing-grid { grid-template-columns: 1fr; }
 		.rc-vuln-row { flex-wrap: wrap; }
 		.rc-vuln-name { flex: 1 0 100%; order: 2; margin: 4px 0; }
 		.rc-quick-channels { grid-template-columns: 1fr; }
 	}
-	@media (max-width: 480px) {
+	@media (max-width: 460px) {
 		.rc-section { padding: 3rem 1rem; }
 		.rc-hero { padding: 72px 1rem 1.5rem; }
 		.rc-hero h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); line-height: 1.15; }
@@ -775,7 +770,8 @@
 		.rc-platforms { padding: 1rem; }
 		.rc-plat-items { gap: 1rem; }
 		.rc-service-card { padding: 1.5rem 1.25rem; }
-		.rc-terminal { font-size: 11px; padding: 1rem; min-height: 240px; }
+		.rc-services-grid { grid-template-columns: 1fr; }
+		.rc-terminal { font-size: 11px; padding: 1rem; min-height: 240px; max-height: 60vh; overflow-y: auto; }
 		.rc-faq-q { font-size: 13px; padding: 1rem; }
 		.rc-form-input, .rc-form-select, .rc-form-textarea { font-size: 16px; } /* iOS no zoom on focus */
 	}
@@ -828,6 +824,7 @@
 	</li>
 	<li><a href="#contacto">Contacto</a></li>
 	</ul>
+	<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-nav-access">Acceso clientes →</a>
 	<a href="#contacto" class="rc-nav-cta">SOLICITAR SOPORTE</a>
 	<button type="button" class="rc-hamburger" id="rc-hamburger"
 			aria-label="Abrir menú" aria-expanded="false" aria-controls="rc-mobile-menu">
@@ -846,6 +843,7 @@
 	<a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a>
 	<a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a>
 	<a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a>
+	<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-mobile-access">Acceso clientes →</a>
 </div>
 
 <main id="main-content">
@@ -1408,11 +1406,11 @@
 		font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted);
 		letter-spacing: .04em;
 	}
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.rc-footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
 		.rc-footer-brand { grid-column: 1 / -1; }
 	}
-	@media (max-width: 480px) {
+	@media (max-width: 460px) {
 		.rc-footer-grid { grid-template-columns: 1fr; gap: 1.75rem; }
 	}
 	</style>
@@ -1898,16 +1896,6 @@ function submitForm(e) {
 		if (res.success) {
 		msg.className = 'rc-form-msg success';
 		msg.textContent = res.data.msg;
-		if (res.data.ticket_id) {
-			const link = document.createElement('a');
-			link.href = '#';
-			link.className = 'rc-ticket-link';
-			link.dataset.ticket = res.data.ticket_id;
-			link.dataset.token = res.data.ticket_token || '';
-			link.style.cssText = 'color:var(--rc-accent);margin-left:6px;font-family:var(--rc-mono);font-size:11px;cursor:pointer;text-decoration:underline;';
-			link.textContent = '[VER TICKET #' + res.data.ticket_id + ']';
-			msg.appendChild(link);
-		}
 		form.reset();
 		charCount.textContent = '0 / ' + MAX_CHARS;
 		} else {
@@ -1926,6 +1914,26 @@ function submitForm(e) {
 		btn.textContent = 'ENVIAR MENSAJE →';
 	});
 }
+
+/* --- Reveal on scroll (IntersectionObserver) --- */
+(function () {
+	var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	var targets = document.querySelectorAll('.rc-service-card, .rc-flow-step, .rc-section-title, .rc-pricing-card, .rc-download-card');
+	if (reduce || !('IntersectionObserver' in window)) {
+		targets.forEach(function (el) { el.classList.add('rc-reveal', 'visible'); });
+		return;
+	}
+	targets.forEach(function (el) { el.classList.add('rc-reveal'); });
+	var io = new IntersectionObserver(function (entries) {
+		entries.forEach(function (entry) {
+			if (entry.isIntersecting) {
+				entry.target.classList.add('visible');
+				io.unobserve(entry.target);
+			}
+		});
+	}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+	targets.forEach(function (el) { io.observe(el); });
+})();
 </script>
 
 <!-- ==================== MODAL TRACKING TICKET ==================== -->
@@ -2128,7 +2136,7 @@ function submitForm(e) {
 	border-top: 1px dashed var(--rc-border);
 	font-family: var(--rc-mono); font-size: 11px;
 }
-@media (max-width: 480px) {
+@media (max-width: 460px) {
 	.rc-ticket-modal-box  { max-height: 95vh; }
 	.rc-ticket-modal-head { padding: 1.25rem 1.25rem .75rem; }
 	.rc-ticket-modal-body { padding: 1.25rem; }
@@ -2328,7 +2336,7 @@ function submitForm(e) {
 	70%  { box-shadow: 0 0 0 14px rgba(0,229,160,0);   }
 	100% { box-shadow: 0 0 0 0   rgba(0,229,160,0);   }
 }
-@media (max-width: 480px) {
+@media (max-width: 460px) {
 	.rc-fab-text { display: none; }
 	.rc-fab-contact { padding: 14px; }
 	.rc-fab-icon { font-size: 18px; }

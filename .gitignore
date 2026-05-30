@@ -66,6 +66,12 @@ wp-config.php
 wordpress-db.sql
 wp-content.tar.gz
 
+# Instalación WordPress completa (core + wp-config con RC_MANTIS_TOKEN + vendor).
+# El código fuente del proyecto vive en wordpress/ — NUNCA en wp/.
+# Auditoría A1/A2 (2026-05-29): wp/ traía 3119 ficheros (95% del repo) y el token
+# Mantis filtrado en wp/wp-config.php. Instalar WP vía deploy, no versionarlo.
+wp/
+
 # Config server PHP — no pertenece al repo de aplicación (documentar valores en docs/).
 /php.ini
 

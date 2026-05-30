@@ -1,18 +1,28 @@
-/* rc-tech panel — paleta ResolveCore (#0a0c10 / #00e5a0) */
-
+/* rc-tech panel — paleta ResolveCore (#0a0c10 / #00e5a0)
+   Tokens autónomos: el panel se sirve en wp-admin, donde NO se encola
+   el style.css del tema, así que se redeclaran aquí (espejo de :root del tema). */
+:root {
+  /* color */
+  --rc-bg: #0a0c10; --rc-accent: #00e5a0; --rc-accent2: #2563eb;
+  --rc-red: #c00; --rc-warn: #b45309;
+  /* espaciado / radio / sombra */
+  --rc-s2: .5rem; --rc-s3: .75rem; --rc-s4: 1rem; --rc-s5: 1.5rem;
+  --rc-radius: 10px;
+  --rc-shadow-lg: 0 12px 40px rgba(0,0,0,.45);
+}
 .rc-tech-wrap { position: relative; }
 
 .rc-tech-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   margin: 16px 0;
 }
 .rc-tech-kpis .kpi {
-  background: #0a0c10;
-  color: #00e5a0;
+  background: var(--rc-bg);
+  color: var(--rc-accent);
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--rc-radius);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -30,6 +40,54 @@
 }
 .rc-tech-toolbar input[type="search"] { min-width: 220px; }
 .rc-tech-updated { margin-left: auto; font-size: 12px; color: #666; }
+
+/* Pestañas de vista: Cola / Kanban / MantisBT */
+.rc-tech-views {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0;
+  border-bottom: 1px solid #dcdcde;
+}
+.rc-tech-view-btn {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #646970;
+}
+.rc-tech-view-btn:hover { color: var(--rc-bg); }
+.rc-tech-view-btn.active {
+  border-color: var(--rc-accent);
+  color: var(--rc-bg);
+  font-weight: 600;
+}
+
+/* Vista MantisBT embebida + fallback */
+.rc-tech-mantis-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--rc-s2);
+  font-size: 13px;
+  color: #646970;
+}
+.rc-tech-mantis-frame {
+  width: 100%;
+  height: 75vh;
+  border: 1px solid #dcdcde;
+  border-radius: var(--rc-radius);
+  background: #fff;
+}
+.rc-tech-mantis-fallback {
+  padding: var(--rc-s5);
+  text-align: center;
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: var(--rc-radius);
+  margin-bottom: var(--rc-s3);
+}
 
 .rc-tech-table th { background: #f1f3f5; }
 .rc-tech-table .sla-overdue { color: #c00; font-weight: 600; }
@@ -96,7 +154,7 @@
   background: none; border: 0; padding: 8px 12px; cursor: pointer;
   border-bottom: 2px solid transparent;
 }
-.rc-tech-tabs button.active { border-color: #00e5a0; color: #0a0c10; font-weight: 600; }
+.rc-tech-tabs button.active { border-color: var(--rc-accent); color: var(--rc-bg); font-weight: 600; }
 
 .rc-tech-timeline-event {
   border-left: 3px solid #ddd;
@@ -110,7 +168,7 @@
 
 .rc-tech-toast {
   position: fixed; bottom: 20px; right: 20px;
-  background: #0a0c10; color: #00e5a0;
+  background: var(--rc-bg); color: var(--rc-accent);
   padding: 12px 18px; border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.3);
   z-index: 9999;
@@ -120,7 +178,7 @@
 /* Kanban */
 .rc-tech-kanban {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 12px;
 }
@@ -147,4 +205,33 @@
 }
 .rc-tech-kanban .card.sla-overdue { border-left: 4px solid #c00; }
 .rc-tech-kanban .card.sla-warn    { border-left: 4px solid #b45309; }
-.rc-tech-kanban .card .id { font-weight: 700; color: #2563eb; }
+.rc-tech-kanban .card .id { font-weight: 700; color: var(--rc-accent2); }
+
+/* ============================================================
+   RESPONSIVE — breakpoints 1100 / 760 / 460 (alineado con el tema)
+============================================================ */
+/* La tabla scrollea horizontal dentro de su contenedor en vez de romper el layout. */
+.rc-tech-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 1100px) {
+  .rc-tech-sidebar { width: 360px; }
+}
+
+@media (max-width: 760px) {
+  /* Sidebar pasa de panel lateral fijo a drawer a pantalla completa. */
+  .rc-tech-sidebar { width: 100%; left: 0; top: 0; }
+  .rc-tech-toolbar input[type="search"] { min-width: 0; flex: 1 1 100%; }
+  .rc-tech-updated { margin-left: 0; flex: 1 1 100%; }
+  /* Oculta columnas no esenciales en pantallas estrechas (AnyDesk, Host Score). */
+  .rc-tech-table th.col-anydesk, .rc-tech-table td.col-anydesk,
+  .rc-tech-table th.col-score,   .rc-tech-table td.col-score { display: none; }
+  /* Targets táctiles ≥44px. */
+  .rc-tech-actions .button { min-height: 44px; display: inline-flex; align-items: center; }
+  .rc-tech-mantis-frame { height: 65vh; }
+  .rc-tech-mantis-bar { flex-direction: column; gap: var(--rc-s2); align-items: flex-start; }
+}
+
+@media (max-width: 460px) {
+  .rc-tech-kpis { grid-template-columns: repeat(2, 1fr); }
+  .rc-tech-sidebar { padding: var(--rc-s4); }
+}

@@ -86,8 +86,11 @@ function rc_hide_adminbar_for_editors(): void {
 }
 add_action( 'after_setup_theme', 'rc_hide_adminbar_for_editors' );
 
-// Modo mantenimiento (actívalo cambiando a true)
-define( 'RESOLVECORE_MAINTENANCE', false );
+// Modo mantenimiento. Se puede forzar desde wp-config.php; si no, default false.
+// El guard evita el notice "constant already defined" cuando ya viene de wp-config.
+if ( ! defined( 'RESOLVECORE_MAINTENANCE' ) ) {
+	define( 'RESOLVECORE_MAINTENANCE', false );
+}
 
 function resolvecore_maintenance_mode() {
 	if ( RESOLVECORE_MAINTENANCE && ! current_user_can( 'administrator' ) && ! is_admin() ) {
@@ -202,7 +205,7 @@ function resolvecore_scripts() {
 		array(),
 		null
 	);
-	wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), array(), '3.1.3' );
+	wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), array(), '3.2.1' );
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_scripts' );
 
@@ -267,71 +270,48 @@ function resolvecore_handle_contact() {
 		wp_send_json_error( array( 'msg' => 'El mensaje supera 500 caracteres.' ) );
 	}
 
-	// 1) Crear ticket en MantisBT (canal primario)
-	$ticket_id  = 0;
-	$ticket_err = '';
-	if ( function_exists( 'rc_mantis_create_ticket' ) ) {
-		$ticket = rc_mantis_create_ticket(
-			array(
-				'name'    => $name,
-				'email'   => $email,
-				'type'    => $type,
-				'message' => $message,
-			)
-		);
-		if ( is_wp_error( $ticket ) ) {
-			$ticket_err = $ticket->get_error_message();
-			error_log( '[resolvecore_handle_contact] Mantis: ' . $ticket_err );
-		} elseif ( (int) $ticket > 0 ) {
-			$ticket_id = (int) $ticket;
-		}
+	// 1) Alta de cuenta de cliente + email de activación (fijar contraseña).
+	// La home NO crea tickets: el cliente los genera luego desde su dashboard.
+	// Idempotente: si ya tiene cuenta, no hace nada.
+	$cuenta_creada = false;
+	if ( function_exists( 'rc_crear_cuenta_cliente' ) ) {
+		$cuenta        = rc_crear_cuenta_cliente( $email, $name );
+		$cuenta_creada = ! empty( $cuenta['created'] );
 	}
 
-	// 2) Email al técnico (canal secundario, no bloquea respuesta)
+	// 2) Aviso al admin — lead de solicitud de acceso (no bloquea respuesta).
 	$admin_email = get_option( 'admin_email' );
-	$subject     = sprintf(
-		'[ResolveCore] %s%s — %s',
-		$ticket_id ? "#{$ticket_id} " : '',
-		$type,
-		$name
-	);
+	$subject     = sprintf( '[ResolveCore] Solicitud de acceso — %s', $name );
 	$body        = "Nombre: {$name}\n";
 	$body       .= "Email: {$email}\n";
 	$body       .= "Tipo: {$type}\n";
-	if ( $ticket_id ) {
-		$body .= "Ticket MantisBT: #{$ticket_id}\n";
-	}
-	$body     .= "\nMensaje:\n{$message}\n";
-	$headers   = array(
+	$body       .= 'Cuenta creada: ' . ( $cuenta_creada ? 'sí' : 'no (ya existía o error)' ) . "\n";
+	$body       .= "\nMensaje:\n{$message}\n";
+	$headers     = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		sprintf( 'Reply-To: %s <%s>', $name, $email ),
 	);
-	$mail_sent = @wp_mail( $admin_email, $subject, $body, $headers );
+	$mail_sent   = @wp_mail( $admin_email, $subject, $body, $headers );
 
-	// 2b) Email de confirmación al cliente — incidencia + seguimiento.
-	// Canal informativo: si falla, solo se registra; no altera la respuesta.
-	resolvecore_send_client_confirmation( $email, $name, $ticket_id, $type, $message );
-
-	// 3) Respuesta — éxito si AL MENOS uno funcionó
-	if ( ! $ticket_id && ! $mail_sent ) {
+	// 3) Respuesta — éxito si se creó cuenta O se avisó al admin.
+	if ( ! $cuenta_creada && ! $mail_sent ) {
 		wp_send_json_error(
 			array(
-				'msg'   => 'No pudimos procesar tu mensaje. Escríbenos directamente a ' . esc_html( $admin_email ) . '.',
-				'debug' => $ticket_err ?: 'mail_failed',
+				'msg'   => 'No pudimos procesar tu solicitud. Escríbenos directamente a ' . esc_html( $admin_email ) . '.',
+				'debug' => 'no_account_no_mail',
 			)
 		);
 	}
 
-	$msg = $ticket_id
-		? sprintf( '¡Mensaje recibido! Ticket #%d creado, te responderemos en menos de 2 horas.', $ticket_id )
-		: '¡Mensaje recibido! Te responderemos en menos de 2 horas.';
+	$msg = $cuenta_creada
+		? '¡Solicitud recibida! Te hemos enviado un email para fijar tu contraseña y acceder a tu panel.'
+		: '¡Solicitud recibida! Si ya tienes cuenta, inicia sesión; si no, te contactaremos en menos de 2 horas.';
 
 	wp_send_json_success(
 		array_filter(
 			array(
-				'msg'          => $msg,
-				'ticket_id'    => $ticket_id ?: null,
-				'ticket_token' => $ticket_id ? resolvecore_ticket_token( $ticket_id ) : null,
+				'msg'    => $msg,
+				'cuenta' => $cuenta_creada ? 1 : null,
 			)
 		)
 	);
@@ -371,204 +351,15 @@ function resolvecore_ticket_token( int $id ): string {
 }
 
 /**
- * Envía al cliente un correo HTML de confirmación con el número de incidencia
- * y el enlace de seguimiento en tiempo real.
+ * (Eliminada en A7 / auditoría 2026-05-29) `resolvecore_send_client_confirmation()`.
  *
- * Canal informativo: si wp_mail falla solo se registra en el log — nunca
- * bloquea ni altera la respuesta AJAX al usuario.
- *
- * @param string $email      Correo del cliente (ya validado en el handler).
- * @param string $name       Nombre del cliente (ya saneado).
- * @param int    $ticket_id  ID de MantisBT, o 0 si no se pudo crear.
- * @param string $type       Tipo de solicitud (whitelist del handler).
- * @param string $message    Mensaje del cliente (ya saneado).
- * @return bool  true si wp_mail aceptó el envío.
+ * Enviaba al cliente un correo de confirmación con nº de ticket + timeline. Quedó
+ * huérfana al separar flujos: la home ya solo crea cuenta (sin ticket), así que no
+ * tenía callers. El alta de cliente envía su propio correo de activación desde
+ * `rc_crear_cuenta_cliente()` (plugin rc-core). El tracker público de tickets
+ * (`resolvecore_handle_ticket_status` + `?rc_ticket=N&rc_t=TOKEN`) sigue vivo y se
+ * mantiene como feature reutilizable.
  */
-function resolvecore_send_client_confirmation( string $email, string $name, int $ticket_id, string $type, string $message ): bool {
-	if ( ! is_email( $email ) ) {
-		return false;
-	}
-
-	$type_labels = array(
-		'soporte'      => 'Soporte técnico',
-		'bug'          => 'Reporte de error',
-		'colaboracion' => 'Colaboración',
-		'licencia'     => 'Licencia',
-		'otro'         => 'Consulta general',
-		'contacto'     => 'Consulta general',
-	);
-	$type_label  = $type_labels[ $type ] ?? 'Consulta general';
-
-	// Las 4 fases coinciden con el timeline de resolvecore_handle_ticket_status().
-	$fases      = array(
-		array( 'Recibido', 'Ticket creado y en cola de revisión.' ),
-		array( 'En diagnóstico', 'El técnico analiza el problema.' ),
-		array( 'En resolución', 'Trabajo sobre la solución mediante AnyDesk.' ),
-		array( 'Resuelto', 'Ticket cerrado con resumen técnico adjunto.' ),
-	);
-	$fases_html = '';
-	foreach ( $fases as $i => $f ) {
-		$fases_html .=
-				'<tr>'
-			. '<td style="width:28px;padding:5px 0;vertical-align:top;">'
-			. '<span style="display:inline-block;width:22px;height:22px;line-height:22px;'
-			. 'text-align:center;border-radius:50%;background:#1a1d24;border:1px solid #2a2e38;'
-			. 'color:#00e5a0;font-family:monospace;font-size:11px;font-weight:700;">' . ( $i + 1 ) . '</span>'
-			. '</td>'
-			. '<td style="padding:5px 0 5px 10px;">'
-			. '<div style="color:#e8eaed;font-size:13px;font-weight:600;">' . esc_html( $f[0] ) . '</div>'
-			. '<div style="color:#7a7f8e;font-size:12px;">' . esc_html( $f[1] ) . '</div>'
-			. '</td>'
-			. '</tr>';
-	}
-
-	$track_url = $ticket_id
-		? add_query_arg(
-			array(
-				'rc_ticket' => $ticket_id,
-				'rc_t'      => resolvecore_ticket_token( $ticket_id ),
-			),
-			home_url( '/' )
-		) . '#contacto'
-		: '';
-
-	$subject = $ticket_id
-		? sprintf( 'ResolveCore — Incidencia #%d registrada', $ticket_id )
-		: 'ResolveCore — Hemos recibido tu solicitud';
-
-	$e_name = esc_html( $name );
-	$e_type = esc_html( $type_label );
-	$e_msg  = nl2br( esc_html( $message ) );
-
-	// Bloque tarjeta de incidencia (solo si hay ticket).
-	$ticket_block = '';
-	if ( $ticket_id ) {
-		$ticket_block =
-				'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-			. 'style="margin:0 0 24px;border:1px solid rgba(0,229,160,.3);border-radius:10px;'
-			. 'background:#0f1f1a;">'
-			. '<tr><td style="padding:18px 22px;">'
-			. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
-			. 'text-transform:uppercase;">Número de incidencia</div>'
-			. '<div style="color:#00e5a0;font-family:monospace;font-size:30px;font-weight:700;'
-			. 'margin:4px 0 8px;">#' . (int) $ticket_id . '</div>'
-			. '<div style="color:#c5c8cf;font-size:13px;">Categoría: <strong>' . $e_type . '</strong></div>'
-			. '</td></tr></table>';
-	}
-
-	// Botón de seguimiento (solo si hay ticket).
-	$track_block = '';
-	if ( $track_url ) {
-		$track_block =
-				'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">'
-			. '<tr><td style="border-radius:8px;background:#00e5a0;">'
-			. '<a href="' . esc_url( $track_url ) . '" '
-			. 'style="display:inline-block;padding:13px 26px;color:#05140f;font-size:14px;'
-			. 'font-weight:700;text-decoration:none;font-family:Arial,sans-serif;">'
-			. 'Ver estado en tiempo real &rarr;</a>'
-			. '</td></tr></table>';
-	}
-
-	$intro = $ticket_id
-		? 'Tu solicitud ha quedado registrada con el número de incidencia que ves abajo. '
-			. 'Un técnico la revisará en menos de 2 horas.'
-		: 'Hemos recibido tu solicitud y un técnico la revisará en menos de 2 horas. '
-			. 'En breve recibirás el número de incidencia.';
-
-	$html =
-			'<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-		. '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
-		. '<body style="margin:0;padding:0;background:#0a0c10;">'
-		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0c10;">'
-		. '<tr><td align="center" style="padding:28px 14px;">'
-
-		. '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
-		. 'style="max-width:600px;width:100%;background:#111318;border:1px solid #1f232c;border-radius:14px;overflow:hidden;">'
-
-		// Cabecera
-		. '<tr><td style="padding:22px 32px;background:#0a0c10;border-bottom:1px solid #1f232c;">'
-		. '<span style="color:#f5f6f8;font-family:monospace;font-size:18px;font-weight:700;">ResolveCore</span>'
-		. '<span style="color:#00e5a0;font-family:monospace;font-size:11px;letter-spacing:.12em;'
-		. 'float:right;padding-top:6px;">// SOPORTE</span>'
-		. '</td></tr>'
-
-		// Cuerpo
-		. '<tr><td style="padding:32px;">'
-		. '<h1 style="margin:0 0 6px;color:#f5f6f8;font-family:Arial,sans-serif;font-size:21px;">'
-		. 'Hemos recibido tu solicitud</h1>'
-		. '<p style="margin:0 0 20px;color:#c5c8cf;font-family:Arial,sans-serif;font-size:14px;'
-		. 'line-height:1.6;">Hola <strong>' . $e_name . '</strong>, gracias por contactar con '
-		. 'ResolveCore. ' . esc_html( $intro ) . '</p>'
-
-		. $ticket_block
-
-		// Mensaje del cliente
-		. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
-		. 'text-transform:uppercase;margin-bottom:6px;">// Tu mensaje</div>'
-		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-		. 'style="margin:0 0 24px;border-left:3px solid #2a2e38;background:#0e1014;border-radius:0 8px 8px 0;">'
-		. '<tr><td style="padding:14px 18px;color:#c5c8cf;font-family:Arial,sans-serif;'
-		. 'font-size:13px;line-height:1.6;">' . $e_msg . '</td></tr></table>'
-
-		// Seguimiento
-		. '<div style="color:#7a7f8e;font-family:monospace;font-size:10px;letter-spacing:.12em;'
-		. 'text-transform:uppercase;margin-bottom:10px;">// Seguimiento de la incidencia</div>'
-		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-		. 'style="margin:0 0 22px;">' . $fases_html . '</table>'
-
-		. $track_block
-
-		. '</td></tr>'
-
-		// Pie
-		. '<tr><td style="padding:18px 32px;background:#0a0c10;border-top:1px solid #1f232c;">'
-		. '<p style="margin:0;color:#5a5f6c;font-family:Arial,sans-serif;font-size:11px;line-height:1.6;">'
-		. 'Este correo es automático. Para añadir información a la incidencia, '
-		. 'responde directamente a este mensaje.<br>'
-		. 'ResolveCore — Solución a tus problemas informáticos.</p>'
-		. '</td></tr>'
-
-		. '</table></td></tr></table></body></html>';
-
-	// Versión texto plano para multipart/alternative: mejora la entregabilidad
-	// y da una alternativa legible si el cliente no renderiza HTML.
-	$text  = "Hemos recibido tu solicitud\n\n";
-	$text .= 'Hola ' . $name . ', gracias por contactar con ResolveCore. ' . $intro . "\n\n";
-	if ( $ticket_id ) {
-		$text .= 'Número de incidencia: #' . (int) $ticket_id . "\n";
-		$text .= 'Categoría: ' . $type_label . "\n\n";
-	}
-	$text .= "Tu mensaje:\n" . $message . "\n\n";
-	$text .= "Seguimiento de la incidencia:\n";
-	foreach ( $fases as $i => $f ) {
-		$text .= '  ' . ( $i + 1 ) . '. ' . $f[0] . ' — ' . $f[1] . "\n";
-	}
-	if ( $track_url ) {
-		$text .= "\nVer estado en tiempo real:\n" . $track_url . "\n";
-	}
-	$text .= "\n—\nEste correo es automático. Para añadir información a la incidencia, "
-		. "responde directamente a este mensaje.\n"
-		. "ResolveCore — Solución a tus problemas informáticos.\n";
-
-	$headers = array(
-		'Content-Type: text/html; charset=UTF-8',
-		'Reply-To: ' . get_option( 'admin_email' ),
-		'List-Unsubscribe: <mailto:' . get_option( 'admin_email' ) . '?subject=baja-resolvecore>',
-	);
-
-	// Adjunta la parte de texto plano como AltBody solo para este envío.
-	$alt_body = static function ( $phpmailer ) use ( $text ) {
-		$phpmailer->AltBody = $text;
-	};
-	add_action( 'phpmailer_init', $alt_body );
-	$sent = @wp_mail( $email, $subject, $html, $headers );
-	remove_action( 'phpmailer_init', $alt_body );
-
-	if ( ! $sent ) {
-		error_log( '[resolvecore] confirmacion cliente: wp_mail devolvio false' );
-	}
-	return (bool) $sent;
-}
 
 /**
  * Consulta el estado de un ticket de MantisBT vía AJAX para mostrar timeline.
@@ -703,8 +494,18 @@ add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_tick
 
 /**
  * Crea la tabla rc_download_log si no existe.
+ *
+ * dbDelta es caro (lanza SHOW TABLES / SHOW COLUMNS): NO debe correr en cada
+ * request. Lo guardamos con una opción de versión, de modo que el esquema solo
+ * se evalúa la primera vez y cuando RC_DL_LOG_SCHEMA_VER cambie.
  */
+const RC_DL_LOG_SCHEMA_VER = '1';
+
 function rc_create_download_log_table(): void {
+	if ( get_option( 'rc_dl_log_schema_ver' ) === RC_DL_LOG_SCHEMA_VER ) {
+		return;
+	}
+
 	global $wpdb;
 	$table   = $wpdb->prefix . 'rc_download_log';
 	$charset = $wpdb->get_charset_collate();
@@ -722,7 +523,10 @@ function rc_create_download_log_table(): void {
 	) {$charset};";
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta( $sql );
+
+	update_option( 'rc_dl_log_schema_ver', RC_DL_LOG_SCHEMA_VER );
 }
+add_action( 'after_switch_theme', 'rc_create_download_log_table' );
 add_action( 'after_setup_theme', 'rc_create_download_log_table' );
 
 function rc_log_download( string $key, string $user_login, string $ip ): void {
@@ -805,6 +609,8 @@ function rc_tech_infra_status(): void {
 	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
 		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
 	}
+	// CSRF: mismo nonce que el resto de endpoints del panel técnico.
+	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
 
 	$cached = get_transient( 'rc_tech_infra_status' );
 	if ( is_array( $cached ) ) {
@@ -912,7 +718,13 @@ function rc_tech_my_tickets(): void {
 		}
 	}
 
+	// El filtro casa el login WP contra handler/reporter de Mantis. Si los dos
+	// sistemas usan logins distintos el filtro deja 0 resultados aunque haya
+	// tickets: avisamos en vez de mostrar un panel vacío sin explicación.
 	$out = array( 'tickets' => array_slice( $filtered, 0, 10 ) );
+	if ( ! $filtered && $issues ) {
+		$out['note'] = 'Hay tickets en Mantis pero ninguno casa con tu usuario «' . $user_hint . '». Revisa que tu login coincida con el de MantisBT.';
+	}
 	set_transient( $cache_key, $out, 2 * MINUTE_IN_SECONDS );
 	wp_send_json_success( $out );
 }
@@ -1105,8 +917,9 @@ function rc_tech_factura_inline(): void {
 	check_admin_referer( 'rc_factura' );
 	$id      = absint( wp_unslash( $_GET['rc_factura'] ) );
 	$cliente = sanitize_text_field( wp_unslash( $_GET['cliente'] ?? 'Cliente' ) );
-	$horas   = max( 0.25, (float) sanitize_text_field( wp_unslash( $_GET['horas'] ?? '1' ) ) );
-	$tarifa  = (float) sanitize_text_field( wp_unslash( $_GET['tarifa'] ?? '35.0' ) );
+	// Clamp de cordura: evita facturas con cifras absurdas por un enlace manipulado.
+	$horas   = min( 1000.0, max( 0.25, (float) sanitize_text_field( wp_unslash( $_GET['horas'] ?? '1' ) ) ) );
+	$tarifa  = min( 1000.0, max( 0.0, (float) sanitize_text_field( wp_unslash( $_GET['tarifa'] ?? '35.0' ) ) ) );
 	$tecnico = wp_get_current_user()->display_name;
 	$fecha   = wp_date( 'Y-m-d' );
 	$num     = sprintf( 'F-%s-%04d', gmdate( 'Ym' ), $id );
