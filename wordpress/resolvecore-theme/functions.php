@@ -529,6 +529,68 @@ function rc_create_download_log_table(): void {
 add_action( 'after_switch_theme', 'rc_create_download_log_table' );
 add_action( 'after_setup_theme', 'rc_create_download_log_table' );
 
+/**
+ * Provisiona (idempotente) las páginas WP que el flujo y el menú de navegación
+ * dan por hechas: /registro/, /dashboard/ y las páginas de recursos/legales.
+ *
+ * Sin esto, al instalar el tema en un WordPress limpio los enlaces del nav
+ * (incluido «Acceso clientes → /registro/») devuelven 404 porque la plantilla
+ * existe pero ninguna entrada de tipo «page» la usa. Se ejecuta al activar el
+ * tema y, como red de seguridad, una sola vez en init (guard por opción).
+ */
+const RC_PAGES_PROVISION_VER = '1';
+
+function rc_provision_pages() {
+	if ( get_option( 'rc_pages_provision_ver' ) === RC_PAGES_PROVISION_VER ) {
+		return;
+	}
+
+	// slug => [ título, plantilla, contenido (shortcode o vacío) ].
+	$pages = array(
+		'registro'      => array( 'Crear cuenta',        'page-registro.php',     '[rc_registro_cliente]' ),
+		'dashboard'     => array( 'Mi panel',            'page-dashboard.php',    '[rc_cliente_dashboard]' ),
+		'docs'          => array( 'Documentación',       'page-docs.php',         '' ),
+		'changelog'     => array( 'Changelog',           'page-changelog.php',    '' ),
+		'fleet-status'  => array( 'Estado de la flota',  'page-fleet-status.php', '' ),
+		'tecnicos'      => array( 'Área de técnicos',    'page-tecnicos.php',     '' ),
+		'contacto'      => array( 'Contacto',            'page-contacto.php',     '' ),
+		'aviso-legal'   => array( 'Aviso legal',         'page-aviso-legal.php',  '' ),
+		'privacidad'    => array( 'Política de privacidad', 'page-privacidad.php', '' ),
+		'cookies'       => array( 'Política de cookies', 'page-cookies.php',      '' ),
+	);
+
+	foreach ( $pages as $slug => $cfg ) {
+		list( $title, $template, $content ) = $cfg;
+
+		$existing = get_page_by_path( $slug );
+		if ( $existing instanceof WP_Post ) {
+			// Página ya existe: solo aseguramos la plantilla correcta.
+			if ( get_page_template_slug( $existing->ID ) !== $template ) {
+				update_post_meta( $existing->ID, '_wp_page_template', $template );
+			}
+			continue;
+		}
+
+		$page_id = wp_insert_post(
+			array(
+				'post_title'   => $title,
+				'post_name'    => $slug,
+				'post_status'  => 'publish',
+				'post_type'    => 'page',
+				'post_content' => $content,
+			)
+		);
+
+		if ( $page_id && ! is_wp_error( $page_id ) ) {
+			update_post_meta( $page_id, '_wp_page_template', $template );
+		}
+	}
+
+	update_option( 'rc_pages_provision_ver', RC_PAGES_PROVISION_VER );
+}
+add_action( 'after_switch_theme', 'rc_provision_pages' );
+add_action( 'init', 'rc_provision_pages' );
+
 function rc_log_download( string $key, string $user_login, string $ip ): void {
 	global $wpdb;
 	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
