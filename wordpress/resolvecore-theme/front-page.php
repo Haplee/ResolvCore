@@ -782,6 +782,94 @@
 		}
 		.rc-nav-links a, .rc-footer-col a { padding: 8px 0; display: inline-block; }
 	}
+
+	/* ============================================================
+		HERO SPLIT (cabecera a dos columnas + tarjeta mockup)
+	============================================================ */
+	.rc-hero--split { text-align: left; }
+	.rc-hero--split .rc-hero-inner {
+		position: relative; z-index: 2;
+		width: 100%; max-width: 1180px; margin: 0 auto;
+		display: grid; grid-template-columns: 1.05fr .95fr;
+		gap: 3.5rem; align-items: center;
+	}
+	.rc-hero--split .rc-hero-content { max-width: 560px; text-align: left; margin: 0; }
+	.rc-hero--split .rc-badge { margin-left: 0; margin-right: 0; }
+	.rc-hero--split .rc-hero-sub { margin-left: 0; margin-right: 0; }
+	.rc-hero--split .rc-hero-actions { justify-content: flex-start; }
+	.rc-hero--split .rc-hero-stats { justify-content: flex-start; grid-template-columns: repeat(4,auto); gap: 1.5rem 2rem; }
+
+	.rc-hero-visual { display: flex; justify-content: center; }
+	.rc-hero-card {
+		width: 100%; max-width: 400px;
+		background: linear-gradient(180deg, var(--rc-surface2), var(--rc-surface));
+		border: 1px solid var(--rc-border2); border-radius: var(--rc-radius-lg);
+		box-shadow: var(--rc-shadow-lg);
+		overflow: hidden; animation: rcFadeUp .9s .25s ease both;
+	}
+	.rc-hcard-head {
+		display: flex; align-items: center; gap: 7px;
+		padding: 12px 16px; border-bottom: 1px solid var(--rc-border);
+		background: rgba(0,0,0,.2);
+	}
+	.rc-hcard-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--rc-border2); }
+	.rc-hcard-dot:nth-child(1){ background:#ff5f57; } .rc-hcard-dot:nth-child(2){ background:#febc2e; } .rc-hcard-dot:nth-child(3){ background:#28c840; }
+	.rc-hcard-title { margin-left: 6px; font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted); }
+	.rc-hcard-body { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; padding: 1.5rem 1.5rem 1rem; align-items: center; }
+	.rc-hcard-score { text-align: center; }
+	.rc-hcard-ring {
+		position: relative;
+		width: 104px; height: 104px; border-radius: 50%;
+		background: conic-gradient(var(--rc-accent) calc(var(--val) * 1%), var(--rc-border) 0);
+		display: flex; align-items: center; justify-content: center; margin: 0 auto;
+	}
+	.rc-hcard-ring::after { content: ''; position: absolute; width: 80px; height: 80px; border-radius: 50%; background: var(--rc-surface); }
+	.rc-hcard-ring-val { position: relative; z-index: 1; font-family: var(--rc-mono); font-size: 1.7rem; font-weight: 700; color: var(--rc-accent); }
+	.rc-hcard-score-lbl { font-family: var(--rc-mono); font-size: 9px; letter-spacing: .1em; color: var(--rc-muted); margin-top: .6rem; }
+	.rc-hcard-metrics { display: flex; flex-direction: column; gap: .75rem; }
+	.rc-hcard-metric-top { display: flex; justify-content: space-between; font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted); margin-bottom: 5px; }
+	.rc-hcard-bar { height: 5px; background: var(--rc-border); border-radius: 3px; overflow: hidden; }
+	.rc-hcard-bar i { display: block; height: 100%; background: var(--rc-accent); border-radius: 3px; }
+	.rc-hcard-bar i.warn { background: #febc2e; }
+	.rc-hcard-foot {
+		display: flex; flex-wrap: wrap; gap: .5rem; padding: 0 1.5rem 1.25rem;
+	}
+	.rc-hcard-pill {
+		font-family: var(--rc-mono); font-size: 10px; letter-spacing: .03em;
+		color: var(--rc-muted); border: 1px solid var(--rc-border2);
+		padding: 4px 9px; border-radius: 100px;
+	}
+	.rc-hcard-pill.ok { color: var(--rc-accent); border-color: rgba(0,229,160,.3); }
+	.rc-hcard-pill.warn { color: #febc2e; border-color: rgba(254,188,46,.3); }
+
+	@media (max-width: 880px) {
+		.rc-hero--split .rc-hero-inner { grid-template-columns: 1fr; gap: 2.5rem; text-align: center; }
+		.rc-hero--split .rc-hero-content { margin: 0 auto; text-align: center; }
+		.rc-hero--split .rc-badge, .rc-hero--split .rc-hero-sub { margin-left: auto; margin-right: auto; }
+		.rc-hero--split .rc-hero-actions, .rc-hero--split .rc-hero-stats { justify-content: center; }
+		.rc-hero-visual { order: -1; }
+	}
+	@media (max-width: 460px) {
+		.rc-hcard-body { grid-template-columns: 1fr; }
+	}
+
+	/* ============================================================
+		SERVICE CARDS — refinado (más aire, icono protagonista)
+	============================================================ */
+	.rc-services-grid { gap: 1px; }
+	.rc-service-card { padding: 2.5rem 2rem; }
+	.rc-service-icon {
+		width: 52px; height: 52px; border-radius: 12px;
+		border-color: rgba(0,229,160,.25);
+		background: rgba(0,229,160,.05); color: var(--rc-accent);
+		font-size: 24px; margin-bottom: 1.5rem;
+		transition: transform .25s, background .25s;
+	}
+	.rc-service-card:hover .rc-service-icon { transform: translateY(-3px); background: rgba(0,229,160,.1); }
+	.rc-service-title { font-size: 1.05rem; margin-bottom: 1rem; }
+	.rc-service-desc { font-size: .9rem; }
+	.rc-service-card::before { width: 0; height: 3px; top: 0; left: 0; right: 0; bottom: auto; transition: width .35s; }
+	.rc-service-card:hover::before { width: 100%; height: 3px; }
 	</style>
 </head>
 <body <?php body_class(); ?>>
@@ -849,29 +937,66 @@
 <main id="main-content">
 
 <!-- ==================== HERO ==================== -->
-<section class="rc-hero">
+<section class="rc-hero rc-hero--split">
 	<div class="rc-hero-grid"></div>
 	<div class="rc-hero-glow"></div>
 	<div class="rc-hero-glow2"></div>
 	<div class="rc-hero-particles" id="rc-particles"></div>
-	<div class="rc-hero-content">
-	<div class="rc-badge">SERVICIO TÉCNICO REMOTO · WINDOWS · LINUX · ANDROID</div>
-	<h1>
-		<span class="dim">Solución a tus</span><br>
-		<span class="accent">problemas</span><br>
-		informáticos.
-	</h1>
-	<p class="rc-hero-sub">Diagnóstico automatizado, proyección de vida útil del hardware y análisis de vulnerabilidades del SO para Windows, Linux y Android.</p>
-	<div class="rc-hero-actions">
-		<a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
-		<a href="#servicios" class="rc-btn-outline">VER SERVICIOS</a>
-	</div>
-	<div class="rc-hero-stats">
-		<div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
-		<div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
-		<div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
-		<div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
-	</div>
+	<div class="rc-hero-inner">
+		<div class="rc-hero-content">
+		<div class="rc-badge">SERVICIO TÉCNICO REMOTO · WINDOWS · LINUX · ANDROID</div>
+		<h1>
+			<span class="dim">Solución a tus</span><br>
+			<span class="accent">problemas</span> informáticos.
+		</h1>
+		<p class="rc-hero-sub">Diagnóstico automatizado, proyección de vida útil del hardware y análisis de vulnerabilidades del SO para Windows, Linux y Android.</p>
+		<div class="rc-hero-actions">
+			<a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
+			<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-btn-outline">CREAR CUENTA</a>
+		</div>
+		<div class="rc-hero-stats">
+			<div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
+			<div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+			<div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
+			<div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
+		</div>
+		</div>
+
+		<aside class="rc-hero-visual" aria-hidden="true">
+		<div class="rc-hero-card">
+			<div class="rc-hcard-head">
+			<span class="rc-hcard-dot"></span><span class="rc-hcard-dot"></span><span class="rc-hcard-dot"></span>
+			<span class="rc-hcard-title">resolvecore · diagnóstico</span>
+			</div>
+			<div class="rc-hcard-body">
+			<div class="rc-hcard-score">
+				<div class="rc-hcard-ring" style="--val:87">
+				<div class="rc-hcard-ring-val">87</div>
+				</div>
+				<div class="rc-hcard-score-lbl">SALUD DEL SISTEMA</div>
+			</div>
+			<div class="rc-hcard-metrics">
+				<div class="rc-hcard-metric">
+				<div class="rc-hcard-metric-top"><span>CPU</span><span>34%</span></div>
+				<div class="rc-hcard-bar"><i style="width:34%"></i></div>
+				</div>
+				<div class="rc-hcard-metric">
+				<div class="rc-hcard-metric-top"><span>Memoria</span><span>61%</span></div>
+				<div class="rc-hcard-bar"><i style="width:61%"></i></div>
+				</div>
+				<div class="rc-hcard-metric">
+				<div class="rc-hcard-metric-top"><span>Disco</span><span>72%</span></div>
+				<div class="rc-hcard-bar"><i style="width:72%" class="warn"></i></div>
+				</div>
+			</div>
+			</div>
+			<div class="rc-hcard-foot">
+			<span class="rc-hcard-pill ok">● 0 críticas</span>
+			<span class="rc-hcard-pill warn">2 avisos</span>
+			<span class="rc-hcard-pill">informe PDF listo</span>
+			</div>
+		</div>
+		</aside>
 	</div>
 	<div class="rc-hero-scroll" aria-hidden="true">
 	<div class="rc-hero-scroll-mouse"><div class="rc-hero-scroll-wheel"></div></div>
@@ -985,68 +1110,6 @@
 	</div>
 	</div>
 </section>
-
-<hr class="rc-section-divider">
-
-<!-- ==================== DEMO INTERACTIVA ==================== -->
-<section class="rc-section" id="demo" aria-label="Demo interactiva">
-	<div class="rc-reveal">
-	<div class="rc-section-label">// DEMO INTERACTIVA</div>
-	<h2 class="rc-section-title">Prueba el diagnóstico</h2>
-	<p class="rc-section-desc">Elige plataforma y módulo para ver cómo actúa ResolveCore. Simulación con datos de ejemplo.</p>
-	</div>
-	<div class="rc-demo-layout rc-reveal">
-	<div>
-		<div class="rc-demo-platforms" role="tablist" aria-label="Plataforma de la demo">
-		<button class="rc-demo-plat active" role="tab" aria-selected="true" onclick="selectPlatform('windows',this)"><span aria-hidden="true">⊞</span> Windows</button>
-		<button class="rc-demo-plat" role="tab" aria-selected="false" onclick="selectPlatform('linux',this)"><span aria-hidden="true">☰</span> Linux</button>
-		<button class="rc-demo-plat" role="tab" aria-selected="false" onclick="selectPlatform('android',this)"><span aria-hidden="true">◈</span> Android</button>
-		</div>
-		<div class="rc-demo-controls">
-		<button class="rc-demo-btn active" onclick="selectModule('diagnostico',this)">
-			<div class="rc-demo-btn-dot"></div> Diagnóstico completo
-		</button>
-		<button class="rc-demo-btn" onclick="selectModule('vulnerabilidades',this)">
-			<div class="rc-demo-btn-dot"></div> Escaneo de vulnerabilidades
-		</button>
-		<button class="rc-demo-btn" onclick="selectModule('hardware',this)">
-			<div class="rc-demo-btn-dot"></div> Proyección de hardware
-		</button>
-		<button class="rc-demo-btn" onclick="selectModule('optimizacion',this)">
-			<div class="rc-demo-btn-dot"></div> Optimización del sistema
-		</button>
-		</div>
-		<div class="rc-demo-progress">
-		<div class="rc-demo-progress-label"><span id="rc-prog-label">Listo</span><span id="rc-prog-pct">—</span></div>
-		<div class="rc-demo-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso del análisis">
-			<div class="rc-demo-bar-fill" id="rc-demo-bar"></div>
-		</div>
-		</div>
-		<button type="button" class="rc-demo-replay" id="rc-demo-replay" onclick="replayDemo()">↻ Repetir análisis</button>
-	</div>
-	<div class="rc-terminal">
-		<div class="rc-term-header">
-		<div class="rc-term-dot td1"></div><div class="rc-term-dot td2"></div><div class="rc-term-dot td3"></div>
-		<span class="rc-term-title" id="rc-term-title">resolvecore — diagnóstico</span>
-		</div>
-		<div id="rc-term-output" aria-live="polite" aria-atomic="false"></div>
-	</div>
-	</div>
-
-	<!-- PANEL DE RESULTADO -->
-	<div class="rc-demo-result" id="rc-demo-result" hidden>
-	<div class="rc-demo-result-grid">
-		<div class="rc-demo-gauge-card">
-		<div class="rc-demo-gauge" id="rc-demo-gauge"></div>
-		<div class="rc-demo-gauge-lbl">Salud del sistema</div>
-		</div>
-		<div class="rc-demo-stats" id="rc-demo-stats"></div>
-	</div>
-	<div id="rc-demo-context"></div>
-	<a class="rc-demo-cta" href="#contacto">Solicitar diagnóstico real de mi equipo →</a>
-	</div>
-</section>
-
 
 <hr class="rc-section-divider">
 
@@ -1683,6 +1746,7 @@ function runDemo(instant) {
 	const lines  = mod.lines;
 	const output = document.getElementById('rc-term-output');
 	const bar    = document.getElementById('rc-demo-bar');
+	if (!output || !bar) { return; } /* demo retirada de la home: nada que pintar */
 	const barWrap = bar.parentElement;
 	const replay = document.getElementById('rc-demo-replay');
 	const reduce = demoReduceMotion || instant === true;
