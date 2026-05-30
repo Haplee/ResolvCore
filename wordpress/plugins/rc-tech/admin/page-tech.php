@@ -39,13 +39,44 @@ $err  = $data['error'] ?? '';
         <label><input type="checkbox" id="rc-tech-only-unassigned"> Sin asignar</label>
         <input type="search" id="rc-tech-q" placeholder="Buscar resumen…">
         <button type="button" class="button" id="rc-tech-refresh">↻ Refrescar</button>
-        <button type="button" class="button" id="rc-tech-toggle-view" data-view="table">Vista Kanban</button>
         <a class="button" href="<?php echo esc_url( rest_url( 'rc-tech/v1/export.csv?_wpnonce=' . wp_create_nonce( 'wp_rest' ) ) ); ?>">⇩ CSV</a>
         <span class="rc-tech-updated" id="rc-tech-updated"></span>
     </div>
 
+    <?php
+    // URL de Mantis (si rc-mantisbt está configurado) para la vista embebida.
+    $mantis_url = function_exists( 'rc_mantis_get_url' ) ? (string) rc_mantis_get_url() : '';
+    ?>
+    <nav class="rc-tech-views" aria-label="Vistas del panel">
+        <button type="button" class="rc-tech-view-btn active" data-view="table">Cola</button>
+        <button type="button" class="rc-tech-view-btn" data-view="kanban">Kanban</button>
+        <?php if ( $mantis_url ) : ?>
+            <button type="button" class="rc-tech-view-btn" data-view="mantis">MantisBT</button>
+        <?php endif; ?>
+    </nav>
+
     <div id="rc-tech-kanban" class="rc-tech-kanban" hidden></div>
 
+    <?php if ( $mantis_url ) : ?>
+    <section id="rc-tech-mantis" class="rc-tech-mantis" hidden>
+        <div class="rc-tech-mantis-bar">
+            <span>MantisBT embebido</span>
+            <a class="button" href="<?php echo esc_url( $mantis_url ); ?>" target="_blank" rel="noopener">⇱ Abrir en pestaña nueva</a>
+        </div>
+        <div class="rc-tech-mantis-fallback" id="rc-tech-mantis-fallback" hidden>
+            <p>No se ha podido embeber MantisBT (el servidor bloquea el iframe).</p>
+            <a class="button button-primary" href="<?php echo esc_url( $mantis_url ); ?>" target="_blank" rel="noopener">Abrir MantisBT →</a>
+        </div>
+        <iframe id="rc-tech-mantis-frame"
+                class="rc-tech-mantis-frame"
+                title="MantisBT"
+                src="about:blank"
+                data-src="<?php echo esc_url( $mantis_url ); ?>"
+                loading="lazy"></iframe>
+    </section>
+    <?php endif; ?>
+
+    <div class="rc-tech-table-wrap">
     <table class="wp-list-table widefat fixed striped rc-tech-table">
         <thead>
             <tr>
@@ -54,9 +85,9 @@ $err  = $data['error'] ?? '';
                 <th>Resumen</th>
                 <th style="width:200px">Cliente</th>
                 <th style="width:80px">SO</th>
-                <th style="width:100px">AnyDesk</th>
+                <th style="width:100px" class="col-anydesk">AnyDesk</th>
                 <th style="width:140px">SLA</th>
-                <th style="width:70px">Host</th>
+                <th style="width:70px" class="col-score">Host</th>
                 <th style="width:240px">Acciones</th>
             </tr>
         </thead>
@@ -69,6 +100,7 @@ $err  = $data['error'] ?? '';
             <?php endif; ?>
         </tbody>
     </table>
+    </div>
 
     <aside id="rc-tech-sidebar" class="rc-tech-sidebar" hidden>
         <button type="button" class="rc-tech-sidebar-close" aria-label="Cerrar">×</button>

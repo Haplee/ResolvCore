@@ -266,6 +266,38 @@ Panel Ionos → tu VPS → `Snapshots` → `Crear snapshot manual`. Recomendado 
 
 ## 8. Operación rutinaria
 
+### 8.0 Repo canónico y consolidación (A4 — auditoría 2026-05-29)
+
+Durante el desarrollo convivieron **tres** copias del proyecto en el VPS, lo que
+hacía ambigua la fuente de verdad:
+
+| Ruta | Qué era | Decisión |
+|------|---------|----------|
+| `/opt/resolvecore-repo`   | clon git de `main` | **CANÓNICO** — única fuente de verdad |
+| `/opt/resolvecore-git`    | clon git de una rama feature | borrar |
+| `/opt/resolvecore-source` | tar extraído sin `.git` | borrar |
+
+**Modelo definitivo**: solo `/opt/resolvecore-repo` (rama `main`). El docroot
+`/var/www/wp` es la instalación de WordPress (core + `wp-config.php` con el token
+Mantis) y **no** se versiona — el repo solo aporta `wordpress/` (tema + plugins).
+El sync tema/plugins se hace con `scripts/server/ops/sync-wp.sh`, que autodetecta
+el repo canónico y hace `rsync` a `/var/www/wp/wp-content`.
+
+```bash
+# Consolidar (una sola vez). Verifica primero que -repo está en main y limpio:
+cd /opt/resolvecore-repo && git fetch origin && git status
+
+# Borrar las copias redundantes:
+sudo rm -rf /opt/resolvecore-git /opt/resolvecore-source
+
+# A partir de aquí, ciclo de deploy estándar:
+cd /opt/resolvecore-repo && git fetch origin && git reset --hard origin/main
+sudo bash scripts/server/ops/sync-wp.sh main
+```
+
+> Nota: `deploy.sh` asumía `/var/www/wp/.git` (que no existe). El docroot no es un
+> repo git; el git vive en `/opt/resolvecore-repo`. Usa `sync-wp.sh` para tema/plugins.
+
 ### Actualizar tema/plugin desde local
 
 ```powershell

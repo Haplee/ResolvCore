@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResolveCore — MantisBT (preview)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Tokens espejo de ResolveCoreBranding.php (el render real lo inyecta el plugin en Mantis). */
+  :root{--m-bg:#0a0c10;--m-surface:#111318;--m-surface2:#16191f;--m-accent:#00e5a0;
+    --m-text:#e8eaf0;--m-muted:#7a7f8e;--m-border:#1e2229;--m-border2:#2a2f3a;
+    --m-grad:radial-gradient(1200px 600px at 70% -10%,rgba(0,229,160,.10),transparent 60%),
+             radial-gradient(900px 500px at 0% 10%,rgba(0,153,255,.08),transparent 55%)}
+  body{margin:0;background-color:var(--m-bg);background-image:var(--m-grad);background-attachment:fixed;
+    color:var(--m-text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+  .pv-bar{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;gap:6px;flex-wrap:wrap;
+    background:#000;border-bottom:1px solid var(--m-accent);padding:8px 12px;font-family:monospace;font-size:12px}
+  .pv-bar a{color:var(--m-muted);border:1px solid var(--m-border2);padding:5px 10px;border-radius:5px;text-decoration:none}
+  .pv-bar a:hover,.pv-bar a.on{color:var(--m-accent);border-color:var(--m-accent)}
+  .pv-bar b{color:var(--m-accent);margin-right:auto;align-self:center}
+  .pv-top{padding-top:48px}
+  .pv-note{color:var(--m-accent);font-size:12px;margin:12px;font-family:monospace;text-align:center}
+  .rc-mantis-topbar{display:flex;align-items:center;justify-content:center;padding:10px;
+    background:var(--m-surface);border-bottom:1px solid var(--m-border)}
+  .rc-mantis-topbar img{height:28px}
+  .rc-mantis-topbar span{color:var(--m-muted);font-size:12px;margin-left:10px}
+  table{border-collapse:collapse;width:90%;max-width:900px;margin:1.5rem auto;font-size:13px}
+  th{background:var(--m-surface2);color:var(--m-text);text-align:left;padding:8px 10px;border:1px solid var(--m-border)}
+  td{padding:8px 10px;border:1px solid var(--m-border);color:var(--m-text)}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  a{color:var(--m-accent)}
+  .bar{text-align:center;margin:1rem}
+  input{background:var(--m-surface2);color:var(--m-text);border:1px solid var(--m-border2);
+    border-radius:5px;padding:8px 12px;margin:0 6px}
+  button{background:var(--m-accent);color:#000;border:none;border-radius:5px;padding:8px 12px;
+    font-weight:700;cursor:pointer}
+  .rc-mantis-footer{text-align:center;padding:14px;color:var(--m-muted);font-size:11px;
+    border-top:1px solid var(--m-border);margin-top:2rem}
+</style>
+</head>
+<body>
+<nav class="pv-bar">
+  <b>PREVIEW</b>
+  <a href="index.html">Índice</a>
+  <a href="home.html">Home</a>
+  <a href="registro.html">Registro</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="tech.html">Panel técnico</a>
+  <a class="on" href="mantis.html">MantisBT</a>
+</nav>
+<div class="pv-top"></div>
+<div class="pv-note">MANTISBT · ResolveCoreBranding v1.1 — mock del branding. El render real lo inyecta el plugin en Mantis.</div>
+
+<div class="rc-mantis-topbar">
+  <img src="../assets/logo/resolvcore-logo-light.svg" alt="ResolveCore" onerror="this.style.display='none'">
+  <span>Gestión de incidencias</span>
+</div>
+<table>
+  <thead><tr><th>ID</th><th>Categoría</th><th>Resumen</th><th>Estado</th><th>Prioridad</th></tr></thead>
+  <tbody>
+    <tr><td><a href="#">0000042</a></td><td>Soporte</td><td>Equipo lento tras actualización</td><td>asignada</td><td>urgente</td></tr>
+    <tr><td><a href="#">0000038</a></td><td>Optimización</td><td>Limpieza de disco</td><td>resuelta</td><td>normal</td></tr>
+    <tr><td><a href="#">0000031</a></td><td>Red</td><td>Escaneo de vulnerabilidades</td><td>nueva</td><td>alta</td></tr>
+  </tbody>
+</table>
+<div class="bar"><input type="text" placeholder="Buscar bug…"><button>Filtrar</button></div>
+<div class="rc-mantis-footer">ResolveCore — Solución a tus problemas informáticos</div>
+</body>
+</html>

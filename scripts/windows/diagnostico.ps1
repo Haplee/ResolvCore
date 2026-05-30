@@ -19,7 +19,7 @@
     .\diagnostico.ps1 -OutputDir C:\Temp
 
 .NOTES
-    Autor:   Francisco Vidal Mateo (FranVi)
+    Autor:   Francisco Vidal Mateo (GitHub: Haplee)
     Versión: 2.0
 #>
 

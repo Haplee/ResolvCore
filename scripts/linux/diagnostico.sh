@@ -12,7 +12,7 @@
 #
 # Probado en:  Ubuntu 22.04 / 24.04, Debian 12.
 #
-# Autor:   Francisco Vidal Mateo (FranVi)
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # Versión: 2.0
 # ─────────────────────────────────────────────────────────────────────────────
 

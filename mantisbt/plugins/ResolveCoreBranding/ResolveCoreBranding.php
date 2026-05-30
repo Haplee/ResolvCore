@@ -12,8 +12,8 @@
  *   2. Login como admin en MantisBT > Gestionar > Gestionar plugins
  *   3. Instalar y activar.
  *
- * Autor:   Francisco Vidal Mateo (FranVi)
- * Versión: 1.0
+ * Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+ * Versión: 1.1
  */
 
 class ResolveCoreBranding extends MantisPlugin {
@@ -21,7 +21,7 @@ class ResolveCoreBranding extends MantisPlugin {
 	function register() {
 		$this->name        = 'ResolveCore Branding';
 		$this->description = 'Logo, título y CSS corporativo de ResolveCore.';
-		$this->version     = '1.0';
+		$this->version     = '1.1';
 		$this->author      = 'Francisco Vidal Mateo';
 		$this->url         = 'https://resolvecore.website';
 	}
@@ -46,67 +46,119 @@ class ResolveCoreBranding extends MantisPlugin {
 	}
 
 	private function css_block() {
-		$accent  = '#00e5a0';
-		$bg      = '#0a0c10';
-		$surface = '#111318';
-		$text    = '#e8eaf0';
-		$muted   = '#7a7f8e';
-		$border  = '#1e2229';
-
 		return <<<CSS
 <style>
+/* Tokens de marca ResolveCore (espejo de :root del tema). */
+:root {
+	--rc-bg: #0a0c10;
+	--rc-surface: #111318;
+	--rc-surface2: #16191f;
+	--rc-accent: #00e5a0;
+	--rc-accent2: #0099ff;
+	--rc-text: #e8eaf0;
+	--rc-muted: #7a7f8e;
+	--rc-border: #1e2229;
+	--rc-border2: #2a2f3a;
+	/* Fondo de marca: gradientes radiales sutiles sobre el oscuro base. */
+	--rc-grad-hero:
+		radial-gradient(1200px 600px at 70% -10%, rgba(0,229,160,.10), transparent 60%),
+		radial-gradient(900px 500px at 0% 10%, rgba(0,153,255,.08), transparent 55%);
+}
+
+/* Fondo de marca en toda la app + pantalla de login. */
 body {
-	background: {$bg} !important;
-	color: {$text} !important;
+	background-color: var(--rc-bg) !important;
+	background-image: var(--rc-grad-hero) !important;
+	background-attachment: fixed !important;
+	color: var(--rc-text) !important;
 }
-#header, .header, #navigation, .nav {
-	background: {$surface} !important;
-	border-bottom: 1px solid {$border};
+body.login_page, .login-container, #login-div {
+	background-color: var(--rc-bg) !important;
+	background-image: var(--rc-grad-hero) !important;
 }
+
+/* Cabecera / navegación. */
+#header, .header, #navigation, .nav, .menu, .responsive-menu {
+	background: var(--rc-surface) !important;
+	border-bottom: 1px solid var(--rc-border) !important;
+}
+
+/* Enlaces. */
 a, .bar-link {
-	color: {$accent} !important;
+	color: var(--rc-accent) !important;
 }
 a:hover {
 	color: #00ffb3 !important;
 }
-.form-container, .widget-container, .table-container {
-	background: {$surface} !important;
-	border-color: {$border} !important;
+
+/* Contenedores y tablas de bugs. */
+.form-container, .widget-container, .table-container,
+.login-container, .important-msg, .space-10 {
+	background: var(--rc-surface) !important;
+	border-color: var(--rc-border) !important;
 }
+table.width100, table.width100 td, .table-container table,
+.table-container th, .table-container td {
+	border-color: var(--rc-border) !important;
+	color: var(--rc-text) !important;
+}
+table.width100 tr:nth-child(even) td,
+.table-container tr:nth-child(even) td {
+	background: rgba(255,255,255,.02) !important;
+}
+th, .row-category, .form-title, .widget-title {
+	background: var(--rc-surface2) !important;
+	color: var(--rc-text) !important;
+}
+
+/* Formularios. */
 input, select, textarea {
-	background: #16191f !important;
-	color: {$text} !important;
-	border-color: #2a2f3a !important;
+	background: var(--rc-surface2) !important;
+	color: var(--rc-text) !important;
+	border: 1px solid var(--rc-border2) !important;
+	border-radius: 5px !important;
 }
-input[type=submit], input[type=button], .btn {
-	background: {$accent} !important;
+input:focus, select:focus, textarea:focus {
+	outline: none !important;
+	border-color: var(--rc-accent) !important;
+	box-shadow: 0 0 0 3px rgba(0,229,160,.12) !important;
+}
+input[type=submit], input[type=button], button, .btn {
+	background: var(--rc-accent) !important;
 	color: #000 !important;
 	border: none !important;
-	font-weight: 700;
+	border-radius: 5px !important;
+	font-weight: 700 !important;
+	cursor: pointer;
 }
+input[type=submit]:hover, input[type=button]:hover, button:hover, .btn:hover {
+	background: #00ffb3 !important;
+}
+
+/* Topbar de marca. */
 .rc-mantis-topbar {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	padding: 10px;
-	background: {$surface};
-	border-bottom: 1px solid {$border};
+	background: var(--rc-surface);
+	border-bottom: 1px solid var(--rc-border);
 }
 .rc-mantis-topbar img {
 	height: 28px;
 	vertical-align: middle;
 }
 .rc-mantis-topbar span {
-	color: {$muted};
+	color: var(--rc-muted);
 	font-size: 12px;
 	margin-left: 10px;
 }
 .rc-mantis-footer {
 	text-align: center;
 	padding: 14px 12px;
-	color: {$muted};
+	color: var(--rc-muted);
 	font-size: 11px;
-	border-top: 1px solid {$border};
+	border-top: 1px solid var(--rc-border);
 }
 </style>
 CSS;
