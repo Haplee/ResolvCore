@@ -538,7 +538,7 @@ add_action( 'after_setup_theme', 'rc_create_download_log_table' );
  * existe pero ninguna entrada de tipo «page» la usa. Se ejecuta al activar el
  * tema y, como red de seguridad, una sola vez en init (guard por opción).
  */
-const RC_PAGES_PROVISION_VER = '1';
+const RC_PAGES_PROVISION_VER = '2';
 
 function rc_provision_pages() {
 	if ( get_option( 'rc_pages_provision_ver' ) === RC_PAGES_PROVISION_VER ) {
@@ -562,11 +562,26 @@ function rc_provision_pages() {
 	foreach ( $pages as $slug => $cfg ) {
 		list( $title, $template, $content ) = $cfg;
 
+		// Extrae el nombre del shortcode (sin corchetes) si la página lo necesita.
+		$shortcode = ( '' !== $content && preg_match( '/^\[([a-z0-9_]+)\]$/', $content, $m ) ) ? $m[1] : '';
+
 		$existing = get_page_by_path( $slug );
 		if ( $existing instanceof WP_Post ) {
-			// Página ya existe: solo aseguramos la plantilla correcta.
+			// Página ya existe: aseguramos plantilla correcta…
 			if ( get_page_template_slug( $existing->ID ) !== $template ) {
 				update_post_meta( $existing->ID, '_wp_page_template', $template );
+			}
+			// …y, si necesita un shortcode que no está en el contenido, lo añadimos.
+			// (Bug en producción: la página /registro/ existía vacía y el formulario
+			//  [rc_registro_cliente] no se pintaba porque el template hace the_content().)
+			if ( $shortcode && ! has_shortcode( $existing->post_content, $shortcode ) ) {
+				$nuevo = trim( $existing->post_content . "\n\n" . $content );
+				wp_update_post(
+					array(
+						'ID'           => $existing->ID,
+						'post_content' => $nuevo,
+					)
+				);
 			}
 			continue;
 		}
@@ -590,6 +605,86 @@ function rc_provision_pages() {
 }
 add_action( 'after_switch_theme', 'rc_provision_pages' );
 add_action( 'init', 'rc_provision_pages' );
+
+/**
+ * Marca de ResolveCore en las pantallas de wp-login.php (login, recuperar
+ * contraseña y reset `action=rp` de los emails de activación).
+ *
+ * No reemplaza el flujo nativo de WordPress (seguro y probado): solo lo viste
+ * con el logo y la paleta del sitio para que el usuario no aterrice en una
+ * pantalla genérica de WordPress al pulsar «¿Olvidaste tu contraseña?».
+ */
+function rc_login_branding() {
+	$logo = get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg';
+	?>
+	<style>
+		body.login {
+			background: #0a0c10;
+			color: #e8eaf0;
+			font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		}
+		.login h1 a {
+			background-image: url('<?php echo esc_url( $logo ); ?>');
+			background-size: contain;
+			background-position: center;
+			width: 240px; height: 60px;
+			margin: 0 auto 16px;
+		}
+		.login form {
+			background: #111318;
+			border: 1px solid rgba(255,255,255,0.07);
+			border-radius: 12px;
+			box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+		}
+		.login label { color: #7a7f8e; font-size: 13px; }
+		.login input[type="text"],
+		.login input[type="password"],
+		.login input[type="email"] {
+			background: #1a1d24;
+			border: 1px solid rgba(255,255,255,0.13);
+			color: #e8eaf0;
+			border-radius: 8px;
+		}
+		.login input[type="text"]:focus,
+		.login input[type="password"]:focus,
+		.login input[type="email"]:focus {
+			border-color: #00e5a0;
+			box-shadow: 0 0 0 1px #00e5a0;
+			outline: none;
+		}
+		.wp-core-ui .button-primary {
+			background: #00e5a0 !important;
+			border: none !important;
+			color: #000 !important;
+			font-weight: 700;
+			text-shadow: none !important;
+			box-shadow: none !important;
+			border-radius: 8px;
+		}
+		.wp-core-ui .button-primary:hover { background: #00ffb3 !important; }
+		.login #nav a, .login #backtoblog a, .login #nav, .login #backtoblog { color: #7a7f8e !important; }
+		.login #nav a:hover, .login #backtoblog a:hover { color: #00e5a0 !important; }
+		.login .message, .login #login_error, .login .notice {
+			background: #1a1d24;
+			border-left-color: #00e5a0;
+			color: #e8eaf0;
+		}
+		.login #login_error { border-left-color: #ff6b35; }
+	</style>
+	<?php
+}
+add_action( 'login_enqueue_scripts', 'rc_login_branding' );
+
+/** El logo de wp-login enlaza al sitio, no a wordpress.org. */
+function rc_login_logo_url() {
+	return home_url( '/' );
+}
+add_filter( 'login_headerurl', 'rc_login_logo_url' );
+
+function rc_login_logo_text() {
+	return get_bloginfo( 'name' );
+}
+add_filter( 'login_headertext', 'rc_login_logo_text' );
 
 function rc_log_download( string $key, string $user_login, string $ip ): void {
 	global $wpdb;

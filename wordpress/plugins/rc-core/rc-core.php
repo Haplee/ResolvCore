@@ -5,7 +5,7 @@
  * Description: Funciones específicas del cliente — shortcodes [rc_cliente_dashboard]
  *              (tickets + solicitar informes) y [rc_registro_cliente] (alta de
  *              cuenta rol rc_cliente con enlace de activación por email).
- * Version:     1.5.1
+ * Version:     1.5.2
  * Author:      Francisco Vidal Mateo
  * Author URI:  https://github.com/Haplee
  * Text Domain: rc-core
@@ -166,12 +166,15 @@ function rc_mantis_crear_ticket( $summary, $description, $user_email ) {
  */
 function rc_mantis_listar_tickets( $user_email ) {
 
+	$issues = array();
+
 	// Vía preferente: RC_Mantis_API::search_issues (transporte centralizado).
 	if ( function_exists( 'rc_mantis_get_api' ) ) {
 		$api = rc_mantis_get_api();
 		if ( $api && method_exists( $api, 'search_issues' ) ) {
-			$res = $api->search_issues( $user_email, 50 );
-			return is_wp_error( $res ) ? array() : $res;
+			$res    = $api->search_issues( $user_email, 50 );
+			$issues = is_wp_error( $res ) ? array() : $res;
+			return rc_mantis_filtrar_por_cliente( $issues, $user_email );
 		}
 	}
 
@@ -198,8 +201,48 @@ function rc_mantis_listar_tickets( $user_email ) {
 		return array();
 	}
 
-	$body = json_decode( wp_remote_retrieve_body( $response ), true );
-	return isset( $body['issues'] ) ? $body['issues'] : array();
+	$body   = json_decode( wp_remote_retrieve_body( $response ), true );
+	$issues = isset( $body['issues'] ) ? $body['issues'] : array();
+	return rc_mantis_filtrar_por_cliente( $issues, $user_email );
+}
+
+/**
+ * Filtra una lista de issues dejando SOLO los del cliente indicado.
+ *
+ * Imprescindible por seguridad: el endpoint `/api/rest/issues` de Mantis
+ * **ignora** el parámetro `search` y devuelve TODOS los tickets, así que sin
+ * este filtro el dashboard de un cliente mostraría los tickets de los demás
+ * (fuga de datos). El criterio de pertenencia es robusto:
+ *   1) email del reporter == email del cliente, o
+ *   2) el email aparece en la descripción (lo inyectamos como
+ *      «Solicitado por: <email>» en rc_mantis_crear_ticket()).
+ *
+ * @param array  $issues      Lista de issues tal cual la devuelve Mantis.
+ * @param string $user_email  Email del cliente logueado.
+ * @return array              Solo los issues que pertenecen al cliente.
+ */
+function rc_mantis_filtrar_por_cliente( $issues, $user_email ) {
+	$email = strtolower( trim( (string) $user_email ) );
+	if ( '' === $email || empty( $issues ) || ! is_array( $issues ) ) {
+		return array();
+	}
+
+	$mios = array();
+	foreach ( $issues as $issue ) {
+		if ( ! is_array( $issue ) ) {
+			continue;
+		}
+
+		$reporter_email = strtolower( trim( (string) ( $issue['reporter']['email'] ?? '' ) ) );
+		$descripcion    = strtolower( (string) ( $issue['description'] ?? '' ) );
+
+		if ( ( '' !== $reporter_email && $reporter_email === $email )
+			|| ( '' !== $descripcion && false !== strpos( $descripcion, $email ) ) ) {
+			$mios[] = $issue;
+		}
+	}
+
+	return $mios;
 }
 
 
@@ -350,12 +393,24 @@ function rc_cliente_render_tickets( $tickets ) {
 		<ul class="rc-cliente-tickets">
 		<?php foreach ( $tickets as $ticket ) :
 			$status_name  = isset( $ticket['status']['name'] ) ? $ticket['status']['name'] : '';
-			$status_label = isset( $ticket['status']['label'] ) ? $ticket['status']['label'] : '';
+			$status_label = isset( $ticket['status']['label'] ) ? $ticket['status']['label'] : ( $status_name ?: '—' );
+			$status_id    = isset( $ticket['status']['id'] ) ? (int) $ticket['status']['id'] : 0;
 			$priority     = isset( $ticket['priority']['label'] ) ? $ticket['priority']['label'] : '-';
+			$prio_name    = isset( $ticket['priority']['name'] ) ? $ticket['priority']['name'] : '';
 			$created_at   = isset( $ticket['created_at'] ) ? $ticket['created_at'] : '';
+			$updated_at   = isset( $ticket['updated_at'] ) ? $ticket['updated_at'] : '';
 			$adjuntos     = isset( $ticket['attachments'] ) ? $ticket['attachments'] : array();
+
+			// Familia de estado para el borde-acento: <50 pendiente, 50-79 en curso, >=80 hecho.
+			if ( $status_id >= 80 ) {
+				$estado_clase = 'is-hecho';
+			} elseif ( $status_id >= 50 ) {
+				$estado_clase = 'is-progreso';
+			} else {
+				$estado_clase = 'is-pendiente';
+			}
 			?>
-			<li class="rc-cliente-ticket">
+			<li class="rc-cliente-ticket <?php echo esc_attr( $estado_clase ); ?>">
 
 				<div class="rc-ticket-head">
 					<span class="rc-ticket-id">#<?php echo intval( $ticket['id'] ); ?></span>
@@ -369,8 +424,13 @@ function rc_cliente_render_tickets( $tickets ) {
 				</div>
 
 				<div class="rc-ticket-meta">
-					<?php echo $created_at ? esc_html( gmdate( 'd/m/Y', strtotime( $created_at ) ) ) : '-'; ?>
-					· prioridad <?php echo esc_html( $priority ); ?>
+					<span>Creado <?php echo $created_at ? esc_html( gmdate( 'd/m/Y', strtotime( $created_at ) ) ) : '-'; ?></span>
+					<?php if ( $updated_at && $updated_at !== $created_at ) : ?>
+						<span class="rc-ticket-meta-sep">·</span>
+						<span>Actualizado <?php echo esc_html( gmdate( 'd/m/Y', strtotime( $updated_at ) ) ); ?></span>
+					<?php endif; ?>
+					<span class="rc-ticket-meta-sep">·</span>
+					<span class="rc-ticket-prio is-<?php echo esc_attr( $prio_name ); ?>"><?php echo esc_html( $priority ); ?></span>
 				</div>
 
 				<?php if ( ! empty( $adjuntos ) ) : ?>

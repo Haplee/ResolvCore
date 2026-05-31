@@ -20,8 +20,8 @@ Text Domain: resolvecore
   --rc-surface2:#1a1d24;
   --rc-border:  rgba(255,255,255,0.07);
   --rc-border2: rgba(255,255,255,0.13);
-  --rc-accent:  #3d8bff;
-  --rc-accent2: #6ea8ff;
+  --rc-accent:  #00e5a0;
+  --rc-accent2: #0099ff;
   --rc-warn:    #ff6b35;
   --rc-text:    #e8eaf0;
   --rc-muted:   #7a7f8e;
@@ -38,7 +38,8 @@ Text Domain: resolvecore
   --rc-shadow-lg:0 12px 40px rgba(0,0,0,.45);
 
   /* gradientes de marca (sutiles) */
-  --rc-grad-hero:radial-gradient(1100px 520px at 72% -12%, rgba(61,139,255,.06), transparent 62%);
+  --rc-grad-hero:radial-gradient(1200px 600px at 70% -10%, rgba(0,229,160,.10), transparent 60%),
+                 radial-gradient(900px 500px at 0% 10%, rgba(0,153,255,.08), transparent 55%);
   --rc-grad-surface:linear-gradient(180deg, var(--rc-surface), var(--rc-bg));
 
   /* breakpoints documentados: 1100 desktop · 760 tablet · 460 móvil */
@@ -490,6 +491,15 @@ section[style] > div,
 .rc-dash-hero-title { font-family: var(--rc-mono); font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700;
                       margin: .4rem 0 .6rem; line-height: 1.15; }
 .rc-dash-hero-sub { color: var(--rc-muted); font-size: 1rem; max-width: 620px; line-height: 1.6; }
+.rc-dash-hero-meta { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1.2rem; }
+.rc-dash-hero-chip { display: inline-flex; align-items: center; gap: 8px;
+                     font-family: var(--rc-mono); font-size: 12px; color: var(--rc-muted);
+                     background: var(--rc-surface2); border: 1px solid var(--rc-border2);
+                     padding: 6px 14px; border-radius: 999px; }
+.rc-dash-hero-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rc-accent); }
+.rc-dash-hero-logout { font-family: var(--rc-mono); font-size: 12px; color: var(--rc-muted);
+                       text-decoration: none; transition: color .2s; }
+.rc-dash-hero-logout:hover { color: var(--rc-accent); }
 
 .rc-dash-body { padding: 2.5rem 1.5rem 0; }
 .rc-dash-wrap { max-width: 1000px; margin: 0 auto; }
@@ -556,16 +566,36 @@ section[style] > div,
                   margin-bottom: .7rem; }
 .rc-ticket-id { font-family: var(--rc-mono); font-size: .95rem; font-weight: 700;
                 color: var(--rc-accent); }
-.rc-ticket-status { font-family: var(--rc-mono); font-size: 11px;
-                    padding: 3px 12px; border-radius: 999px;
+.rc-ticket-status { display: inline-flex; align-items: center; gap: 6px;
+                    font-family: var(--rc-mono); font-size: 11px;
+                    padding: 4px 12px; border-radius: 999px;
                     background: var(--rc-surface2); color: var(--rc-muted);
-                    border: 1px solid var(--rc-border2); letter-spacing: .04em; }
-.rc-status--closed   { background: rgba(0,229,160,.1); color: var(--rc-accent);
-                       border-color: rgba(0,229,160,.3); }
-.rc-status--resolved { background: rgba(0,153,255,.1); color: var(--rc-accent2);
-                       border-color: rgba(0,153,255,.3); }
-.rc-ticket-summary { font-size: 1rem; color: var(--rc-text); margin-bottom: .35rem; }
-.rc-ticket-meta { font-size: .82rem; color: var(--rc-muted); margin-bottom: .8rem; }
+                    border: 1px solid var(--rc-border2); letter-spacing: .04em;
+                    text-transform: capitalize; white-space: nowrap; }
+.rc-ticket-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%;
+                            background: currentColor; flex-shrink: 0; }
+/* En curso (azul) */
+.rc-status--assigned, .rc-status--acknowledged, .rc-status--confirmed {
+    background: rgba(0,153,255,.1); color: var(--rc-accent2); border-color: rgba(0,153,255,.3); }
+/* Pendiente / esperando (ámbar) */
+.rc-status--new, .rc-status--feedback {
+    background: rgba(254,188,46,.1); color: #febc2e; border-color: rgba(254,188,46,.3); }
+/* Hecho (verde) */
+.rc-status--resolved, .rc-status--closed {
+    background: rgba(0,229,160,.1); color: var(--rc-accent); border-color: rgba(0,229,160,.3); }
+/* Borde-acento izquierdo según estado */
+.rc-cliente-ticket { border-left: 3px solid var(--rc-border2); }
+.rc-cliente-ticket.is-progreso { border-left-color: var(--rc-accent2); }
+.rc-cliente-ticket.is-pendiente { border-left-color: #febc2e; }
+.rc-cliente-ticket.is-hecho { border-left-color: var(--rc-accent); }
+.rc-ticket-summary { font-size: 1rem; color: var(--rc-text); margin-bottom: .35rem; font-weight: 500; }
+.rc-ticket-meta { font-size: .82rem; color: var(--rc-muted); margin-bottom: .8rem;
+                  display: flex; flex-wrap: wrap; gap: .35rem .8rem; align-items: center; }
+.rc-ticket-meta .rc-ticket-meta-sep { color: var(--rc-border2); }
+.rc-ticket-prio { font-family: var(--rc-mono); font-size: 10px; letter-spacing: .04em;
+                  text-transform: uppercase; padding: 1px 7px; border-radius: 4px;
+                  border: 1px solid var(--rc-border2); color: var(--rc-muted); }
+.rc-ticket-prio.is-urgent, .rc-ticket-prio.is-high { color: #ff8a5c; border-color: rgba(255,107,53,.35); }
 .rc-ticket-attachments { background: var(--rc-bg); border: 1px solid var(--rc-border);
                          border-radius: 5px; padding: .7rem 1rem; margin-bottom: .8rem; }
 .rc-ticket-attachments strong { display: block; font-size: .8rem;
