@@ -129,7 +129,8 @@
 		width: 180px; height: 45px;
 		object-fit: contain; object-position: left center;
 	}
-	.rc-nav-links { display: flex; gap: 2rem; list-style: none; }
+	.rc-nav-links { display: flex; align-items: center; gap: 2rem; list-style: none; }
+	.rc-nav-dd { display: flex; align-items: center; }
 	.rc-nav-links a {
 		font-size: 13px; color: var(--rc-muted); text-decoration: none;
 		font-weight: 500; letter-spacing: .03em; transition: color .2s;
@@ -147,12 +148,12 @@
 		font-family: var(--rc-sans); font-size: 13px; color: var(--rc-muted);
 		background: none; border: none; cursor: pointer; font-weight: 500;
 		letter-spacing: .03em; transition: color .2s;
-		display: flex; align-items: center; gap: 5px; padding: 0; line-height: inherit;
+		display: inline-flex; align-items: center; gap: 5px; padding: 0; line-height: 1; white-space: nowrap;
 	}
 	.rc-nav-dd-btn:hover,
 	.rc-nav-dd:hover .rc-nav-dd-btn,
 	.rc-nav-dd-btn[aria-expanded="true"] { color: var(--rc-text); }
-	.rc-nav-dd-caret { font-size: 9px; transition: transform .25s; }
+	.rc-nav-dd-caret { font-size: 9px; line-height: 1; flex-shrink: 0; transition: transform .25s; }
 	.rc-nav-dd:hover .rc-nav-dd-caret,
 	.rc-nav-dd-btn[aria-expanded="true"] .rc-nav-dd-caret { transform: rotate(180deg); }
 	.rc-nav-dd-menu {
@@ -1108,6 +1109,67 @@
 		<div class="rc-flow-title">FACTURACIÓN</div>
 		<div class="rc-flow-desc">Factura automática por intervención o cargo a suscripción mensual</div>
 	</div>
+	</div>
+</section>
+
+<hr class="rc-section-divider">
+
+<!-- ==================== DEMO INTERACTIVA ==================== -->
+<section class="rc-section" id="demo" aria-label="Demo interactiva">
+	<div class="rc-reveal">
+	<div class="rc-section-label">// DEMO INTERACTIVA</div>
+	<h2 class="rc-section-title">Prueba el diagnóstico</h2>
+	<p class="rc-section-desc">Elige plataforma y módulo para ver cómo actúa ResolveCore. Simulación con datos de ejemplo.</p>
+	</div>
+	<div class="rc-demo-layout rc-reveal">
+	<div>
+		<div class="rc-demo-platforms" role="tablist" aria-label="Plataforma de la demo">
+		<button class="rc-demo-plat active" role="tab" aria-selected="true" onclick="selectPlatform('windows',this)"><span aria-hidden="true">⊞</span> Windows</button>
+		<button class="rc-demo-plat" role="tab" aria-selected="false" onclick="selectPlatform('linux',this)"><span aria-hidden="true">☰</span> Linux</button>
+		<button class="rc-demo-plat" role="tab" aria-selected="false" onclick="selectPlatform('android',this)"><span aria-hidden="true">◈</span> Android</button>
+		</div>
+		<div class="rc-demo-controls">
+		<button class="rc-demo-btn active" onclick="selectModule('diagnostico',this)">
+			<div class="rc-demo-btn-dot"></div> Diagnóstico completo
+		</button>
+		<button class="rc-demo-btn" onclick="selectModule('vulnerabilidades',this)">
+			<div class="rc-demo-btn-dot"></div> Escaneo de vulnerabilidades
+		</button>
+		<button class="rc-demo-btn" onclick="selectModule('hardware',this)">
+			<div class="rc-demo-btn-dot"></div> Proyección de hardware
+		</button>
+		<button class="rc-demo-btn" onclick="selectModule('optimizacion',this)">
+			<div class="rc-demo-btn-dot"></div> Optimización del sistema
+		</button>
+		</div>
+		<div class="rc-demo-progress">
+		<div class="rc-demo-progress-label"><span id="rc-prog-label">Listo</span><span id="rc-prog-pct">—</span></div>
+		<div class="rc-demo-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso del análisis">
+			<div class="rc-demo-bar-fill" id="rc-demo-bar"></div>
+		</div>
+		</div>
+		<button type="button" class="rc-demo-replay" id="rc-demo-replay" onclick="replayDemo()">↻ Repetir análisis</button>
+	</div>
+	<div class="rc-terminal">
+		<div class="rc-term-header">
+		<div class="rc-term-dot td1"></div><div class="rc-term-dot td2"></div><div class="rc-term-dot td3"></div>
+		<span class="rc-term-title" id="rc-term-title">resolvecore — diagnóstico</span>
+		</div>
+		<div id="rc-term-output" aria-live="polite" aria-atomic="false"></div>
+	</div>
+	</div>
+
+	<!-- PANEL DE RESULTADO -->
+	<div class="rc-demo-result" id="rc-demo-result" hidden>
+	<div class="rc-demo-result-grid">
+		<div class="rc-demo-gauge-card">
+		<div class="rc-demo-gauge" id="rc-demo-gauge"></div>
+		<div class="rc-demo-gauge-lbl">Salud del sistema</div>
+		</div>
+		<div class="rc-demo-stats" id="rc-demo-stats"></div>
+	</div>
+	<div id="rc-demo-context"></div>
+	<a class="rc-demo-cta" href="#contacto">Solicitar diagnóstico real de mi equipo →</a>
 	</div>
 </section>
 

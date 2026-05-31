@@ -28,6 +28,15 @@ $current_user = is_user_logged_in() ? wp_get_current_user() : null;
 			<p class="rc-dash-hero-sub">
 				Solicita un informe técnico y consulta el estado de tus tickets en un solo sitio.
 			</p>
+			<?php if ( $current_user ) : ?>
+				<div class="rc-dash-hero-meta">
+					<span class="rc-dash-hero-chip">
+						<span class="rc-dash-hero-dot" aria-hidden="true"></span>
+						<?php echo esc_html( $current_user->user_email ); ?>
+					</span>
+					<a class="rc-dash-hero-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">Cerrar sesión</a>
+				</div>
+			<?php endif; ?>
 		</div>
 	</section>
 
