@@ -763,7 +763,7 @@
 	.rc-hero--split .rc-badge { margin-left: 0; margin-right: 0; }
 	.rc-hero--split .rc-hero-sub { margin-left: 0; margin-right: 0; }
 	.rc-hero--split .rc-hero-actions { justify-content: flex-start; }
-	.rc-hero--split .rc-hero-stats { grid-template-columns: repeat(4,1fr); gap: 1.5rem 1.25rem; justify-items: center; text-align: center; }
+	.rc-hero--split .rc-hero-stats { grid-column: 1 / -1; grid-template-columns: repeat(4,1fr); gap: 1.5rem 1.25rem; justify-items: center; text-align: center; max-width: 760px; width: 100%; margin: 1.5rem auto 0; }
 
 	.rc-hero-visual { display: flex; justify-content: center; }
 	.rc-hero-card {
@@ -922,12 +922,6 @@
 			<a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
 			<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-btn-outline">CREAR CUENTA</a>
 		</div>
-		<div class="rc-hero-stats">
-			<div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
-			<div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
-			<div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
-			<div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
-		</div>
 		</div>
 
 		<aside class="rc-hero-visual" aria-hidden="true">
@@ -965,6 +959,13 @@
 			</div>
 		</div>
 		</aside>
+
+		<div class="rc-hero-stats">
+			<div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
+			<div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+			<div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
+			<div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
+		</div>
 	</div>
 	<div class="rc-hero-scroll" aria-hidden="true">
 	<div class="rc-hero-scroll-mouse"><div class="rc-hero-scroll-wheel"></div></div>
