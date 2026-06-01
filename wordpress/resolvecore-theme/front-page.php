@@ -185,7 +185,7 @@
 	.rc-nav-cta {
 		font-family: var(--rc-mono); font-size: 12px; letter-spacing: .06em;
 		color: var(--rc-accent); border: 1px solid var(--rc-accent);
-		padding: 8px 18px; text-decoration: none; transition: all .25s;
+		padding: 8px 18px; text-decoration: none; transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s, transform .25s;
 	}
 	.rc-nav-cta:hover { background: var(--rc-accent); color: #000; }
 	.rc-nav-access {
@@ -201,7 +201,7 @@
 	}
 	.rc-hamburger span {
 		display: block; width: 22px; height: 1.5px;
-		background: var(--rc-text); transition: all .3s;
+		background: var(--rc-text); transition: background-color .3s, transform .3s, opacity .3s;
 	}
 	.rc-mobile-menu {
 		display: none; position: fixed; top: 64px; left: 0; right: 0;
@@ -305,7 +305,7 @@
 		font-family: var(--rc-mono); font-size: 12px; letter-spacing: .06em;
 		color: #000; background: var(--rc-accent); border: none;
 		padding: 14px 30px; cursor: pointer; font-weight: 700;
-		transition: all .25s; text-decoration: none; display: inline-flex;
+		transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s, transform .25s; text-decoration: none; display: inline-flex;
 		align-items: center; gap: 8px;
 	}
 	.rc-btn-primary:hover { background: #00ffb3; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,229,160,.25); }
@@ -313,7 +313,7 @@
 		font-family: var(--rc-mono); font-size: 12px; letter-spacing: .06em;
 		color: var(--rc-text); background: transparent;
 		border: 1px solid var(--rc-border2); padding: 14px 30px;
-		cursor: pointer; transition: all .25s; text-decoration: none;
+		cursor: pointer; transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s, transform .25s; text-decoration: none;
 		display: inline-flex; align-items: center; gap: 8px;
 	}
 	.rc-btn-outline:hover { border-color: var(--rc-accent); color: var(--rc-accent); }
@@ -445,7 +445,7 @@
 		flex: 1; font-family: var(--rc-mono); font-size: 11px; letter-spacing: .04em;
 		color: var(--rc-muted); background: var(--rc-surface);
 		border: 1px solid var(--rc-border2); padding: 8px 6px; cursor: pointer;
-		transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+		transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
 	}
 	.rc-demo-plat:hover, .rc-demo-plat.active {
 		color: var(--rc-accent); border-color: rgba(0,229,160,.4); background: rgba(0,229,160,.05);
@@ -455,7 +455,7 @@
 		font-family: var(--rc-mono); font-size: 12px; letter-spacing: .05em;
 		color: var(--rc-muted); background: var(--rc-surface);
 		border: 1px solid var(--rc-border2); padding: 10px 16px;
-		cursor: pointer; transition: all .2s; text-align: left;
+		cursor: pointer; transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s; text-align: left;
 		display: flex; align-items: center; gap: 10px;
 	}
 	.rc-demo-btn:hover, .rc-demo-btn.active {
@@ -469,7 +469,7 @@
 	.rc-demo-replay {
 		margin-top: 1rem; font-family: var(--rc-mono); font-size: 11px; letter-spacing: .04em;
 		color: var(--rc-muted); background: transparent; border: 1px solid var(--rc-border2);
-		padding: 8px 14px; cursor: pointer; transition: all .2s;
+		padding: 8px 14px; cursor: pointer; transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s;
 	}
 	.rc-demo-replay:hover { color: var(--rc-accent); border-color: rgba(0,229,160,.4); }
 	.rc-demo-replay:disabled { opacity: .4; cursor: not-allowed; }
@@ -524,7 +524,7 @@
 	.rc-demo-cta {
 		display: inline-block; margin-top: 1.5rem; font-family: var(--rc-mono);
 		font-size: 12px; letter-spacing: .04em; color: var(--rc-accent);
-		border: 1px solid var(--rc-accent); padding: 11px 22px; text-decoration: none; transition: all .25s;
+		border: 1px solid var(--rc-accent); padding: 11px 22px; text-decoration: none; transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s, transform .25s;
 	}
 	.rc-demo-cta:hover { background: var(--rc-accent); color: #000; }
 	@media (max-width: 760px) {
@@ -546,7 +546,7 @@
 	.rc-vuln-name { flex: 1; }
 	.rc-vuln-name a { color: var(--rc-accent2); text-decoration: none; border-bottom: 1px dotted rgba(0,153,255,.45); }
 	.rc-vuln-name a:hover { color: var(--rc-accent); }
-	.rc-vuln-fix { font-family: var(--rc-mono); font-size: 10px; color: var(--rc-accent); cursor: pointer; padding: 3px 8px; border: 1px solid rgba(0,229,160,.2); transition: all .2s; background: transparent; }
+	.rc-vuln-fix { font-family: var(--rc-mono); font-size: 10px; color: var(--rc-accent); cursor: pointer; padding: 3px 8px; border: 1px solid rgba(0,229,160,.2); transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s; background: transparent; }
 	.rc-vuln-fix:hover { background: rgba(0,229,160,.1); }
 	.rc-vuln-fix:disabled { cursor: default; opacity: .7; }
 	.rc-vuln-fix.fixed { color: #28c840; border-color: rgba(40,200,64,.2); cursor: default; }
@@ -568,7 +568,7 @@
 	.rc-download-card {
 		background: var(--rc-surface2); border: 1px solid var(--rc-border2);
 		padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;
-		transition: all .25s; position: relative; overflow: hidden;
+		transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s, transform .25s; position: relative; overflow: hidden;
 	}
 	.rc-download-card:hover { border-color: rgba(0,229,160,.3); transform: translateY(-2px); }
 	.rc-download-card-icon { font-size: 24px; }
@@ -579,7 +579,7 @@
 		font-family: var(--rc-mono); font-size: 11px; letter-spacing: .05em;
 		color: var(--rc-accent); border: 1px solid rgba(0,229,160,.25);
 		padding: 8px 14px; text-decoration: none; display: inline-flex;
-		align-items: center; gap: 6px; transition: all .2s; width: fit-content;
+		align-items: center; gap: 6px; transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s; width: fit-content;
 	}
 	.rc-download-card-btn:hover { background: rgba(0,229,160,.08); }
 	.rc-download-github {
@@ -622,42 +622,7 @@
 	}
 	.pf-check { color: var(--rc-accent); } .pf-none { color: var(--rc-border2); }
 
-	/* ============================================================
-		CONTACT FORM
-	============================================================ */
-	.rc-contact-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 3rem; align-items: start; }
-	.rc-contact-info { display: flex; flex-direction: column; gap: 1.5rem; }
-	.rc-contact-item { display: flex; align-items: flex-start; gap: 1rem; }
-	.rc-contact-item-icon { font-size: 18px; margin-top: 2px; }
-	.rc-contact-item-label { font-family: var(--rc-mono); font-size: 11px; color: var(--rc-muted); letter-spacing: .06em; margin-bottom: 3px; }
-	.rc-contact-item-val { font-size: 14px; color: var(--rc-text); }
-	.rc-contact-item-val a { color: var(--rc-accent); text-decoration: none; }
-	.rc-form { display: flex; flex-direction: column; gap: 1rem; }
-	.rc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-	.rc-form-group { display: flex; flex-direction: column; gap: 6px; }
-	.rc-form-label { font-family: var(--rc-mono); font-size: 10px; letter-spacing: .08em; color: var(--rc-muted); }
-	.rc-form-input, .rc-form-select, .rc-form-textarea {
-		background: var(--rc-surface2); border: 1px solid var(--rc-border2);
-		color: var(--rc-text); font-family: var(--rc-sans); font-size: 14px;
-		padding: 10px 14px; transition: border-color .2s; outline: none;
-		width: 100%;
-	}
-	.rc-form-input:focus, .rc-form-select:focus, .rc-form-textarea:focus {
-		border-color: var(--rc-accent);
-	}
-	.rc-form-select { appearance: none; cursor: pointer; }
-	.rc-form-textarea { resize: vertical; min-height: 110px; font-family: var(--rc-sans); }
-	.rc-form-submit {
-		font-family: var(--rc-mono); font-size: 12px; letter-spacing: .06em;
-		color: #000; background: var(--rc-accent); border: none;
-		padding: 13px 28px; cursor: pointer; font-weight: 700;
-		transition: all .25s; align-self: flex-start;
-	}
-	.rc-form-submit:hover { background: #00ffb3; transform: translateY(-1px); }
-	.rc-form-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-	.rc-form-msg { font-family: var(--rc-mono); font-size: 12px; padding: 10px 14px; display: none; }
-	.rc-form-msg.success { background: rgba(40,200,64,.08); border: 1px solid rgba(40,200,64,.2); color: #28c840; display: block; }
-	.rc-form-msg.error   { background: rgba(255,107,53,.08); border: 1px solid rgba(255,107,53,.2); color: var(--rc-warn); display: block; }
+	/* CSS del formulario de contacto eliminada (form retirado 01-06-2026). */
 
 	/* ============================================================
 		FOOTER
@@ -683,7 +648,7 @@
 		width: 40px; height: 40px; background: var(--rc-surface2);
 		border: 1px solid var(--rc-border2); cursor: pointer;
 		display: flex; align-items: center; justify-content: center;
-		font-size: 16px; color: var(--rc-muted); transition: all .25s;
+		font-size: 16px; color: var(--rc-muted); transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s, transform .25s;
 		opacity: 0; pointer-events: none; z-index: 500;
 	}
 	#rc-back-top.visible { opacity: 1; pointer-events: auto; }
@@ -742,11 +707,10 @@
 	}
 
 	@media (max-width: 760px) {
-		.rc-demo-layout, .rc-contact-layout { grid-template-columns: 1fr; }
+		.rc-demo-layout { grid-template-columns: 1fr; }
 		.rc-nav-links { display: none; }
 		.rc-nav-cta, .rc-nav-access { display: none; }
 		.rc-hamburger { display: flex; }
-		.rc-form-row { grid-template-columns: 1fr; }
 		.rc-download-github { flex-direction: column; }
 		.rc-flow { justify-content: center; gap: .25rem; }
 		.rc-flow-step { min-width: 90px; flex: 0 0 calc(33% - .5rem); }
@@ -776,7 +740,6 @@
 		.rc-services-grid { grid-template-columns: 1fr; }
 		.rc-terminal { font-size: 11px; padding: 1rem; min-height: 240px; max-height: 60vh; overflow-y: auto; }
 		.rc-faq-q { font-size: 13px; padding: 1rem; }
-		.rc-form-input, .rc-form-select, .rc-form-textarea { font-size: 16px; } /* iOS no zoom on focus */
 	}
 	/* Touch tap targets ≥ 44px (WCAG) */
 	@media (hover: none) {
@@ -957,12 +920,7 @@
 			<a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
 			<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-btn-outline">CREAR CUENTA</a>
 		</div>
-		<div class="rc-hero-stats">
-			<div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
-			<div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
-			<div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
-			<div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
-		</div>
+		<?php // Bloque de estadísticas del hero eliminado (01-06-2026). ?>
 		</div>
 
 		<aside class="rc-hero-visual" aria-hidden="true">
@@ -1579,30 +1537,7 @@ const revealObserver = new IntersectionObserver((entries) => {
 }, { threshold: 0.1 });
 reveals.forEach(r => revealObserver.observe(r));
 
-/* --- Count-up animation --- */
-function countUp(el, target, suffix) {
-	let current = 0;
-	const step = target / 60;
-	const timer = setInterval(() => {
-	current += step;
-	if (current >= target) { current = target; clearInterval(timer); }
-	el.textContent = Math.round(current) + (suffix || '');
-	}, 20);
-}
-const statsObserver = new IntersectionObserver((entries) => {
-	entries.forEach(e => {
-	if (e.isIntersecting) {
-		document.querySelectorAll('[data-count]').forEach(el => {
-		const val = parseInt(el.dataset.count);
-		const suffix = el.dataset.count === '100' ? '%' : (el.dataset.count === '500' ? '+' : '');
-		countUp(el, val, suffix);
-		});
-		statsObserver.disconnect();
-	}
-	});
-}, { threshold: 0.5 });
-const statsSection = document.querySelector('.rc-hero-stats');
-if (statsSection) statsObserver.observe(statsSection);
+/* Count-up de las stats del hero eliminado (01-06-2026): la sección ya no existe. */
 
 /* --- Card glow effect --- */
 function cardGlow(e, card) {
@@ -1659,9 +1594,9 @@ function pickPlat(v, plat) {
 /* ── Módulos: contenido del escenario (independiente del SO) ── */
 const demoModules = {
 	diagnostico: {
-	title: 'diagnóstico', label: 'Ejecutando diagnóstico...', score: 68,
+	title: 'diagnóstico', label: 'Ejecutando diagnóstico…', score: 68,
 	lines: [
-		['dim', 'Iniciando análisis del sistema...'],
+		['dim', 'Iniciando análisis del sistema…'],
 		['ok', { windows: '✓ CPU: Intel Core i7-12700H — 8% carga',
 				linux:   '✓ CPU: AMD Ryzen 7 5800X — 6% carga',
 				android: '✓ SoC: Snapdragon 8 Gen 2 — 11% carga' }],
@@ -1684,9 +1619,9 @@ const demoModules = {
 	compare: null,
 	},
 	vulnerabilidades: {
-	title: 'vulnerabilidades', label: 'Escaneando vulnerabilidades...', score: 54,
+	title: 'vulnerabilidades', label: 'Escaneando vulnerabilidades…', score: 54,
 	lines: [
-		['dim', 'Cargando base de datos CVE (NVD · CISA KEV · OSV)...'],
+		['dim', 'Cargando base de datos CVE (NVD · CISA KEV · OSV)…'],
 		['info', '→ Comparando el inventario con 500+ entradas conocidas'],
 		['err', '✗ CVE-2024-3049 — Kernel priv. escalation [CRÍTICO]'],
 		['warn', '⚠ CVE-2024-1871 — SMB remote code exec [ALTO]'],
@@ -1706,9 +1641,9 @@ const demoModules = {
 	compare: null,
 	},
 	hardware: {
-	title: 'hardware', label: 'Analizando hardware...', score: 79,
+	title: 'hardware', label: 'Analizando hardware…', score: 79,
 	lines: [
-		['dim', 'Leyendo datos S.M.A.R.T...'],
+		['dim', 'Leyendo datos S.M.A.R.T…'],
 		['ok', { windows: '✓ SSD Samsung 970 EVO — 94% salud',
 				linux:   '✓ SSD WD Black SN770 — 96% salud',
 				android: '✓ UFS 3.1 128 GB — 92% salud' }],
@@ -1735,9 +1670,9 @@ const demoModules = {
 	},
 	},
 	optimizacion: {
-	title: 'optimización', label: 'Optimizando sistema...', score: 84,
+	title: 'optimización', label: 'Optimizando sistema…', score: 84,
 	lines: [
-		['dim', 'Analizando archivos temporales y arranque...'],
+		['dim', 'Analizando archivos temporales y arranque…'],
 		['info', '→ 4.0 GB en archivos temporales detectados'],
 		['info', { windows: '→ 23 procesos de inicio innecesarios',
 				linux:   '→ 14 servicios systemd innecesarios',
@@ -1954,7 +1889,7 @@ function renderDemoCompare(cmp) {
 /* --- Reparar vulnerabilidad (simulación) --- */
 function fixVuln(el) {
 	if (el.classList.contains('fixed')) return;
-	el.textContent = '[APLICANDO...]';
+	el.textContent = '[APLICANDO…]';
 	el.disabled = true;
 	setTimeout(() => {
 	el.textContent = '[✓ HECHO]';
@@ -2035,7 +1970,7 @@ runDemo(true);
 	width: 32px; height: 32px; background: transparent;
 	border: 1px solid var(--rc-border); color: var(--rc-muted);
 	cursor: pointer; font-size: 18px; line-height: 1;
-	transition: all .2s; font-family: var(--rc-mono);
+	transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s; font-family: var(--rc-mono);
 }
 .rc-ticket-modal-close:hover { color: var(--rc-warn); border-color: var(--rc-warn); }
 .rc-ticket-modal-head {
@@ -2062,7 +1997,7 @@ runDemo(true);
 	font-family: var(--rc-mono); font-size: 11px; letter-spacing: .06em;
 	background: transparent; border: 1px solid var(--rc-border2);
 	color: var(--rc-accent); padding: 6px 12px; cursor: pointer;
-	transition: all .2s;
+	transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s, transform .2s;
 }
 .rc-ticket-refresh:hover { border-color: var(--rc-accent); background: rgba(0,229,160,.06); }
 .rc-ticket-foot-note {

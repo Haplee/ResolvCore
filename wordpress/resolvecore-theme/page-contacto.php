@@ -13,7 +13,7 @@ get_header();
 	--rc-accent2: #0099ff;
 	--rc-warn:    #ff6b35;
 	--rc-text:    #e8eaf0;
-	--rc-muted:   #7a7f8e;
+	--rc-muted:   #8b909e;
 	--rc-mono:    'Space Mono', monospace;
 	--rc-sans:    'DM Sans', sans-serif;
 }
@@ -46,7 +46,7 @@ body { background: var(--rc-bg); color: var(--rc-text); font-family: var(--rc-sa
 	font-family: var(--rc-mono); font-size: 14px; letter-spacing: .06em;
 	color: #000; background: var(--rc-accent); border: none; text-decoration: none;
 	padding: 18px 40px; cursor: pointer; font-weight: 700;
-	transition: all .25s;
+	transition: background-color .25s, transform .25s, box-shadow .25s;
 }
 .rc-ct-cta:hover {
 	background: #00ffb3; transform: translateY(-2px);

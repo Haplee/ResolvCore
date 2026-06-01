@@ -5,6 +5,10 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="theme-color" content="#0a0c10">
 	<meta name="color-scheme" content="dark">
+	<?php $rc_meta_desc = function_exists( 'resolvecore_meta_description' ) ? resolvecore_meta_description() : ''; ?>
+	<?php if ( '' !== $rc_meta_desc ) : ?>
+	<meta name="description" content="<?php echo esc_attr( $rc_meta_desc ); ?>">
+	<?php endif; ?>
 	<?php wp_head(); ?>
 </head>
 <body <?php body_class(); ?>>
