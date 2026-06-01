@@ -116,44 +116,7 @@ get_header();
 	</div>
 </header>
 
-<!-- ── Estado infraestructura ─────────────────────────────────────────── -->
-<section class="rc-tec-status" aria-label="Estado de infraestructura">
-	<div class="rc-tec-wrap">
-		<div class="rc-tec-status-head">
-			<span class="rc-tec-status-label">Infraestructura en vivo</span>
-			<button class="rc-tec-status-refresh" type="button" aria-label="Refrescar estado">
-				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-				<span>Actualizar</span>
-			</button>
-		</div>
-		<div class="rc-tec-status-grid" id="rc-infra">
-			<div class="rc-tec-status-card" data-svc="mantis">
-				<span class="rc-tec-status-dot rc-tec-status-dot--load"></span>
-				<div>
-					<strong>MantisBT</strong>
-					<small>mantis.resolvecore.website</small>
-				</div>
-				<span class="rc-tec-status-ms">—</span>
-			</div>
-			<div class="rc-tec-status-card" data-svc="web">
-				<span class="rc-tec-status-dot rc-tec-status-dot--load"></span>
-				<div>
-					<strong>Web / API</strong>
-					<small>resolvecore.website</small>
-				</div>
-				<span class="rc-tec-status-ms">—</span>
-			</div>
-			<div class="rc-tec-status-card" data-svc="fleet">
-				<span class="rc-tec-status-dot rc-tec-status-dot--load"></span>
-				<div>
-					<strong>Fleet panel</strong>
-					<small>/fleet-status/</small>
-				</div>
-				<span class="rc-tec-status-ms">—</span>
-			</div>
-		</div>
-	</div>
-</section>
+<?php // Estado de infraestructura en vivo eliminado (simplificación 01-06-2026). ?>
 
 <!-- ── Mis tickets MantisBT (accionable: arriba) ──────────────────────── -->
 <section class="rc-tec-tickets">
@@ -367,64 +330,8 @@ get_header();
 				</table>
 			</div>
 
-			<!-- Generador README personalizado -->
-			<div class="rc-kit-gen">
-				<h3>Generador de README personalizado</h3>
-				<p class="rc-muted">Genera un <code>README-cliente.txt</code> ya rellenado con nombre del cliente, ticket y técnico asignado.</p>
-				<form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="rc-kit-form">
-					<input type="hidden" name="action" value="rc_tech_build_readme">
-					<?php wp_nonce_field( 'rc_tech_readme' ); ?>
-					<label>
-						<span>Cliente</span>
-						<input type="text" name="cliente" required maxlength="80" placeholder="Ej: Juan Pérez">
-					</label>
-					<label>
-						<span>Ticket #</span>
-						<input type="number" name="ticket" min="0" placeholder="123">
-					</label>
-					<button type="submit" class="rc-mini-btn rc-mini-btn--primary">
-						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-						Descargar README
-					</button>
-				</form>
-			</div>
 			<?php endif; ?>
-
-			<div class="rc-dl-steps">
-				<h3 class="rc-dl-steps-title">Pasos tras la descarga</h3>
-				<ol class="rc-checklist" data-checklist="<?php echo esc_attr( $key ); ?>">
-				<?php
-				$steps = array(
-					'windows' => array(
-						'Clic derecho en install-servicios.ps1 → Ejecutar con PowerShell',
-						'Confirmar UAC con "Sí"',
-						'Esperar 3-5 min mientras instala',
-						'Si pide reinicio: reiniciar y lanzar .\ResolveCore.ps1',
-					),
-					'linux'   => array(
-						'Abrir terminal en carpeta de descarga',
-						'chmod +x install-servicios.sh && bash install-servicios.sh',
-						'Esperar a que termine (instala paquetes con sudo)',
-						'Lanzar: bash scripts/linux/ResolveCore.sh',
-					),
-					'kit'     => array(
-						'Descargar ZIP desde este portal',
-						'Enviar por email o pendrive al cliente',
-						'Cliente: doble clic en anydesk-portable.exe',
-						'Cliente te da ID AnyDesk → conectas',
-					),
-				);
-				foreach ( $steps[ $key ] as $i => $step ) :
-					?>
-					<li>
-						<label>
-							<input type="checkbox" data-step="<?php echo (int) $i; ?>">
-							<span><?php echo esc_html( $step ); ?></span>
-						</label>
-					</li>
-				<?php endforeach; ?>
-				</ol>
-			</div>
+			<?php // Generador de README y checklist de pasos eliminados (simplificación 01-06-2026). ?>
 		</div>
 	</div>
 	<?php endforeach; ?>
@@ -433,7 +340,7 @@ get_header();
 </section>
 
 <!-- ── Dashboard ticket activo (pinned) ────────────────────────────────── -->
-<section class="rc-tec-dash" id="rc-dash" hidden>
+<section class="rc-tec-dash" id="rc-dash">
 	<div class="rc-tec-wrap">
 		<div class="rc-dash-header">
 			<div class="rc-dash-pin">
@@ -536,10 +443,7 @@ get_header();
 	</div>
 </section>
 
-<!-- ── Atajos teclado hint ─────────────────────────────────────────────── -->
-<div class="rc-tec-hotkeys" aria-hidden="true">
-	<kbd>Ctrl</kbd>+<kbd>K</kbd> palette · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> tabs · <kbd>C</kbd> copiar · <kbd>Esc</kbd> cerrar
-</div>
+<?php // Cartel flotante de atajos eliminado (simplificación 01-06-2026). ?>
 
 </main>
 
@@ -721,11 +625,7 @@ get_header();
 }
 .rc-terminal-prompt { color: #00e5a0; flex-shrink: 0; user-select: none; }
 .rc-terminal-cmd    { color: #e8eaf0; background: none; }
-.rc-terminal-cmd::after {
-	content: '▍'; color: #00e5a0;
-	animation: rc-blink 1s steps(2) infinite;
-}
-@keyframes rc-blink { 50% { opacity: 0; } }
+/* Cursor parpadeante del terminal eliminado (simplificación 01-06-2026). */
 .rc-terminal-actions {
 	display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
 	gap: .5rem;
@@ -1143,29 +1043,7 @@ get_header();
 		btn.addEventListener('click', function () { copyText(btn.dataset.copy, btn); });
 	});
 
-	// ── Infraestructura ──────────────────────────────────────────────────
-	function paintInfra(data) {
-		['mantis','web','fleet'].forEach(function (svc) {
-			var card = document.querySelector('[data-svc="' + svc + '"]');
-			if (!card || !data[svc]) return;
-			var dot = card.querySelector('.rc-tec-status-dot');
-			var ms  = card.querySelector('.rc-tec-status-ms');
-			dot.className = 'rc-tec-status-dot ' + (data[svc].ok ? 'rc-tec-status-dot--ok' : 'rc-tec-status-dot--err');
-			ms.textContent = (data[svc].code || 'ERR') + ' · ' + (data[svc].ms || 0) + ' ms';
-		});
-	}
-	function fetchInfra() {
-		var fd = new FormData();
-		fd.append('action', 'rc_tech_infra_status');
-		fd.append('nonce', nonce);
-		fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
-			.then(function (r) { return r.json(); })
-			.then(function (j) { if (j && j.success) paintInfra(j.data); })
-			.catch(function () {});
-	}
-	fetchInfra();
-	setInterval(fetchInfra, 60000);
-	document.querySelector('.rc-tec-status-refresh').addEventListener('click', fetchInfra);
+	// Estado de infraestructura en vivo eliminado (simplificación 01-06-2026).
 
 	// ── Mis tickets ──────────────────────────────────────────────────────
 	function paintTickets(list) {
@@ -1201,22 +1079,7 @@ get_header();
 	}
 	fetchTickets();
 
-	// ── Checklist persistido ─────────────────────────────────────────────
-	document.querySelectorAll('.rc-checklist').forEach(function (list) {
-		var key = 'rc-checklist-' + list.dataset.checklist;
-		var saved = {};
-		try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e){}
-		list.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
-			if (saved[cb.dataset.step]) cb.checked = true;
-			cb.addEventListener('change', function () {
-				try {
-					var current = JSON.parse(localStorage.getItem(key) || '{}');
-					current[cb.dataset.step] = cb.checked;
-					localStorage.setItem(key, JSON.stringify(current));
-				} catch(e){}
-			});
-		});
-	});
+	// Checklist persistido eliminado (simplificación 01-06-2026).
 
 	// ── Dashboard ticket activo ──────────────────────────────────────────
 	var dash    = document.getElementById('rc-dash');
@@ -1275,10 +1138,11 @@ get_header();
 		savePinned();
 	}
 	function renderDash() {
-		if (!pinned) { dash.hidden = true; return; }
+		// Panel siempre visible (simplificación 01-06-2026): si no hay ticket fijado
+		// muestra placeholder; AnyDesk funciona sin ticket, nota/informe/factura piden fijar uno.
 		dash.hidden = false;
-		dashId.textContent = '#' + pinned.id;
-		dashSum.textContent = pinned.summary || '';
+		dashId.textContent = pinned ? '#' + pinned.id : '#—';
+		dashSum.textContent = pinned ? ( pinned.summary || '' ) : 'Fija un ticket desde «Mis tickets abiertos»';
 		dashToggleBtn.textContent = timer.running ? 'Pausar' : (timer.accumulated ? 'Reanudar' : 'Iniciar');
 		if (!timer.intervalId) timer.intervalId = setInterval(tickTimer, 500);
 		tickTimer();
@@ -1445,7 +1309,6 @@ get_header();
 			{ cat: 'Tab', label: 'Ir a Kit cliente',     action: function(){ activateTab('kit'); } },
 			{ cat: 'Acción', label: 'Copiar oneliner Windows', action: function(){ copyText('irm https://resolvecore.website/install.ps1 | iex', document.querySelector('.rc-copy-btn')); } },
 			{ cat: 'Acción', label: 'Copiar oneliner Linux',   action: function(){ copyText('curl -fsSL https://resolvecore.website/install.sh | sudo bash', document.querySelector('.rc-copy-btn')); } },
-			{ cat: 'Acción', label: 'Refrescar estado infra',  action: fetchInfra },
 			{ cat: 'Acción', label: 'Refrescar mis tickets',   action: fetchTickets },
 			{ cat: 'Link', label: 'Abrir MantisBT',  action: function(){ window.open('https://mantis.resolvecore.website','_blank'); } },
 			{ cat: 'Link', label: 'Abrir Fleet panel', action: function(){ window.open('<?php echo esc_js( home_url( '/fleet-status/' ) ); ?>','_blank'); } },
