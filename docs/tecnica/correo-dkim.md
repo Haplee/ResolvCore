@@ -1,9 +1,20 @@
 # Correo saliente: SPF, DKIM y DMARC
 
+> ⚠️ **ESTADO REAL (2026-05-31).** En producción el correo NO va por este flujo
+> (Postfix + OpenDKIM). Va por **msmtp + relay autenticado a IONOS**, configurado
+> con `scripts/server/ops/setup-mail-ionos.sh`, sobre el dominio
+> **`resolvecore.website`** (no `.es`). DKIM lo firma IONOS (selectores
+> `s1-ionos`/`s2-ionos`); SPF incluye `include:_spf-eu.ionos.com`; DMARC en
+> `p=quarantine`. Verificado: el correo de activación llega a **inbox**.
+> Este documento describe la alternativa OpenDKIM, cuyo script
+> `scripts/server/setup-mail-dkim.sh` **se borró en `12890ac` y no está en el
+> repo** (recuperable de histórico). Mantener como referencia, no como guía viva.
+> Ver auditoría A11/D6.
+
 > Garantiza que los correos de confirmación de ticket (`wp_mail` desde el tema
 > ResolveCore) lleguen a la bandeja de entrada del cliente y no a spam.
 >
-> Script automatizado: `scripts/server/setup-mail-dkim.sh` (idempotente).
+> Script (alternativa, no presente): `scripts/server/setup-mail-dkim.sh` (idempotente).
 > Tiempo total: ~10 min + propagación DNS.
 
 ---

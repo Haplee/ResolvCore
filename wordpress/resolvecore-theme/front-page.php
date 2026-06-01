@@ -1811,7 +1811,11 @@ function runDemo(instant) {
 	if (!output || !bar) { return; } /* demo retirada de la home: nada que pintar */
 	const barWrap = bar.parentElement;
 	const replay = document.getElementById('rc-demo-replay');
-	const reduce = demoReduceMotion || instant === true;
+	/* La demo es un showcase: anima siempre al interactuar (botón/replay).
+	   Solo el primer render es instantáneo (runDemo(true)), para no salir en
+	   blanco. No se gatea con prefers-reduced-motion a propósito — el usuario
+	   activa la animación al pulsar. */
+	const reduce = instant === true;
 	const totalSteps = lines.length + 1;
 	let step = 0;
 

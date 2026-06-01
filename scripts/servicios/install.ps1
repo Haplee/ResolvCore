@@ -13,6 +13,9 @@
 
 .NOTES
     Exit codes: 0 OK  1 Error  2 Requiere reinicio
+
+    Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+    Versión: 1.0.0
 #>
 
 Set-StrictMode -Version Latest

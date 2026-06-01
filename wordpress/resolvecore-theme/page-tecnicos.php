@@ -17,17 +17,12 @@ if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
 }
 
 $dl_base    = home_url( '/tecnicos/' );
-$build_date = '2026-05-26';
 $nonce_ajax = wp_create_nonce( 'rc_tech_nonce' );
 $nonce_kit  = wp_create_nonce( 'rc_tech_readme' );
 
 $meta_win = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'windows' ) : array();
 $meta_lin = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'linux' ) : array();
 $meta_kit = function_exists( 'rc_get_download_meta' ) ? rc_get_download_meta( 'kit' ) : array();
-$stats    = function_exists( 'rc_tech_my_stats' ) ? rc_tech_my_stats() : array(
-	'total'   => 0,
-	'last_at' => '',
-);
 
 $downloads = array(
 	'windows' => array(
@@ -63,27 +58,23 @@ get_header();
 
 <main id="main-content" class="rc-tec">
 
-<!-- ── Hero ───────────────────────────────────────────────────────────── -->
-<section class="rc-tec-hero">
-	<div class="rc-tec-hero-mesh" aria-hidden="true"></div>
-	<div class="rc-tec-hero-inner">
-		<div class="rc-tec-badge">
-			<span class="rc-tec-badge-dot"></span> Área restringida
-		</div>
-		<h1 class="rc-tec-title">Centro de Operaciones</h1>
-		<p class="rc-tec-sub">
-			Hola, <strong><?php echo esc_html( wp_get_current_user()->display_name ); ?></strong>.
-			Herramientas, kits e infraestructura del soporte ResolveCore.
-		</p>
-		<div class="rc-tec-meta">
-			<span>Build <?php echo esc_html( $build_date ); ?></span>
-			<span>·</span>
-			<a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a>
-			<span>·</span>
-			<span class="rc-tec-stat">Tus descargas (30d): <strong><?php echo (int) $stats['total']; ?></strong></span>
-		</div>
+<!-- ── Barra de trabajo ───────────────────────────────────────────────── -->
+<header class="rc-tec-bar">
+	<div class="rc-tec-bar-inner">
+		<span class="rc-tec-bar-brand">ResolveCore <span>Operaciones</span></span>
+		<nav class="rc-tec-bar-nav" aria-label="Accesos directos">
+			<a href="https://mantis.resolvecore.website" target="_blank" rel="noopener" class="rc-tec-bar-link rc-tec-bar-link--primary">
+				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+				MantisBT
+			</a>
+			<a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>" class="rc-tec-bar-link">Estado flota</a>
+			<a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>" class="rc-tec-bar-link">Docs</a>
+			<button type="button" class="rc-tec-bar-link rc-tec-bar-pal" id="rc-bar-palette">
+				<kbd>Ctrl</kbd>+<kbd>K</kbd>
+			</button>
+		</nav>
 	</div>
-</section>
+</header>
 
 <!-- ── Estado infraestructura ─────────────────────────────────────────── -->
 <section class="rc-tec-status" aria-label="Estado de infraestructura">
@@ -120,6 +111,22 @@ get_header();
 				</div>
 				<span class="rc-tec-status-ms">—</span>
 			</div>
+		</div>
+	</div>
+</section>
+
+<!-- ── Mis tickets MantisBT (accionable: arriba) ──────────────────────── -->
+<section class="rc-tec-tickets">
+	<div class="rc-tec-wrap">
+		<div class="rc-tec-tickets-head">
+			<h2>Mis tickets abiertos</h2>
+			<a href="https://mantis.resolvecore.website" target="_blank" rel="noopener" class="rc-mini-btn">
+				Abrir MantisBT
+				<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+			</a>
+		</div>
+		<div id="rc-tickets" class="rc-tickets-list">
+			<div class="rc-tickets-loading">Cargando tickets…</div>
 		</div>
 	</div>
 </section>
@@ -385,22 +392,6 @@ get_header();
 </div>
 </section>
 
-<!-- ── Mis tickets MantisBT ───────────────────────────────────────────── -->
-<section class="rc-tec-tickets">
-	<div class="rc-tec-wrap">
-		<div class="rc-tec-tickets-head">
-			<h2>Mis tickets abiertos</h2>
-			<a href="https://mantis.resolvecore.website" target="_blank" rel="noopener" class="rc-mini-btn">
-				Abrir MantisBT
-				<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-			</a>
-		</div>
-		<div id="rc-tickets" class="rc-tickets-list">
-			<div class="rc-tickets-loading">Cargando tickets…</div>
-		</div>
-	</div>
-</section>
-
 <!-- ── Dashboard ticket activo (pinned) ────────────────────────────────── -->
 <section class="rc-tec-dash" id="rc-dash" hidden>
 	<div class="rc-tec-wrap">
@@ -462,27 +453,6 @@ get_header();
 	</div>
 </section>
 
-<!-- ── Tail logs en vivo ───────────────────────────────────────────────── -->
-<section class="rc-tec-logs">
-	<div class="rc-tec-wrap">
-		<div class="rc-tec-logs-head">
-			<h2>Últimas descargas <span class="rc-muted">(auto-refresh 10s)</span></h2>
-			<button type="button" class="rc-mini-btn" id="rc-logs-refresh">
-				<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/></svg>
-				Actualizar
-			</button>
-		</div>
-		<div class="rc-logs-table-wrap">
-			<table class="rc-logs-table">
-				<thead><tr><th>#</th><th>Cuándo</th><th>Usuario</th><th>Fichero</th><th>IP</th></tr></thead>
-				<tbody id="rc-logs-body">
-					<tr><td colspan="5" class="rc-muted">Cargando…</td></tr>
-				</tbody>
-			</table>
-		</div>
-	</div>
-</section>
-
 <!-- ── Command palette ─────────────────────────────────────────────────── -->
 <div id="rc-palette" class="rc-palette" hidden role="dialog" aria-modal="true" aria-label="Paleta de comandos">
 	<div class="rc-palette-bg" data-close></div>
@@ -539,58 +509,35 @@ get_header();
 .rc-tec * { box-sizing: border-box; }
 .rc-tec-wrap { max-width: 920px; margin: 0 auto; padding: 0 1.5rem; }
 
-/* ── Hero gradient mesh ───────────────────────────────────────────────── */
-.rc-tec-hero {
-	position: relative; overflow: hidden;
-	padding: 4rem 1.5rem 3rem;
-	text-align: center;
-	background: #0a0c10;
+/* ── Barra de trabajo ─────────────────────────────────────────────────── */
+.rc-tec-bar {
+	position: sticky; top: 0; z-index: 30;
+	background: rgba(10,12,16,.92); backdrop-filter: blur(10px);
 	border-bottom: 1px solid #1a1d24;
 }
-.rc-tec-hero-mesh {
-	position: absolute; inset: -20%;
-	background:
-		radial-gradient(circle at 20% 30%, #00e5a020 0%, transparent 40%),
-		radial-gradient(circle at 80% 70%, #1565c020 0%, transparent 45%),
-		radial-gradient(circle at 60% 20%, #7c4dff15 0%, transparent 50%);
-	filter: blur(40px);
-	animation: rc-mesh 18s ease-in-out infinite alternate;
-	pointer-events: none;
+.rc-tec-bar-inner {
+	max-width: 920px; margin: 0 auto; padding: .6rem 1.5rem;
+	display: flex; align-items: center; justify-content: space-between; gap: 1rem;
 }
-@keyframes rc-mesh {
-	0%   { transform: translate(0,0) scale(1); }
-	100% { transform: translate(-3%,2%) scale(1.08); }
+.rc-tec-bar-brand {
+	font-size: .9rem; font-weight: 800; color: #e8eaf0; letter-spacing: .02em;
 }
-.rc-tec-hero-inner { position: relative; max-width: 680px; margin: 0 auto; }
-.rc-tec-badge {
-	display: inline-flex; align-items: center; gap: .4rem;
-	font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-	color: #00e5a0;
-	border: 1px solid #00e5a040;
-	background: rgba(0,229,160,.08);
-	backdrop-filter: blur(6px);
-	padding: .3rem .8rem; border-radius: 2rem;
-	margin-bottom: 1.25rem;
+.rc-tec-bar-brand span { color: #00e5a0; font-weight: 700; }
+.rc-tec-bar-nav { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.rc-tec-bar-link {
+	display: inline-flex; align-items: center; gap: .35rem;
+	background: none; border: 1px solid #1e2130; color: #9da2b0;
+	font-size: .78rem; font-family: inherit;
+	padding: .35rem .7rem; border-radius: 6px; cursor: pointer; text-decoration: none;
+	transition: color .15s, border-color .15s, background .15s;
 }
-.rc-tec-badge-dot {
-	width: 6px; height: 6px; border-radius: 50%;
-	background: #00e5a0;
-	box-shadow: 0 0 0 0 #00e5a080;
-	animation: rc-pulse 2s infinite;
+.rc-tec-bar-link:hover { color: #00e5a0; border-color: #00e5a040; }
+.rc-tec-bar-link--primary { color: #00e5a0; border-color: #00e5a040; background: rgba(0,229,160,.06); }
+.rc-tec-bar-pal kbd {
+	background: #1e2130; border: 1px solid #2a2d3e; border-bottom-width: 2px;
+	padding: 1px 5px; border-radius: 3px; font-size: .62rem; color: #c8cad8;
+	font-family: inherit; margin: 0 1px;
 }
-@keyframes rc-pulse {
-	0%,100% { box-shadow: 0 0 0 0 #00e5a080; }
-	50%     { box-shadow: 0 0 0 6px #00e5a000; }
-}
-.rc-tec-title {
-	font-size: clamp(2rem,4.5vw,2.8rem); font-weight: 800; margin: 0 0 .75rem;
-	background: linear-gradient(135deg,#e8eaf0 0%,#00e5a0 100%);
-	-webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.rc-tec-sub { color: #a0a4b0; margin: 0 0 1rem; font-size: 1.05rem; }
-.rc-tec-meta { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; font-size: .8rem; color: #555c6e; }
-.rc-tec-meta a { color: #00e5a0; text-decoration: none; }
-.rc-tec-stat strong { color: #c8cad8; }
 
 /* ── Estado infra ─────────────────────────────────────────────────────── */
 .rc-tec-status { padding: 1.5rem 1.5rem 0; background: #06080c; }
@@ -1011,38 +958,6 @@ get_header();
 .rc-anydesk-recent button {
 	background: none; border: none; color: #00e5a0; cursor: pointer; font-size: .7rem;
 }
-
-/* ── Tail logs ───────────────────────────────────────────────────────── */
-.rc-tec-logs { padding: 2rem 1.5rem; background: #06080c; border-top: 1px solid #1a1d24; }
-.rc-tec-logs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.rc-tec-logs-head h2 {
-	font-size: .85rem; font-weight: 700; color: #7a7f8e;
-	letter-spacing: .08em; text-transform: uppercase; margin: 0;
-}
-.rc-tec-logs-head .rc-muted { font-weight: 400; font-size: .7rem; text-transform: none; letter-spacing: 0; }
-.rc-logs-table-wrap {
-	background: rgba(19,21,28,.6); border: 1px solid #1e2130;
-	border-radius: 10px; overflow: hidden;
-}
-.rc-logs-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-.rc-logs-table th {
-	background: #0d0f14; color: #555c6e;
-	font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
-	font-weight: 600; text-align: left;
-	padding: .55rem .75rem; border-bottom: 1px solid #1e2130;
-}
-.rc-logs-table td {
-	padding: .5rem .75rem; border-bottom: 1px solid #13151c;
-	color: #c8cad8;
-}
-.rc-logs-table tbody tr:last-child td { border-bottom: none; }
-.rc-logs-table td:first-child { color: #555c6e; font-family: 'JetBrains Mono',monospace; }
-.rc-logs-table td.rc-log-key {
-	font-family: 'JetBrains Mono',monospace;
-}
-.rc-log-key--windows { color: #4fc3f7; }
-.rc-log-key--linux   { color: #ffd54f; }
-.rc-log-key--kit     { color: #00e5a0; }
 
 /* ── Command palette ─────────────────────────────────────────────────── */
 .rc-palette {
@@ -1475,33 +1390,6 @@ get_header();
 	anydeskInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') launchAnydesk(anydeskInput.value.trim()); });
 	paintAnydeskHist();
 
-	// ── Tail logs ────────────────────────────────────────────────────────
-	function paintLogs(rows) {
-		var body = document.getElementById('rc-logs-body');
-		if (!rows.length) { body.innerHTML = '<tr><td colspan="5" class="rc-muted">Sin descargas registradas.</td></tr>'; return; }
-		body.innerHTML = rows.map(function (r) {
-			return '<tr>'
-				+ '<td>' + r.id + '</td>'
-				+ '<td>' + escapeHtml(r.downloaded_at) + '</td>'
-				+ '<td>' + escapeHtml(r.user_login) + '</td>'
-				+ '<td class="rc-log-key rc-log-key--' + escapeHtml(r.file_key) + '">' + escapeHtml(r.file_key) + '</td>'
-				+ '<td>' + escapeHtml(r.ip) + '</td>'
-				+ '</tr>';
-		}).join('');
-	}
-	function fetchLogs() {
-		var fd = new FormData();
-		fd.append('action', 'rc_tech_logs_tail');
-		fd.append('nonce', nonce);
-		fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
-			.then(function (r) { return r.json(); })
-			.then(function (j) { if (j && j.success) paintLogs(j.data.rows || []); })
-			.catch(function () {});
-	}
-	fetchLogs();
-	setInterval(fetchLogs, 10000);
-	document.getElementById('rc-logs-refresh').addEventListener('click', fetchLogs);
-
 	// ── Command palette ──────────────────────────────────────────────────
 	var palette  = document.getElementById('rc-palette');
 	var palQ     = document.getElementById('rc-palette-q');
@@ -1518,7 +1406,6 @@ get_header();
 			{ cat: 'Acción', label: 'Copiar oneliner Windows', action: function(){ copyText('irm https://resolvecore.website/install.ps1 | iex', document.querySelector('.rc-copy-btn')); } },
 			{ cat: 'Acción', label: 'Copiar oneliner Linux',   action: function(){ copyText('curl -fsSL https://resolvecore.website/install.sh | sudo bash', document.querySelector('.rc-copy-btn')); } },
 			{ cat: 'Acción', label: 'Refrescar estado infra',  action: fetchInfra },
-			{ cat: 'Acción', label: 'Refrescar logs',          action: fetchLogs },
 			{ cat: 'Acción', label: 'Refrescar mis tickets',   action: fetchTickets },
 			{ cat: 'Link', label: 'Abrir MantisBT',  action: function(){ window.open('https://mantis.resolvecore.website','_blank'); } },
 			{ cat: 'Link', label: 'Abrir Fleet panel', action: function(){ window.open('<?php echo esc_js( home_url( '/fleet-status/' ) ); ?>','_blank'); } },
@@ -1580,6 +1467,8 @@ get_header();
 		else if (e.key === 'Enter')     { e.preventDefault(); runPal(palIdx); }
 	});
 	palette.querySelectorAll('[data-close]').forEach(function (el) { el.addEventListener('click', closePalette); });
+	var barPalBtn = document.getElementById('rc-bar-palette');
+	if (barPalBtn) barPalBtn.addEventListener('click', function () { palette.hidden ? openPalette() : closePalette(); });
 
 	// Hook para guardar últimos tickets en global
 	var paintTicketsForPalette = paintTickets;

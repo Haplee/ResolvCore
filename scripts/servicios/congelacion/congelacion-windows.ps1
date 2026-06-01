@@ -38,6 +38,10 @@
     .\congelacion-windows.ps1 -Action Status
     .\congelacion-windows.ps1 -Action Configure
     .\congelacion-windows.ps1 -Action Freeze -Confirm
+
+.NOTES
+    Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+    Versión: 1.0.0
 #>
 
 [CmdletBinding()]

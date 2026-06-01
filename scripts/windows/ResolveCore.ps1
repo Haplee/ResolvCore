@@ -1,12 +1,27 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    ResolveCore - Menu Windows
+    ResolveCore — Menú del técnico para Windows.
 
 .DESCRIPTION
-    Menu interactivo para tecnicos de soporte
+    Lanzador interactivo que el técnico abre en el equipo del cliente. Reúne en
+    un solo menú el diagnóstico, la optimización y el escaneo de
+    vulnerabilidades, llamando a los demás scripts de la carpeta. Auto-instala
+    Python (scoop/choco) si falta para el módulo de CVEs.
+
+    Pensado para Windows 10 y 11 (PowerShell 5.1, el que trae el sistema).
+
+.PARAMETER NoLoop
+    Ejecuta una sola acción y sale, sin volver al menú.
+
+.EXAMPLE
+    .\ResolveCore.ps1
+    .\ResolveCore.ps1 -Diagnostico -OutputDir C:\Temp
+
+.NOTES
+    Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+    Versión: 2.0
 #>
-# Variables 
 
 
 
@@ -89,8 +104,11 @@ MENU
     3. VULNERABILIDADES Llama a buscar_vulnerabilidades.py (Python).
     4. INFORME         Genera HTML/PDF desde el ultimo JSON y opcionalmente
                        lo adjunta a un ticket MantisBT.
-    5. AYUDA           Guia rapida embebida.
-    6. SALIR           Cierra el programa.
+    5. FACTURA         Genera factura PDF y opcionalmente la sube a Mantis
+                       y la envia por email al cliente.
+    6. SERVICIOS       Congelacion / Clonacion / Kit de cliente.
+    7. AYUDA           Guia rapida embebida.
+    8. SALIR           Cierra el programa.
 
 FLAGS DE DIAGNOSTICO (forward a diagnostico.ps1)
     -O, -OutputDir, -Output <dir>   Directorio salida JSON/HTML
@@ -368,7 +386,8 @@ function Show-Help {
     Write-Host "  OPTIMIZACION:    Aplica mejoras segun nivel seleccionado"
     Write-Host "  VULNERABILIDADES: Escaneo CVE multi-feed (NVD/KEV/OSV/EPSS)"
     Write-Host "  INFORME:         Genera HTML/PDF desde el JSON + adjunta a Mantis"
-    Write-Host "  ANALIZAR:        Vuelve a analizar el sistema"
+    Write-Host "  FACTURA:         Genera factura PDF + sube a Mantis + email cliente"
+    Write-Host "  SERVICIOS:       Congelacion / Clonacion / Kit de cliente"
     Write-Host ""
     Read-Host "  Presiona ENTER"
 }

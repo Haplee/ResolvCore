@@ -1,6 +1,7 @@
 # Esquema JSON de diagnóstico — ResolveCore
 
-> Estructura común que producen los scripts de `scripts/{windows,linux,android,macos}/diagnostico.*`.
+> Estructura común que producen los scripts de `scripts/{windows,linux,android}/diagnostico.*`.
+> (macOS está en ROADMAP: su script se borró en `12890ac` y no está en el repo — ver auditoría A11/D8.)
 > El generador de informes PDF consume este JSON. Mantener compatibilidad.
 
 ---
@@ -18,7 +19,7 @@
 | Windows    | `windows/diagnostico.ps1` | **4.0.0**         | Migrado a `hardware {}` (major, breaking) |
 | Linux      | `linux/diagnostico.sh`    | 3.0.0             | |
 | Android    | `android/diagnostico.sh`  | 2.1.0             | |
-| macOS      | `macos/diagnostico.sh`    | 0.1.0-demo (stub) | |
+| macOS      | `macos/diagnostico.sh`    | — (ROADMAP)       | Borrado en `12890ac`, no presente en el repo. Recuperable de histórico. |
 
 ---
 

@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
-# =============================================================================
-# ResolveCore - Menu Linux
-# Menu interactivo para tecnicos ResolveCore en Linux
-# =============================================================================
+# ─────────────────────────────────────────────────────────────────────────────
+# ResolveCore — Menú del técnico para Linux.
+#
+# Lanzador interactivo que el técnico abre en el equipo del cliente. Reúne en
+# un solo menú el diagnóstico, la optimización, el escaneo de vulnerabilidades
+# y los servicios adicionales (congelación / clonación), llamando a los demás
+# scripts de la carpeta. Auto-instala Python si falta para el módulo de CVEs.
+#
+# Uso:
+#   bash ResolveCore.sh                 # menú interactivo
+#
+# Probado en:  Ubuntu 22.04 / 24.04, Debian 12.
+#
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+# Versión: 2.0
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
 
@@ -54,8 +66,10 @@ MENU
     3. VULNERABILIDADES Lanza buscar_vulnerabilidades.py (Python).
     4. INFORME         Genera HTML/PDF desde el ultimo JSON y opcionalmente
                        lo adjunta a un ticket MantisBT.
-    5. AYUDA           Guia rapida embebida.
-    6. SALIR           Cierra el programa.
+    5. FACTURA         Genera factura PDF + sube a Mantis + email al cliente.
+    6. SERVICIOS       Congelacion / Clonacion de sistemas.
+    7. AYUDA           Guia rapida embebida.
+    8. SALIR           Cierra el programa.
 
 REQUISITOS
     - Terminal interactiva para el menu (no pipes).

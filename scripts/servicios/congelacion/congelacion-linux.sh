@@ -26,7 +26,7 @@
 #   2  btrfs / snapper no disponibles
 #   3  acción destructiva (rollback) sin --confirm
 #
-# Autor:   FranVi / ResolveCore
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # Versión: 1.0.0
 # ─────────────────────────────────────────────────────────────────────────────
 
