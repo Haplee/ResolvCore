@@ -60,3 +60,21 @@ $g_show_user_email_threshold         = ADMINISTRATOR;
 
 // Por defecto los nuevos registros son clientes (REPORTER).
 $g_default_new_account_access_level = REPORTER;
+
+
+// ── Branding White-Label ResolveCore (01-06-2026) ───────────────────────────
+// Sustituye el logo y el título nativos de MantisBT por los de la empresa y
+// oculta el footer «Powered by MantisBT, Copyright © 2000-202x» + enlaces de
+// soporte integrados. El logo se copia a la web-root de Mantis con el script
+// scripts/server/ops/mantis-branding.sh (cp del logo oscuro del repo WP).
+$g_window_title  = 'ResolveCore · Soporte';
+$g_logo_image    = 'images/rc-logo-dark.png';   // copiado por mantis-branding.sh
+$g_logo_url      = 'https://resolvecore.website';
+$g_favicon_image = 'images/rc-logo-dark.png';
+
+// Footer: vaciar el copyright propio de Mantis y, vía página de inclusión
+// inferior, inyectar CSS que oculta la firma «Powered by» y los enlaces de
+// soporte que el core imprime de forma fija.
+$g_copyright_statement = '';
+$g_show_version        = OFF;
+$g_bottom_include_page = __DIR__ . '/rc_footer.php';   // generado por el script
