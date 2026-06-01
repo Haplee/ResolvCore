@@ -302,8 +302,14 @@ function resolvecore_handle_contact() {
 		)
 	);
 }
-add_action( 'wp_ajax_resolvecore_contact', 'resolvecore_handle_contact' );
-add_action( 'wp_ajax_nopriv_resolvecore_contact', 'resolvecore_handle_contact' );
+// Endpoint de contacto DESACTIVADO (auditoría 01-06-2026). El formulario público
+// «Escríbenos» se eliminó de la portada para mitigar saturación/DDoS contra
+// admin-ajax (alta de cuenta + wp_mail sin login). El alta de cliente se hace
+// ahora únicamente desde /registro/ (plugin rc-core, con honeypot + nonce). La
+// función resolvecore_handle_contact() se conserva inerte por si se reactiva con
+// captcha en el futuro; sin estos hooks, la acción AJAX no está registrada.
+// add_action( 'wp_ajax_resolvecore_contact', 'resolvecore_handle_contact' );
+// add_action( 'wp_ajax_nopriv_resolvecore_contact', 'resolvecore_handle_contact' );
 
 /**
  * Remitente unificado del correo saliente.

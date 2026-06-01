@@ -326,17 +326,17 @@ function rc_cliente_render_stats( $stats ) {
 	ob_start();
 	?>
 	<div class="rc-cliente-stats">
-		<div class="rc-stat">
-			<div class="rc-stat-num"><?php echo intval( $stats['total'] ); ?></div>
-			<div class="rc-stat-label">Tickets en total</div>
+		<div class="rc-pill rc-pill--total">
+			<span class="rc-pill-num"><?php echo intval( $stats['total'] ); ?></span>
+			<span class="rc-pill-label">Tickets en total</span>
 		</div>
-		<div class="rc-stat">
-			<div class="rc-stat-num rc-stat-num--warn"><?php echo intval( $stats['abiertos'] ); ?></div>
-			<div class="rc-stat-label">En curso</div>
+		<div class="rc-pill rc-pill--progress">
+			<span class="rc-pill-num"><?php echo intval( $stats['abiertos'] ); ?></span>
+			<span class="rc-pill-label">En curso</span>
 		</div>
-		<div class="rc-stat">
-			<div class="rc-stat-num rc-stat-num--ok"><?php echo intval( $stats['cerrados'] ); ?></div>
-			<div class="rc-stat-label">Cerrados</div>
+		<div class="rc-pill rc-pill--done">
+			<span class="rc-pill-num"><?php echo intval( $stats['cerrados'] ); ?></span>
+			<span class="rc-pill-label">Cerrados</span>
 		</div>
 	</div>
 	<?php
@@ -353,7 +353,16 @@ function rc_cliente_render_form() {
 	$rc_form_enviado = isset( $_POST['rc_solicitar_informe'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 	?>
 	<details class="rc-cliente-solicitar" <?php echo $rc_form_enviado ? '' : 'open'; ?>>
-		<summary><strong>Solicitar nuevo informe</strong></summary>
+		<summary>
+			<span class="rc-solicitar-summary-main">
+				<span class="rc-solicitar-icon" aria-hidden="true">+</span>
+				<span class="rc-solicitar-summary-text">
+					<strong>Solicitar nuevo informe</strong>
+					<small>Abre un ticket de soporte — respuesta en menos de 2 horas</small>
+				</span>
+			</span>
+			<span class="rc-solicitar-chevron" aria-hidden="true">&#9662;</span>
+		</summary>
 
 		<form method="post" class="rc-cliente-form">
 			<?php wp_nonce_field( 'rc_solicitar_informe' ); ?>

@@ -324,7 +324,9 @@
 		gap: 1.5rem 2.5rem;
 		padding-top: 2rem; border-top: 1px solid var(--rc-border);
 		animation: rcFadeUp .8s .4s ease both;
+		justify-items: center; text-align: center;
 	}
+	.rc-hero-stats > div { display: flex; flex-direction: column; align-items: center; }
 	@media (max-width: 760px) {
 		.rc-hero-stats { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
 	}
@@ -798,7 +800,7 @@
 	.rc-hero--split .rc-badge { margin-left: 0; margin-right: 0; }
 	.rc-hero--split .rc-hero-sub { margin-left: 0; margin-right: 0; }
 	.rc-hero--split .rc-hero-actions { justify-content: flex-start; }
-	.rc-hero--split .rc-hero-stats { justify-content: flex-start; grid-template-columns: repeat(4,auto); gap: 1.5rem 2rem; }
+	.rc-hero--split .rc-hero-stats { grid-template-columns: repeat(4,1fr); gap: 1.5rem 1.25rem; justify-items: center; text-align: center; }
 
 	.rc-hero-visual { display: flex; justify-content: center; }
 	.rc-hero-card {
@@ -1317,28 +1319,43 @@
 <section class="rc-section" id="contacto" aria-label="Contacto">
 	<div class="rc-reveal">
 	<div class="rc-section-label">// CONTACTO</div>
-	<h2 class="rc-section-title">Escríbenos</h2>
-	<p class="rc-section-desc">¿Necesitas soporte técnico? Cuéntanos el problema y te respondemos en menos de 2 horas.</p>
+	<h2 class="rc-section-title">Contacto directo</h2>
+	<p class="rc-section-desc">Elige el canal que prefieras. Para abrir un ticket de soporte crea tu cuenta de cliente — respuesta inicial en menos de 2 horas.</p>
 	</div>
 
-	<!-- Canales rápidos -->
+	<!-- Tarjetas de contacto directo -->
 	<div class="rc-quick-channels rc-reveal">
-	<a class="rc-channel" href="mailto:tecnicos@resolvecore.website" aria-label="Enviar email">
-		<div class="rc-channel-icon">✉</div>
+	<a class="rc-channel" href="mailto:tecnicos@resolvecore.website" aria-label="Enviar email a soporte">
+		<div class="rc-channel-icon" aria-hidden="true">
+		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+		</div>
 		<div class="rc-channel-body">
 		<div class="rc-channel-label">EMAIL DIRECTO</div>
 		<div class="rc-channel-val">tecnicos@resolvecore.website</div>
 		</div>
 	</a>
-	<a class="rc-channel" href="https://github.com/Haplee/ResolveCore/issues/new" target="_blank" rel="noopener noreferrer" aria-label="Abrir issue en GitHub">
-		<div class="rc-channel-icon">◈</div>
+	<a class="rc-channel" href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer" aria-label="Perfil de GitHub">
+		<div class="rc-channel-icon" aria-hidden="true">
+		<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.8c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+		</div>
 		<div class="rc-channel-body">
-		<div class="rc-channel-label">REPORTE TÉCNICO</div>
-		<div class="rc-channel-val">GitHub Issues →</div>
+		<div class="rc-channel-label">CÓDIGO FUENTE</div>
+		<div class="rc-channel-val">github.com/Haplee →</div>
 		</div>
 	</a>
-	<a class="rc-channel" href="<?php echo esc_url( home_url( '/docs/' ) ); ?>" aria-label="Consultar documentación">
-		<div class="rc-channel-icon">⬡</div>
+	<a class="rc-channel" href="https://x.com/FranVidalMateo" target="_blank" rel="noopener noreferrer" aria-label="Perfil en Twitter / X">
+		<div class="rc-channel-icon" aria-hidden="true">
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18.2 2H21l-6.5 7.4L22 22h-6l-4.7-6.1L5.9 22H3l7-8L2.2 2h6.1l4.2 5.6L18.2 2Zm-2.1 18h1.7L7.9 3.8H6.1L16.1 20Z"/></svg>
+		</div>
+		<div class="rc-channel-body">
+		<div class="rc-channel-label">TWITTER / X</div>
+		<div class="rc-channel-val">@FranVidalMateo →</div>
+		</div>
+	</a>
+	<a class="rc-channel" href="<?php echo esc_url( home_url( '/docs/' ) ); ?>" aria-label="Documentación y autoservicio">
+		<div class="rc-channel-icon" aria-hidden="true">
+		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M13 3v5h5M9 13h6M9 17h6"/></svg>
+		</div>
 		<div class="rc-channel-body">
 		<div class="rc-channel-label">AUTOSERVICIO</div>
 		<div class="rc-channel-val">Docs &amp; guías →</div>
@@ -1373,76 +1390,43 @@
 		color: var(--rc-muted); margin-bottom: 3px;
 	}
 	.rc-channel-val { font-size: 13px; color: var(--rc-text); font-weight: 500; }
+	.rc-channel-icon svg { display: block; }
+
+	/* Banner full-width que canaliza el soporte al alta de cliente */
+	.rc-contact-banner {
+		display: flex; align-items: center; justify-content: space-between;
+		gap: 2rem; flex-wrap: wrap;
+		background: var(--rc-surface); border: 1px solid var(--rc-border);
+		border-radius: var(--rc-radius-lg); padding: 2.25rem 2.5rem;
+		position: relative; overflow: hidden;
+	}
+	.rc-contact-banner::before {
+		content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+		background: linear-gradient(90deg, var(--rc-accent), var(--rc-accent2), transparent);
+	}
+	.rc-contact-banner-text h3 {
+		font-family: var(--rc-mono); font-size: 1.25rem; font-weight: 700; margin-bottom: .4rem;
+	}
+	.rc-contact-banner-text p { color: var(--rc-muted); font-size: .95rem; max-width: 520px; line-height: 1.6; }
+	.rc-contact-banner-btn { flex-shrink: 0; font-size: 13px; padding: 16px 32px; }
+	@media (max-width: 600px) {
+		.rc-contact-banner { flex-direction: column; align-items: flex-start; padding: 1.75rem; }
+		.rc-contact-banner-btn { width: 100%; justify-content: center; }
+	}
 	</style>
-	<div class="rc-contact-layout rc-reveal">
-	<div class="rc-contact-info">
-		<div class="rc-contact-item">
-		<div class="rc-contact-item-icon">◎</div>
-		<div>
-			<div class="rc-contact-item-label">AUTOR</div>
-			<div class="rc-contact-item-val">Francisco Vidal Mateo</div>
+	<!-- Banner full-width: canaliza el flujo de soporte al alta de cliente.
+	     El formulario abierto «Escríbenos» se eliminó de raíz para mitigar
+	     intentos de saturación/DDoS contra admin-ajax (auditoría 01-06-2026). -->
+	<div class="rc-contact-banner rc-reveal">
+		<div class="rc-contact-banner-text">
+		<h3>¿Listo para resolver tu incidencia?</h3>
+		<p>Crea tu cuenta de cliente y abre tu primer ticket de soporte desde tu panel. Respuesta inicial en menos de 2 horas.</p>
 		</div>
-		</div>
-		<div class="rc-contact-item">
-		<div class="rc-contact-item-icon">⌥</div>
-		<div>
-			<div class="rc-contact-item-label">GITHUB</div>
-			<div class="rc-contact-item-val"><a href="https://github.com/Haplee" target="_blank" rel="noopener noreferrer">github.com/Haplee</a></div>
-		</div>
-		</div>
-		<div class="rc-contact-item">
-		<div class="rc-contact-item-icon">◈</div>
-		<div>
-			<div class="rc-contact-item-label">TWITTER / X</div>
-			<div class="rc-contact-item-val"><a href="https://x.com/FranVidalMateo" target="_blank" rel="noopener noreferrer">@FranVidalMateo</a></div>
-		</div>
-		</div>
-		<div class="rc-contact-item">
-		<div class="rc-contact-item-icon">⬡</div>
-		<div>
-			<div class="rc-contact-item-label">EMAIL</div>
-			<div class="rc-contact-item-val"><a href="mailto:tecnicos@resolvecore.website">tecnicos@resolvecore.website</a></div>
-		</div>
-		</div>
-		<div class="rc-contact-item">
-		<div class="rc-contact-item-icon">◎</div>
-		<div>
-			<div class="rc-contact-item-label">PROYECTO</div>
-			<div class="rc-contact-item-val">TFG ASIR · Barbate, Cádiz</div>
-		</div>
-		</div>
+		<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-btn-primary rc-contact-banner-btn">CREAR CUENTA Y SOLICITAR SOPORTE →</a>
 	</div>
-	<form class="rc-form" id="rc-contact-form" onsubmit="submitForm(event)">
-		<?php wp_nonce_field( 'resolvecore_contact', 'rc_nonce' ); ?>
-		<input type="text" name="rc_website" id="rc_website" class="rc-form-input" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off">
-		<div class="rc-form-row">
-		<div class="rc-form-group">
-			<label class="rc-form-label" for="rc_name">NOMBRE</label>
-			<input class="rc-form-input" type="text" id="rc_name" name="rc_name" placeholder="Tu nombre" required data-validate>
-		</div>
-		<div class="rc-form-group">
-			<label class="rc-form-label" for="rc_email">EMAIL</label>
-			<input class="rc-form-input" type="email" id="rc_email" name="rc_email" placeholder="tu@email.com" required data-validate>
-		</div>
-		</div>
-		<div class="rc-form-group">
-		<label class="rc-form-label" for="rc_type">TIPO DE CONSULTA</label>
-		<select class="rc-form-select" id="rc_type" name="rc_type">
-			<option value="soporte">Soporte técnico</option>
-			<option value="bug">Reportar un bug</option>
-			<option value="colaboracion">Colaboración / contribuir</option>
-			<option value="licencia">Licencia Pro / Enterprise</option>
-			<option value="otro">Otro</option>
-		</select>
-		</div>
-		<div class="rc-form-group">
-		<label class="rc-form-label" for="rc_message">MENSAJE <span id="rc-char-count" style="float:right;font-weight:400"></span></label>
-		<textarea class="rc-form-textarea" id="rc_message" name="rc_message" placeholder="Cuéntanos en qué podemos ayudarte..." required maxlength="500" data-validate></textarea>
-		</div>
-		<div id="rc-form-msg" class="rc-form-msg"></div>
-		<button type="submit" class="rc-form-submit" id="rc-submit-btn">ENVIAR MENSAJE →</button>
-	</form>
-	</div>
+
+	<?php // Nonce que el modal de seguimiento de tickets (rc-ticket-modal) sigue usando. ?>
+	<?php wp_nonce_field( 'resolvecore_contact', 'rc_nonce' ); ?>
 </section>
 
 </main><!-- /#main-content -->
@@ -1982,68 +1966,9 @@ function fixVuln(el) {
 /* Render inicial sin animación */
 runDemo(true);
 
-/* --- Form validation & counter --- */
-const textarea = document.getElementById('rc_message');
-const charCount = document.getElementById('rc-char-count');
-const MAX_CHARS = 500;
-if (textarea && charCount) {
-	textarea.addEventListener('input', () => {
-	const len = textarea.value.length;
-	charCount.textContent = len + ' / ' + MAX_CHARS;
-	charCount.style.color = len > MAX_CHARS ? '#ff6b35' : (len > MAX_CHARS - 50 ? '#febc2e' : '');
-	});
-	charCount.textContent = '0 / ' + MAX_CHARS;
-}
-
-document.querySelectorAll('[data-validate]').forEach(input => {
-	input.addEventListener('blur', function() {
-	const isValid = this.checkValidity();
-	this.style.borderColor = isValid ? '' : '#ff6b35';
-	});
-	input.addEventListener('input', function() {
-	if (this.checkValidity()) this.style.borderColor = '';
-	});
-});
-
-/* --- Contact form AJAX --- */
-function submitForm(e) {
-	e.preventDefault();
-	const honeypot = document.getElementById('rc_website').value;
-	if (honeypot) return;
-	const btn = document.getElementById('rc-submit-btn');
-	const msg = document.getElementById('rc-form-msg');
-	btn.disabled = true;
-	btn.textContent = 'ENVIANDO...';
-	msg.className = 'rc-form-msg';
-	msg.style.display = 'none';
-	const form = document.getElementById('rc-contact-form');
-	const data = new FormData(form);
-	data.append('action', 'resolvecore_contact');
-	data.append('nonce', document.querySelector('[name="rc_nonce"]').value);
-	fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', { method: 'POST', body: data })
-	.then(r => r.json())
-	.then(res => {
-		if (res.success) {
-		msg.className = 'rc-form-msg success';
-		msg.textContent = res.data.msg;
-		form.reset();
-		charCount.textContent = '0 / ' + MAX_CHARS;
-		} else {
-		msg.className = 'rc-form-msg error';
-		msg.textContent = res.data.msg || 'Error al enviar.';
-		}
-		msg.style.display = 'block';
-		btn.disabled = false;
-		btn.textContent = 'ENVIAR MENSAJE →';
-	})
-	.catch(() => {
-		msg.className = 'rc-form-msg error';
-		msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
-		msg.style.display = 'block';
-		btn.disabled = false;
-		btn.textContent = 'ENVIAR MENSAJE →';
-	});
-}
+/* Formulario de contacto eliminado (auditoría 01-06-2026): se retiró el bloque
+   «Escríbenos» y su handler AJAX para mitigar saturación/DDoS. El contacto pasa
+   por tarjetas directas + banner → /registro/. */
 
 /* --- Reveal on scroll (IntersectionObserver) --- */
 (function () {

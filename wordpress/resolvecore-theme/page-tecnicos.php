@@ -7,13 +7,53 @@ if ( ! is_user_logged_in() ) {
 	exit;
 }
 
-// Solo roles técnico / administrador
+// Solo roles técnico / administrador.
+// En vez de la pantalla gris nativa de wp_die(), renderizamos un 403 elegante
+// que hereda el header/footer del tema (auditoría 01-06-2026).
 if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
-	wp_die(
-		'<p>Acceso restringido al área de técnicos. Contacta con el administrador.</p>',
-		'Sin acceso',
-		array( 'response' => 403 )
-	);
+	status_header( 403 );
+	get_header();
+	?>
+	<main id="main-content" class="rc-403">
+		<div class="rc-403-box">
+			<div class="rc-403-code" aria-hidden="true">403</div>
+			<h1 class="rc-403-title">Acceso restringido</h1>
+			<p class="rc-403-text">
+				Esta zona es exclusiva del equipo técnico de ResolveCore.
+				Tu cuenta no tiene permisos para acceder a ella.
+			</p>
+			<div class="rc-403-actions">
+				<a class="rc-btn rc-btn--accent" href="<?php echo esc_url( home_url( '/' ) ); ?>">Volver al inicio</a>
+				<a class="rc-btn" href="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>">Ir a mi panel</a>
+			</div>
+			<p class="rc-403-foot">
+				¿Crees que es un error? Escribe a
+				<a href="mailto:tecnicos@resolvecore.website">tecnicos@resolvecore.website</a>.
+			</p>
+		</div>
+	</main>
+	<style>
+		.rc-403 { display: flex; align-items: center; justify-content: center;
+		          min-height: 60vh; padding: 4rem 1.5rem; }
+		.rc-403-box { max-width: 480px; text-align: center;
+		              background: var(--rc-grad-surface, #13151c); border: 1px solid var(--rc-border2, #1e2130);
+		              border-radius: 16px; padding: 3rem 2.5rem;
+		              box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+		.rc-403-code { font-family: var(--rc-mono, monospace); font-size: 4rem; font-weight: 700;
+		               line-height: 1; color: var(--rc-accent, #00e5a0); margin-bottom: .5rem;
+		               letter-spacing: .05em; }
+		.rc-403-title { font-family: var(--rc-mono, monospace); font-size: 1.5rem; font-weight: 700;
+		                margin: 0 0 .75rem; color: var(--rc-text, #e8eaf0); }
+		.rc-403-text { color: var(--rc-muted, #9da2b0); line-height: 1.6; margin: 0 0 1.75rem; }
+		.rc-403-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap;
+		                  margin-bottom: 1.5rem; }
+		.rc-403-foot { font-size: .85rem; color: var(--rc-muted, #9da2b0); margin: 0; }
+		.rc-403-foot a { color: var(--rc-accent, #00e5a0); }
+		@media (max-width: 460px) { .rc-403-box { padding: 2rem 1.5rem; } }
+	</style>
+	<?php
+	get_footer();
+	exit;
 }
 
 $dl_base    = home_url( '/tecnicos/' );
