@@ -184,6 +184,75 @@ function resolvecore_favicon() {
 }
 add_action( 'wp_head', 'resolvecore_favicon' );
 
+// =============================================================================
+//  SEO — sitemap discovery, meta description y noindex de páginas privadas
+// =============================================================================
+
+/**
+ * Anuncia el sitemap XML del core en robots.txt.
+ *
+ * WordPress sirve /wp-sitemap.xml desde 5.5 pero no añade la línea
+ * `Sitemap:` al robots.txt virtual. Sin ella, los crawlers no descubren el
+ * mapa salvo que lo declares en Search Console. Respeta el flag de
+ * visibilidad: si el sitio está marcado como privado, no lo anuncia.
+ */
+function resolvecore_robots_txt( string $output, $public ): string {
+	if ( '0' === (string) $public ) {
+		return $output;
+	}
+	$output .= "\nSitemap: " . esc_url( home_url( '/wp-sitemap.xml' ) ) . "\n";
+	return $output;
+}
+add_filter( 'robots_txt', 'resolvecore_robots_txt', 10, 2 );
+
+/**
+ * Marca como noindex las páginas privadas (registro, dashboard de cliente y
+ * área de técnicos). Son pantallas de login/cliente sin valor de búsqueda y
+ * no deben aparecer en Google. Usa el filtro nativo `wp_robots` (WP 5.7+),
+ * que emite la etiqueta <meta name="robots"> correcta.
+ */
+function resolvecore_noindex_private( array $robots ): array {
+	if ( is_page( array( 'registro', 'dashboard', 'tecnicos' ) ) ) {
+		$robots['noindex']  = true;
+		$robots['nofollow'] = true;
+	}
+	return $robots;
+}
+add_filter( 'wp_robots', 'resolvecore_noindex_private' );
+
+/**
+ * Meta description dinámica para páginas internas (la portada trae la suya
+ * en front-page.php). Prioriza el extracto manual; si no hay, recorta el
+ * contenido; como último recurso usa el lema del sitio. Se trunca a ~160
+ * caracteres, el límite útil del snippet de Google.
+ */
+function resolvecore_meta_description(): string {
+	$desc = '';
+
+	if ( is_front_page() ) {
+		return ''; // la portada ya emite su propia description
+	}
+
+	if ( is_singular() ) {
+		$post = get_queried_object();
+		if ( $post instanceof WP_Post ) {
+			$desc = has_excerpt( $post )
+				? get_the_excerpt( $post )
+				: wp_strip_all_tags( strip_shortcodes( $post->post_content ) );
+		}
+	}
+
+	if ( '' === trim( $desc ) ) {
+		$desc = get_bloginfo( 'description' );
+	}
+
+	$desc = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $desc ) ) );
+	if ( mb_strlen( $desc ) > 160 ) {
+		$desc = rtrim( mb_substr( $desc, 0, 157 ) ) . '…';
+	}
+	return $desc;
+}
+
 function resolvecore_scripts() {
 	wp_enqueue_style(
 		'resolvecore-fonts',
@@ -611,7 +680,7 @@ function rc_login_branding() {
 			border-radius: 12px;
 			box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 		}
-		.login label { color: #7a7f8e; font-size: 13px; }
+		.login label { color: #8b909e; font-size: 13px; }
 		.login input[type="text"],
 		.login input[type="password"],
 		.login input[type="email"] {
@@ -637,7 +706,7 @@ function rc_login_branding() {
 			border-radius: 8px;
 		}
 		.wp-core-ui .button-primary:hover { background: #00ffb3 !important; }
-		.login #nav a, .login #backtoblog a, .login #nav, .login #backtoblog { color: #7a7f8e !important; }
+		.login #nav a, .login #backtoblog a, .login #nav, .login #backtoblog { color: #8b909e !important; }
 		.login #nav a:hover, .login #backtoblog a:hover { color: #00e5a0 !important; }
 		.login .message, .login #login_error, .login .notice {
 			background: #1a1d24;

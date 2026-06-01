@@ -369,7 +369,7 @@ function rc_cliente_render_form() {
 
 			<label class="rc-cliente-label">
 				Resumen del problema
-				<input type="text" name="rc_summary" maxlength="120" required>
+				<input type="text" name="rc_summary" maxlength="120" autocomplete="off" required>
 			</label>
 
 			<label class="rc-cliente-label">
@@ -688,12 +688,12 @@ function rc_registro_cliente_render() {
 
 				<label class="rc-cliente-label">
 					Nombre
-					<input type="text" name="rc_nombre" maxlength="80" required>
+					<input type="text" name="rc_nombre" maxlength="80" autocomplete="name" required>
 				</label>
 
 				<label class="rc-cliente-label">
 					Email
-					<input type="email" name="rc_email" maxlength="120" required>
+					<input type="email" name="rc_email" maxlength="120" autocomplete="email" inputmode="email" spellcheck="false" required>
 				</label>
 
 				<label class="rc-cliente-label">
