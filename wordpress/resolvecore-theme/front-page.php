@@ -813,9 +813,11 @@
 		.rc-hero--split .rc-hero-content { margin: 0 auto; text-align: center; }
 		.rc-hero--split .rc-badge, .rc-hero--split .rc-hero-sub { margin-left: auto; margin-right: auto; }
 		.rc-hero--split .rc-hero-actions, .rc-hero--split .rc-hero-stats { justify-content: center; }
+		.rc-hero--split .rc-hero-stats { grid-template-columns: repeat(2, 1fr); max-width: 420px; margin-left: auto; margin-right: auto; }
 		.rc-hero-visual { order: -1; }
 	}
 	@media (max-width: 460px) {
+		.rc-hero--split .rc-hero-stats { grid-template-columns: repeat(2, 1fr); gap: 1.25rem 1rem; }
 		.rc-hcard-body { grid-template-columns: 1fr; }
 	}
 
