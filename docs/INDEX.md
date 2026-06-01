@@ -76,5 +76,5 @@
 | Fichero | Descripción |
 |---------|-------------|
 | `../README.md` | Instalación del entorno local y comandos esenciales |
-| `../.claude/CLAUDE.md` | Instrucciones para Claude Code (convenciones, arquitectura) |
+| `../.claude/CLAUDE.md` | Convenciones y arquitectura de desarrollo del proyecto |
 | `../reports/informe.html` | Plantilla HTML del informe técnico generado por los scripts |
