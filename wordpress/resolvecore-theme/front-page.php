@@ -763,7 +763,7 @@
 	.rc-hero--split .rc-badge { margin-left: 0; margin-right: 0; }
 	.rc-hero--split .rc-hero-sub { margin-left: 0; margin-right: 0; }
 	.rc-hero--split .rc-hero-actions { justify-content: flex-start; }
-	.rc-hero--split .rc-hero-stats { grid-column: 1 / -1; grid-template-columns: repeat(4,1fr); gap: 1.5rem 1.25rem; justify-items: center; text-align: center; max-width: 760px; width: 100%; margin: 1.5rem auto 0; }
+	.rc-hero--split .rc-hero-stats { grid-column: 1 / -1; grid-template-columns: repeat(4,1fr); gap: 1.5rem 1.25rem; justify-items: center; text-align: center; max-width: 760px; width: 100%; margin: 2.5rem auto 3.5rem; }
 
 	.rc-hero-visual { display: flex; justify-content: center; }
 	.rc-hero-card {
