@@ -14,7 +14,7 @@ Mejoras v1.1.0:
 
 Política: stdlib only. Sin dependencias pip.
 
-Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
+Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 """
 
 import argparse

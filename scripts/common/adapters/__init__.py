@@ -1,11 +1,14 @@
-"""Adapters: implementaciones concretas de los Ports sobre APIs externas.
+"""Adapters: implementaciones concretas de los contratos (Ports), sin clases.
 
-Cada adapter encapsula una integracion (NVD, OSV, Mantis, Nmap...).
-Solo aqui se permite hacer IO, llamadas HTTP, subprocesos y lectura de env.
+Cada adapter es un módulo con funciones que cumplen el contrato descrito en
+ports/. Solo aquí se permite hacer IO, llamadas HTTP, subprocesos y env.
+
+Uso:
+    from scripts.common.adapters import nmap_local, nvd_rest
+    host = nmap_local.get_host_info("192.168.1.10")
+    cves = nvd_rest.get_vulns("OpenSSH", "8.2")
 """
 
-from .mantis_rest import MantisRestSink
-from .nmap_local import NmapLocalAdapter
-from .nvd_rest import NvdRestAdapter
+from . import mantis_rest, nmap_local, nvd_rest
 
-__all__ = ["MantisRestSink", "NmapLocalAdapter", "NvdRestAdapter"]
+__all__ = ["mantis_rest", "nmap_local", "nvd_rest"]

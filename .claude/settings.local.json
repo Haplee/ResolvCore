@@ -168,7 +168,27 @@
       "Bash(shellcheck scripts/server/ops/sync-wp.sh)",
       "Bash(claude plugin *)",
       "PowerShell(echo y | & 'C:\\\\Program Files\\\\PuTTY\\\\plink.exe' -ssh -batch -pw 'Vv1Uxpvp611lyii' root@212.227.95.116 \"cd /opt/resolvecore-repo && git fetch origin && git reset --hard origin/main && bash scripts/server/ops/sync-wp.sh main 2>&1\")",
-      "PowerShell(& 'C:\\\\Program Files\\\\PuTTY\\\\plink.exe' -ssh -batch -hostkey 'SHA256:WuUgRWOHCORY7q9lJNnYpcdgqxN7ESLQSLzM9RJZl8w' -pw 'Vv1Uxpvp611lyii' root@212.227.95.116 \"cd /opt/resolvecore-repo && git fetch origin && git reset --hard origin/main && bash scripts/server/ops/sync-wp.sh main 2>&1\")"
+      "PowerShell(& 'C:\\\\Program Files\\\\PuTTY\\\\plink.exe' -ssh -batch -hostkey 'SHA256:WuUgRWOHCORY7q9lJNnYpcdgqxN7ESLQSLzM9RJZl8w' -pw 'Vv1Uxpvp611lyii' root@212.227.95.116 \"cd /opt/resolvecore-repo && git fetch origin && git reset --hard origin/main && bash scripts/server/ops/sync-wp.sh main 2>&1\")",
+      "Bash(awk -F/ '{print $1}')",
+      "Bash(grep -iE '\\\\.\\(pyc|zip|log\\)$|__pycache__|diagnosticos/')",
+      "Bash(grep -n \"INSERT INTO \\\\`wp_users\\\\`\" wordpress-db.sql)",
+      "Bash(xargs grep -iEl \"\\(token|password|secret|api_key\\)\\\\s*[:=]\\\\s*['\\\\\"][A-Za-z0-9+/]{16,}\")",
+      "Bash(xargs grep -L '^#!/usr/bin/env bash')",
+      "Bash(xargs grep -lE '^# Requires')",
+      "Bash(grep -c '^scripts\\\\|^vulnerabilities\\\\|\\\\.sh$\\\\|\\\\.ps1$\\\\|\\\\.py$')",
+      "Bash(python -m py_compile scripts/common/*.py scripts/common/**/*.py)",
+      "Bash(grep -iE 'ResolveCore\\\\.\\(sh|ps1\\)$')",
+      "Bash(awk '{print $1}')",
+      "Bash(perl -pi -e 's/Autor:\\\\s+FranVi \\\\/ ResolveCore/Autor:   Francisco Vidal Mateo \\(GitHub: Haplee\\)/' scripts/servicios/clonacion/registrar-imagen.sh scripts/servicios/clonacion/verificar-imagen.sh scripts/servicios/congelacion/congelacion-linux.sh)",
+      "Bash(perl -pi -e 's/Autor: Francisco Vidal Mateo \\\\\\(Haplee\\\\\\) - TFG ASIR ResolveCore/Autor:   Francisco Vidal Mateo \\(GitHub: Haplee\\)/' scripts/common/adjuntar_informe_mantis.py scripts/common/escaner_nmap.py scripts/common/generar_factura.py scripts/common/generar_informe.py)",
+      "Bash(python -m py_compile _archivo/common/*.py _archivo/common/adapters/*.py)",
+      "Bash(python -c \"import pypdf\")",
+      "Bash(python -c \"import fitz\")",
+      "Bash(python -c \"import sys; sys.path.insert\\(0,'.'\\); from common.adapters import mantis_rest; print\\('adapter ok', mantis_rest.attach.__doc__ is not None\\)\")",
+      "Bash(python -m py_compile common/generar_informe.py common/generar_factura.py common/adjuntar_informe_mantis.py common/adapters/mantis_rest.py)",
+      "Bash(python common/adjuntar_informe_mantis.py --ticket 1 --pdf nonexistent.pdf)",
+      "PowerShell($null = [System.Management.Automation.Language.Parser]::ParseFile\\(\"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\scripts\\\\windows\\\\ResolveCore.ps1\", [ref]$null, [ref]$e\\); if \\($e\\) { $e | ForEach-Object { $_.Message } } else { \"PS_PARSE_OK\" })",
+      "PowerShell(php -l wordpress/resolvecore-theme/functions.php)"
     ]
   }
 }

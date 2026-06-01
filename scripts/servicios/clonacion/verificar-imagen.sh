@@ -19,7 +19,7 @@
 #   1  imagen corrupta (hash no coincide)
 #   2  imagen o entrada de manifiesto no encontrada
 #
-# Autor:   FranVi / ResolveCore
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # Versión: 1.0.0
 # ─────────────────────────────────────────────────────────────────────────────
 

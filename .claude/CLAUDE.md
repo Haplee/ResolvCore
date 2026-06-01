@@ -25,14 +25,14 @@ de informes PDF.
 - **Tickets:** MantisBT (Docker local + VPS)
 - **Acceso remoto:** AnyDesk
 - **Scripts diagnóstico:** PowerShell (Windows), Bash (Linux / macOS / Android)
-- **Scripts de reconocimiento:** Python 3 — Nmap, Shodan, CVE (Hexagonal Architecture)
+- **Scripts de reconocimiento:** Python 3 — Nmap, CVE (capas dominio/ports/adapters, sin clases)
 - **Generación de informes:** HTML → PDF (wkhtmltopdf / DomPDF)
 - **Base de datos de vulnerabilidades:** MySQL / MariaDB
 - **Android (futuro):** Kotlin + Jetpack Compose + Material 3
 
 Para la parte web usa PHP moderno. No mezcles jQuery con vanilla JS sin motivo.
 Para los scripts, usa PowerShell 5.1+ en Windows y Bash compatible con sh en Linux.
-Para los scripts Python (`scripts/common/`), sigue la arquitectura Hexagonal: domain → ports → adapters.
+Para los scripts Python (`scripts/common/`), separa en capas domain → ports → adapters, pero **sin clases**: las entidades son diccionarios creados por funciones (`nueva_vulnerabilidad()`, `nuevo_host()`…), los ports son contratos escritos en docstrings y los adapters son funciones de módulo (`nvd_rest.get_vulns()`, `nmap_local.get_host_info()`). Tampoco uses type hints — el autor no programa con clases ni anotaciones.
 
 ---
 
@@ -51,24 +51,23 @@ pwsh ./scripts/windows/diagnostico.ps1
 # Ejecutar script de diagnóstico Linux
 bash ./scripts/linux/diagnostico.sh
 
-# Ejecutar script de diagnóstico macOS
-bash ./scripts/macos/diagnostico.sh
-
-# Escaneo Nmap (Python — requiere nmap instalado)
-python scripts/common/escaner_nmap.py --ip 192.168.1.0/24
+# Ejecutar script de diagnóstico macOS  (ROADMAP — script no presente en el repo;
+# borrado en 12890ac, recuperable de histórico. Ver auditoría A11/D5.)
+# bash ./scripts/macos/diagnostico.sh
 
 # Buscar vulnerabilidades
 python scripts/common/buscar_vulnerabilidades.py
 
-# Generar informe HTML/PDF desde JSON de diagnóstico
-python scripts/common/generar_informe.py --json scripts/diagnosticos/diagnostico.json
-python scripts/common/generar_informe.py --json scripts/diagnosticos/diagnostico.json --pdf --ticket 42
+# (ARCHIVADO — en _archivo/common/, no en el árbol activo. Restaurar con git mv si se necesita.)
+# python scripts/common/escaner_nmap.py --ip 192.168.1.0/24       # escaneo Nmap
+# python scripts/common/generar_informe.py --json ... [--pdf --ticket 42]   # informe HTML/PDF
 
 # Setup servidor VPS (Linux)
 bash ./scripts/server/linux/post-install.sh
 
-# Setup entorno técnico (Windows)
-pwsh ./scripts/setup/setup-tecnico-windows.ps1
+# Setup entorno técnico (Windows)  (ROADMAP — scripts/setup/ borrado en 12890ac,
+# recuperable de histórico. Ver auditoría A11/D5.)
+# pwsh ./scripts/setup/setup-tecnico-windows.ps1
 
 # Generar informe PDF (cuando esté implementado)
 php artisan resolvecore:report --ticket=ID
@@ -79,36 +78,265 @@ php artisan resolvecore:report --ticket=ID
 ## Arquitectura del proyecto
 
 ```
-resolvecore/
-├── wordpress/                       # WordPress frontend
-│   ├── resolvecore-theme/           # Tema (PHP + CSS + JS vanilla)
-│   │   ├── assets/js/               # main.js
-│   │   └── assets/logo/             # Logos y SVGs
-│   └── plugins/rc-mantisbt/         # Plugin integración MantisBT
-├── mantisbt/                        # Despliegue y configuración MantisBT
-│   ├── config/                      # config_inc.php (+ .template)
-│   ├── plugins/                     # EventLog, Kanban, Reminder, etc.
-│   ├── sql/                         # mantisbt-db.sql + resolvecore-setup.sql
+ResolveCore
+├── .claude
+│   ├── skills
+│   │   ├── entrevistador-procesos.skill
+│   │   ├── humanizador.skill
+│   │   ├── optimizador-prompts.skill
+│   │   ├── presentaciones-visuales.skill
+│   │   ├── superpowers.skill
+│   │   └── verificador-datos.skill
+│   ├── CLAUDE.md
+│   ├── settings.json
+│   └── settings.local.json
+├── .github
+│   └── workflows
+│       └── lint.yml
+├── _archivo
+│   ├── common
+│   │   ├── adapters
+│   │   │   └── mantis_rest.py
+│   │   ├── adjuntar_informe_mantis.py
+│   │   ├── escaner_nmap.py
+│   │   ├── generar_factura.py
+│   │   └── generar_informe.py
+│   └── README.md
+├── assets
+│   └── logo
+│       ├── resolvcore-icon.png
+│       ├── resolvcore-icon.svg
+│       ├── resolvcore-logo-dark.png
+│       ├── resolvcore-logo-dark.svg
+│       ├── resolvcore-logo-light.png
+│       └── resolvcore-logo-light.svg
+├── docs
+│   ├── capturas
+│   │   ├── lun19-entornos-backup
+│   │   │   ├── 01_localwp-web-descarga.png
+│   │   │   ├── 02_localwp-formulario-descarga.png
+│   │   │   ├── 03_localwp-instalacion-dpkg.png
+│   │   │   ├── 04_localwp-lanzar-app.png
+│   │   │   ├── 05_localwp-terminos-servicio.png
+│   │   │   ├── 06_localwp-app-vacia.png
+│   │   │   ├── 07_localwp-nombre-sitio-resolvecore.png
+│   │   │   ├── 08_localwp-entorno-custom-php82-nginx-mysql.png
+│   │   │   ├── 09_localwp-setup-wordpress-credenciales.png
+│   │   │   ├── 10_localwp-error-libaio.png
+│   │   │   ├── 11_localwp-fix-apt-install-libaio.png
+│   │   │   ├── 12_wordpress-sitio-activo-resolvecore-local.png
+│   │   │   ├── 13_wordpress-login.png
+│   │   │   ├── 14_wordpress-dashboard-admin.png
+│   │   │   ├── 15_tema-directorio-creado-terminal.png
+│   │   │   └── 16_wordpress-temas-instalados.png
+│   │   ├── mar20-mantisbt-web
+│   │   │   ├── 01_web-resolvecore-homepage-hero.png
+│   │   │   ├── 02_mantisbt-instalacion-error-bd.png
+│   │   │   ├── 03_mantisbt-credenciales-firefox.png
+│   │   │   ├── 04_mantisbt-dashboard-vacio.png
+│   │   │   ├── 05_mantisbt-api-token-generado.png
+│   │   │   ├── 06_mantisbt-primer-ticket-test-terminal.png
+│   │   │   ├── 07_wordpress-formulario-contacto-test.png
+│   │   │   ├── 08_mantisbt-ticket-creado-desde-formulario.png
+│   │   │   └── 09_backup-sql-wpcontent-tar.png
+│   │   └── README.md
+│   ├── defensa
+│   │   ├── anotaciones-tutor.md
+│   │   ├── auditoria-mejoras.md
+│   │   ├── cambios _desde_25_05.md
+│   │   ├── defensa-scripts-mantis.md
+│   │   ├── defensa-tfg.md
+│   │   ├── estudio-tribunal-scripts.md
+│   │   ├── informe-tutor-estado-proyecto.md
+│   │   ├── mantisbt-api-integracion.md
+│   │   ├── origen-componentes.md
+│   │   └── punto-de-partida-ante-proyecto.md
+│   ├── scripting
+│   │   ├── arquitectura-scripting.md
+│   │   ├── diseno-alto-nivel.md
+│   │   ├── regex-y-json-diagnostico.md
+│   │   ├── schema-diagnostico.md
+│   │   ├── schema-diagnostico.schema.json
+│   │   ├── schema-servicios-adicionales.md
+│   │   └── schema-vulnerabilidades.md
+│   ├── tareas
+│   │   ├── handoff.md
+│   │   ├── implementar-servicios-adicionales.md
+│   │   └── pendiente-2026-05-26.md
+│   ├── tecnica
+│   │   ├── ResolveCore_Documentacion_Tecnica.md
+│   │   ├── backup-entorno-web.md
+│   │   ├── comparativa-componentes.md
+│   │   ├── correo-dkim.md
+│   │   ├── despliegue-ionos.md
+│   │   ├── entornos.md
+│   │   ├── equipo-tecnicos.md
+│   │   ├── flujo-sistema.md
+│   │   ├── mantis-integration.md
+│   │   ├── mantis-permisos.md
+│   │   ├── manual-usuario-mantis.md
+│   │   ├── servicios-adicionales.md
+│   │   ├── so-especializado.md
+│   │   ├── stack-tecnologico.md
+│   │   ├── tutorial-wordpress-manual.md
+│   │   └── versionado.md
+│   ├── INDEX.md
+│   └── PENDIENTES.md
+├── mantisbt
+│   ├── config
+│   │   └── config_inc.php
+│   ├── plugins
+│   │   ├── ResolveCoreBranding
+│   │   │   └── ResolveCoreBranding.php
+│   │   └── install.sh
+│   ├── sql
+│   │   ├── mantisbt-db.sql
+│   │   └── resolvecore-setup.sql
+│   ├── .env.example
 │   └── docker-compose.yml
-├── scripts/
-│   ├── windows/                     # PowerShell: diagnóstico + optimización
-│   ├── linux/                       # Bash: diagnóstico + optimización
-│   ├── macos/                       # Bash: diagnóstico + optimización macOS
-│   ├── android/                     # Bash: diagnóstico Android (ADB)
-│   ├── common/                      # Python (Hexagonal Architecture)
-│   │   ├── domain/                  # Modelos (Host, Vulnerability…)
-│   │   ├── ports/                   # Interfaces (HostIntelSource)
-│   │   └── adapters/                # Implementaciones (shodan_rest.py)
-│   ├── server/                      # Setup VPS (bootstrap-mantis.sh, post-install.sh)
-│   ├── setup/                       # Setup entorno técnico (Linux + Windows)
-│   └── diagnosticos/                # Salida de ejecuciones (JSON + HTML)
-├── reports/                         # Plantilla HTML → PDF
-├── vulnerabilities/
-│   └── migrations/                  # SQL migraciones idempotentes (0001_init.sql)
-├── assets/                          # Logos globales del proyecto
-└── docs/                            # Documentación técnica
+├── preview
+│   ├── _home-inline.css
+│   ├── _nav.css
+│   ├── dashboard.html
+│   ├── home.html
+│   ├── index.html
+│   ├── mantis.html
+│   ├── registro.html
+│   └── tech.html
+├── scripts
+│   ├── android
+│   │   ├── ResolveCore.sh
+│   │   ├── diagnostico.sh
+│   │   └── optimizacion.sh
+│   ├── common
+│   │   ├── adapters
+│   │   │   ├── __init__.py
+│   │   │   ├── nmap_local.py
+│   │   │   └── nvd_rest.py
+│   │   ├── domain
+│   │   │   ├── __init__.py
+│   │   │   └── models.py
+│   │   ├── ports
+│   │   │   ├── __init__.py
+│   │   │   ├── host_intel_source.py
+│   │   │   ├── mantis_attachment_sink.py
+│   │   │   └── vuln_source.py
+│   │   ├── __init__.py
+│   │   └── buscar_vulnerabilidades.py
+│   ├── linux
+│   │   ├── ResolveCore.sh
+│   │   ├── diagnostico.sh
+│   │   └── optimizacion.sh
+│   ├── server
+│   │   ├── linux
+│   │   │   ├── autoinstall.yaml
+│   │   │   └── post-install.sh
+│   │   ├── nginx-snippets
+│   │   │   └── rc-install.conf
+│   │   ├── ops
+│   │   │   ├── backup.sh
+│   │   │   ├── cron-resolvecore
+│   │   │   ├── deploy.sh
+│   │   │   ├── healthcheck.sh
+│   │   │   ├── logrotate-resolvecore
+│   │   │   ├── nginx-reload-safe.sh
+│   │   │   ├── restore.sh
+│   │   │   ├── setup-mail-ionos.sh
+│   │   │   └── sync-wp.sh
+│   │   ├── bootstrap-mantis.sh
+│   │   ├── deploy-ionos.sh
+│   │   ├── setup-downloads-dir.sh
+│   │   └── upload-to-vps.ps1
+│   ├── servicios
+│   │   ├── clonacion
+│   │   │   ├── registrar-imagen.sh
+│   │   │   └── verificar-imagen.sh
+│   │   ├── congelacion
+│   │   │   ├── congelacion-linux.sh
+│   │   │   └── congelacion-windows.ps1
+│   │   ├── kit
+│   │   │   └── construir-kit.ps1
+│   │   ├── README.md
+│   │   ├── install.ps1
+│   │   └── install.sh
+│   └── windows
+│       ├── ResolveCore.ps1
+│       ├── diagnostico.ps1
+│       └── optimizacion.ps1
+├── vulnerabilities
+│   └── migrations
+│       └── 0001_init.sql
+├── wordpress
+│   ├── plugins
+│   │   ├── rc-core
+│   │   │   └── rc-core.php
+│   │   ├── rc-fleet
+│   │   │   └── rc-fleet.php
+│   │   ├── rc-mantisbt
+│   │   │   ├── includes
+│   │   │   │   └── class-mantis-api.php
+│   │   │   └── rc-mantisbt.php
+│   │   └── rc-tech
+│   │       ├── admin
+│   │       │   ├── partials
+│   │       │   │   └── row.php
+│   │       │   └── page-tech.php
+│   │       ├── assets
+│   │       │   ├── tech-panel.css
+│   │       │   └── tech-panel.js
+│   │       ├── includes
+│   │       │   ├── addon-telegram.example.php
+│   │       │   ├── class-rc-tech-alerts.php
+│   │       │   ├── class-rc-tech-api-ext.php
+│   │       │   ├── class-rc-tech-queue.php
+│   │       │   ├── class-rc-tech-report.php
+│   │       │   ├── class-rc-tech-sla.php
+│   │       │   ├── class-rc-tech-timeline.php
+│   │       │   └── helpers.php
+│   │       ├── rest
+│   │       │   └── class-rc-tech-rest.php
+│   │       ├── README.md
+│   │       ├── rc-tech.php
+│   │       └── uninstall.php
+│   └── resolvecore-theme
+│       ├── assets
+│       │   ├── js
+│       │   │   └── main.js
+│       │   └── logo
+│       │       ├── resolvcore-icon.png
+│       │       ├── resolvcore-icon.svg
+│       │       ├── resolvcore-logo-dark.png
+│       │       ├── resolvcore-logo-dark.svg
+│       │       ├── resolvcore-logo-light.png
+│       │       └── resolvcore-logo-light.svg
+│       ├── footer.php
+│       ├── front-page.php
+│       ├── functions.php
+│       ├── header.php
+│       ├── index.php
+│       ├── og-image.png
+│       ├── page-aviso-legal.php
+│       ├── page-changelog.php
+│       ├── page-contacto.php
+│       ├── page-cookies.php
+│       ├── page-dashboard.php
+│       ├── page-docs.php
+│       ├── page-fleet-status.php
+│       ├── page-privacidad.php
+│       ├── page-registro.php
+│       ├── page-tecnicos.php
+│       ├── page.php
+│       └── style.css
+├── .editorconfig
+├── .env.example
+├── .gitattributes
+├── .gitignore
+├── .pre-commit-config.yaml
+├── LICENSE
+├── PSScriptAnalyzerSettings.psd1
+├── README.md
+└── phpcs.xml.dist
 ```
-
 ---
 
 ## Convenciones de código
@@ -145,7 +373,7 @@ resolvecore/
 ### 1. Diagnóstico multiplataforma
 - Windows: rendimiento (CPU/RAM/disco), servicios críticos, logs de eventos, Windows Update.
 - Linux: top/htop, journalctl, df, apt/dnf, cron, puertos abiertos.
-- macOS: equivalente Linux via `scripts/macos/`.
+- macOS: equivalente Linux via `scripts/macos/` (ROADMAP — script no presente; ver A11/D5).
 - Android: diagnóstico básico via ADB en `scripts/android/`.
 - Reconocimiento de red: Nmap + Shodan via Python (`scripts/common/`) con arquitectura Hexagonal.
 - Salida estructurada JSON (+ HTML) en `scripts/diagnosticos/`.

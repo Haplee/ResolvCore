@@ -206,28 +206,31 @@ Script original que usa ADB (Android Debug Bridge) para recoger:
 
 | Campo | Valor |
 |-------|-------|
-| Origen | **Creación propia** con Hexagonal Architecture |
+| Origen | **Creación propia** — separación dominio / adapters, sin clases |
 | Autor | Francisco Vidal Mateo |
 | Lenguaje | Python 3.8+ — stdlib only (sin `pip install`) |
-| Asistencia IA | Sí — patrón Hexagonal y manejo de APIs REST |
+| Asistencia IA | Sí — diseño en capas y manejo de APIs REST |
 
 ### `buscar_vulnerabilidades.py`
 Consulta en tiempo real NVD (NIST), CISA KEV, OSV y EPSS-FIRST.
 No almacena base de datos local — cada ejecución obtiene datos frescos.
 Salida: JSON, HTML con chips de severidad, texto plano.
 
-### `escaner_nmap.py`
-Wrapper sobre Nmap (debe estar instalado en el sistema).
-Parsea salida XML de Nmap y la convierte a la estructura de dominio de ResolveCore.
+### `adapters/nmap_local.py`
+Lanza Nmap (debe estar instalado en el sistema) contra una IP de la LAN.
+Parsea la salida XML de Nmap y la convierte a la estructura de dominio de ResolveCore
+(un host = un diccionario hecho con `nuevo_host()`).
 
-**Arquitectura Hexagonal aplicada:**
+**Separación en capas (sin clases):**
 ```
-domain/         → modelos (Host, Vulnerability, Service) — sin dependencias externas
-ports/          → interfaces abstractas (HostIntelSource)
-adapters/       → implementaciones concretas (mantis_rest.py)
+domain/    → entidades = diccionarios creados por funciones (nuevo_host, nueva_vulnerabilidad...)
+             y reglas = funciones sueltas (es_critica, contar_criticas). Sin dependencias.
+ports/     → contratos escritos en docstrings (qué función debe ofrecer cada adapter)
+adapters/  → funciones que tocan red/subprocesos (nvd_rest.get_vulns, nmap_local.get_host_info)
 ```
-Esta arquitectura permite añadir nuevas fuentes (VirusTotal, Censys) sin modificar
-el dominio, siguiendo el patrón Strangler Fig (migración incremental).
+No se usan clases a propósito: el dominio trabaja solo con diccionarios, que van
+directos a JSON. Para añadir una fuente nueva (VirusTotal, Censys) basta escribir
+otro módulo adapter con la misma función; el dominio no cambia.
 
 ---
 

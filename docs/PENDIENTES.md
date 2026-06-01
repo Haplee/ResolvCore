@@ -1,7 +1,7 @@
 # Tareas pendientes — ResolveCore
 
 > Lista de acciones manuales por hacer. Marca con [x] al completar.
-> Última actualización: 2026-05-30.
+> Última actualización: 2026-05-31.
 
 ---
 
@@ -32,29 +32,40 @@ Verificación en Chrome (**Ctrl+Shift+R** para saltar caché):
 
 ---
 
-## 2. Configurar el correo saliente (IONOS SMTP vía msmtp)
+## 2. Configurar el correo saliente (IONOS SMTP vía msmtp) — ✅ COMPLETADO 2026-05-31
 
 Sin esto NO llegan los emails de activación de cuenta ni «He olvidado mi contraseña».
 
-1. [ ] **Crear el buzón** en el panel IONOS → Email: `no-reply@resolvecore.website` (o el que prefieras). Apuntar su contraseña.
-2. [ ] En el VPS, lanzar el script con el buzón + password reales:
+1. [x] **Crear el buzón** en el panel IONOS → Email: `tecnicos@resolvecore.website`. Contraseña guardada aparte (gestor de contraseñas, **nunca en el repo**).
+2. [x] En el VPS, lanzar el script con el buzón + password reales (pega la password en la terminal, no la versiones):
    ```bash
-   sudo bash /opt/resolvecore-repo/scripts/server/ops/setup-mail-ionos.sh no-reply@resolvecore.website 'PASSWORD_DEL_BUZON'
+   sudo bash /opt/resolvecore-repo/scripts/server/ops/setup-mail-ionos.sh tecnicos@resolvecore.website 'PASSWORD_DEL_BUZON'
    ```
-3. [ ] Alinear el remitente de WordPress al buzón (el filtro `wp_mail_from` usa `admin_email`):
+3. [x] Alinear el remitente de WordPress al buzón (el filtro `wp_mail_from` usa `admin_email`):
    ```bash
-   sudo -u www-data wp option update admin_email no-reply@resolvecore.website --path=/var/www/wp
+   sudo -u www-data wp option update admin_email tecnicos@resolvecore.website --path=/var/www/wp
    ```
-4. [ ] Probar el envío directo:
+4. [x] Probar el envío directo:
    ```bash
    echo -e "Subject: prueba resolvecore\n\nhola" | msmtp -a default TU_CORREO_PERSONAL@gmail.com
    ```
-5. [ ] Probar el flujo real: alta en `/registro/` con un email tuyo → debe llegar el correo de activación con el botón «Fijar mi contraseña».
+5. [x] Probar el flujo real: alta en `/registro/` con un email tuyo → debe llegar el correo de activación con el botón «Fijar mi contraseña».
 
 Notas:
 - Host/puerto por defecto del script: `smtp.ionos.es:587` (STARTTLS). Cambiar como args 3 y 4 si IONOS te da otros.
 - La password queda solo en `/etc/msmtprc` (`0640 root:www-data`), nunca en el repo.
 - Logs de envío en `/var/log/msmtp.log` si algo falla.
+
+### 2b. Autenticación DNS (SPF / DKIM / DMARC) — ✅ hecho 2026-05-31
+
+Registros TXT/CNAME en DNS de `resolvecore.website` (panel IONOS):
+- **SPF** TXT `@`: `v=spf1 a mx ip4:212.227.95.116 include:_spf-eu.ionos.com ~all`.
+- **DKIM**: CNAME `s1-ionos._domainkey` y `s2-ionos._domainkey` (firma IONOS, activado en panel Email). Borrado `rc._domainkey` huérfano (sobra del intento OpenDKIM, no firmaba nada con relay IONOS).
+- **DMARC** TXT `_dmarc`: `v=DMARC1; p=quarantine; rua=mailto:postmaster@resolvecore.website; fo=1`.
+
+Verificado: correo de activación («ResolveCore — Activa tu cuenta») llega a **inbox**, no a spam.
+
+> Gotcha que costó depurar: en `/registro/` no llegaba nada porque el email de prueba (`fvidalmateo@gmail.com`) ya era la cuenta **admin** (ID 1) → `email_exists` corta el alta y no manda activación. Para probar el flujo real usar un email nuevo (alias Gmail `+test`). El transporte y la plantilla HTML funcionaban desde el principio.
 
 ---
 

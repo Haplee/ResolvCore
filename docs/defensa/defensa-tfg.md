@@ -9,6 +9,19 @@
 > ⚠️ **REGLA DE MANTENIMIENTO**
 > Este documento es el **artefacto vivo** de la defensa. Cada vez que se añade o modifica una funcionalidad del proyecto, se actualiza la sección correspondiente aquí. No se mantiene en el commit final únicamente — se mantiene continuamente. Si un cambio no está reflejado en este fichero, no existe a efectos de la defensa.
 
+> 🔄 **ESTADO DEL ÁRBOL (2026-05-31, tras auditoría A11).**
+> El commit `12890ac` borró 44 ficheros fuente; se restauró lo esencial + indispensable.
+> **SÍ en el árbol actual** (restaurado desde `12890ac^`): los scripts Python en capas
+> (sin clases) `scripts/common/{domain,ports,adapters}` + `escaner_nmap.py`/`generar_informe.py`/
+> `generar_factura.py`/`adjuntar_informe_mantis.py`, la migración
+> `vulnerabilities/migrations/0001_init.sql`, los **launchers** `ResolveCore.{sh,ps1}`
+> (Linux/Android/Windows) y `scripts/servicios/` (congelación/clonación/kit, **source**).
+> **NO en el árbol (siguen en histórico, recuperables):** `scripts/macos/`,
+> `scripts/setup/`, el binario `scripts/servicios/kit/anydesk.exe` (7.9 MB — no se
+> versiona, lo aporta el técnico) y `scripts/server/setup-mail-dkim.sh` (superado por
+> `setup-mail-ionos.sh`). Lo no presente se marca **[ROADMAP]**/**[EN HISTÓRICO]**.
+> Ver `docs/defensa/auditoria-mejoras.md` §8.
+
 ---
 
 ## Tabla de contenidos
@@ -79,16 +92,16 @@ Construir una plataforma operativa que permita a un técnico:
 | O1 | Scripts diagnóstico Windows (PowerShell 5.1+) | ✅ Completado v4.0.0 |
 | O2 | Scripts diagnóstico Linux (Bash) | ✅ Completado v3.0.0 |
 | O3 | Scripts diagnóstico Android (Termux/ADB) | ✅ Completado v2.1.0 |
-| O4 | Scripts diagnóstico macOS (stub demo) | ✅ Completado v0.1.0 |
+| O4 | Scripts diagnóstico macOS (stub demo) | 🟡 ROADMAP — stub borrado en `12890ac`, en histórico |
 | O5 | Schema JSON cross-platform unificado | ✅ Completado — Windows migrado a `hardware {}` v4.0.0 |
 | O6 | Plugin WP integración MantisBT | ✅ Completado |
 | O7 | Tema WP landing pública | ✅ Completado v3.0.0 |
 | O8 | Generador PDF informes | ✅ Completado — `reports/generate-report.php` + wkhtmltopdf |
 | O9 | Base CVE sincronizada con NVD | 🟡 Schema definido, cron pendiente |
 | O10 | Despliegue VPS productivo | 🟡 Scripts listos (`deploy-ionos.sh` + `upload-to-vps.ps1`), pendiente ejecución |
-| O11 | Servicio congelación de sistemas (Windows + Linux) | ✅ Completado — `scripts/servicios/congelacion/` |
-| O12 | Servicio clonación (registro + verificación de imágenes) | ✅ Completado — `scripts/servicios/clonacion/` |
-| O13 | Kit de implantación en cliente (paquete AnyDesk + scripts) | ✅ Completado — `scripts/servicios/kit/construir-kit.ps1` |
+| O11 | Servicio congelación de sistemas (Windows + Linux) | ✅ Completado — `scripts/servicios/congelacion/` (restaurado) |
+| O12 | Servicio clonación (registro + verificación de imágenes) | ✅ Completado — `scripts/servicios/clonacion/` (restaurado) |
+| O13 | Kit de implantación en cliente (paquete AnyDesk + scripts) | ✅ Completado — `scripts/servicios/kit/construir-kit.ps1` (binario `anydesk.exe` no versionado, lo aporta el técnico) |
 
 ### Fuera de alcance (declarado)
 - App móvil nativa Android (queda como roadmap, no entregable TFG).
@@ -207,7 +220,9 @@ Salida: JSON (v4.0.0 — todos los datos hardware bajo `hardware {}`) + HTML res
 - Termux: `getprop`, `df`, `top -n 1`
 - Detección de apps con permisos peligrosos.
 
-### macOS (stub `scripts/macos/diagnostico.sh` v0.1.0-demo)
+### macOS (stub `scripts/macos/diagnostico.sh` v0.1.0-demo) — **[EN HISTÓRICO]**
+> Borrado en `12890ac`; no está en el árbol actual. Recuperable de histórico. Descrito aquí como trabajo realizado y roadmap.
+
 Esqueleto CLI con `--host --user --port --output --dry-run --confirm`. Devuelve JSON placeholder con `_meta.stub: true`. **Decisión consciente:** la versión completa anterior contenía operaciones destructivas (`mdutil off`, `rm -rf ~/Library/Caches`, `networksetup -setdnsservers`) sin guardas — se redujo a stub hasta poder revisar a fondo.
 
 ### Schema JSON unificado
@@ -252,7 +267,7 @@ La versión anterior (`scripts/android/optimizacion.sh` v3.0.0) usaba `pm clear 
 
 ### Decisión arquitectónica
 
-Módulo unificado en **Python 3.8+ stdlib** (sin pip, sin requirements.txt) que vale para los 4 SO. Evita duplicar lógica CVE en PowerShell + Bash + Bash + Bash. Se invoca como **opción 3** del menú `ResolveCore` en cada plataforma. El launcher auto-instala Python via scoop/choco/apt/dnf/brew si falta.
+Módulo unificado en **Python 3.8+ stdlib** (sin pip, sin requirements.txt) que vale para los 4 SO. Evita duplicar lógica CVE en PowerShell + Bash + Bash + Bash. El script (`scripts/common/buscar_vulnerabilidades.py`) **sí está** en el árbol actual y se ejecuta directamente. Se invoca además como **opción 3** del menú `ResolveCore` en cada plataforma; los launchers `ResolveCore.{sh,ps1}` (Linux/Android/Windows, restaurados tras A11) auto-instalan Python via scoop/choco/apt/dnf/brew.
 
 **Política open source estricta (defendible):**
 
@@ -723,6 +738,10 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 
 ## 15b. Servicios adicionales — scripts operativos
 
+> ℹ️ `scripts/servicios/` se restauró tras la auditoría A11 (source completo).
+> Único elemento no versionado: el binario `kit/anydesk.exe` (7.9 MB), que aporta el
+> técnico al construir el kit con `construir-kit.ps1`.
+
 Tres servicios complementarios implementados en `scripts/servicios/`.
 Justificación técnica completa: [`docs/tecnica/servicios-adicionales.md`](../tecnica/servicios-adicionales.md).
 
@@ -850,6 +869,9 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 5. **(2 min)** `adjuntar_informe_mantis.py --ticket <ID> --pdf informe.pdf` → mostrar adjunto + nota Markdown en el ticket.
 6. **(1 min)** Mostrar tabla `rc_vulnerabilities` con CVEs cargados + matching contra paquetes detectados.
 7. **(2 min)** `optimizacion.ps1 -Nivel rendimiento -DryRun` → mostrar plan; luego con `-Confirm` → mostrar `estado_previo.json`; finalmente `-Undo` → restaura.
+> ℹ️ **Pasos 8-10:** `scripts/servicios/` está en el árbol (restaurado A11). Para el
+> paso del **kit** (construir-kit) hace falta colocar `anydesk.exe` en `kit/` (no versionado).
+
 8. **(2 min)** **Servicios adicionales — congelación Linux:**
    ```bash
    bash scripts/servicios/congelacion/congelacion-linux.sh --action=snapshot --etiqueta="estado-limpio"
@@ -936,6 +958,7 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-06-01 | **Scripts Python reescritos sin clases** (decisión del autor: el código debe entenderse sin orientación a objetos). En `scripts/common/` se quitaron todas las clases: `domain/models.py` ya no usa `@dataclass` — las entidades son **diccionarios** creados por funciones `nueva_vulnerabilidad()`/`nuevo_servicio()`/`nuevo_host()` y las reglas son funciones sueltas (`es_critica`, `contar_criticas`...). Los adapters dejan de ser clases: `nvd_rest.py` pasa de `class NvdRestAdapter` a la función `get_vulns(product, version, api_key=None)` y `nmap_local.py` de `class NmapLocalAdapter` a `get_host_info(ip, flags=None)`. Los `ports/` dejan de ser `Protocol` (PEP 544) y quedan como **contratos escritos en el docstring** (qué función debe ofrecer cada adapter). Fuera también los type hints (`typing`, `-> dict`) y nombres de variables a español, para casar con el estilo de `buscar_vulnerabilidades.py`. Compila limpio, salida JSON idéntica (mismas claves). Docs sincronizadas: `arquitectura-scripting.md` §6 (antes "Hexagonal / Ports & Adapters" con clases) y `origen-componentes.md` §8 reescritas a la versión sin clases; banner del árbol actualizado. `_archivo/` (código archivado) no tocado. |
 | 2026-05-07 | Creación inicial. Cubre módulos 1-7, decisiones, errores, guion demo, roadmap. Estado proyecto al cierre de ciclo "mejoras tema WP + integración JSON↔Mantis". |
 | 2026-05-07 | Sección 16: eliminadas referencias a stack previo (React/Vue/SPA). Justificación WordPress reescrita en positivo (audiencia, mantenimiento, SEO, hosting, ASIR). Sincroniza con docs/stack-tecnologico.md. |
 | 2026-05-07 | README.md reescrito: índice, badges ampliados (MantisBT/PowerShell/Bash/Lighthouse), instalación vía zip oficial, troubleshooting WP, sección plugins separada, tabla docs, módulos ASIR con descripción concreta, footer con autor unificado. |
@@ -976,4 +999,5 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 | 2026-05-30 | **Tercera auditoría — lógica del flujo cliente/técnico** (`docs/defensa/auditoria-mejoras.md` §7, 9 fixes): `rc-core` v1.5.0 → **v1.5.1** + `functions.php` + `page-tecnicos.php`. **L1** rate-limit del registro (`rc_registro_cliente_procesar`) se incrementa **tras** validar y comprobar `email_exists`, no antes — un usuario que corrige typos ya no agota la cuota de 3/h sin crear cuenta. **L2** `rc_cliente_calcular_stats()` cuenta cerrados por `status['id'] >= 80` (enum Mantis) en vez de comparar `status['name']` contra `'closed'/'resolved'` en inglés, que fallaba con nombres localizados. **L3** si el `wp_signon()` posterior al alta falla, redirige a `/registro/?tab=login&alta=ok` con mensaje de confirmación en vez de un texto engañoso sin sesión. **L4** el `<details>` "Solicitar informe" colapsa solo si se envió **ese** formulario (`rc_solicitar_informe`), no ante cualquier POST del sitio. **L5** `rc_create_download_log_table()` deja de ejecutar `dbDelta` (`SHOW TABLES/COLUMNS`) en cada request: guard de versión `rc_dl_log_schema_ver` vs constante `RC_DL_LOG_SCHEMA_VER` + hook `after_switch_theme`. **L6** `define('RESOLVECORE_MAINTENANCE')` envuelto en `if(!defined())` — sin notice y forzable desde `wp-config.php`. **L7** `rc_tech_infra_status` gana `check_ajax_referer('rc_tech_nonce')` (era el único endpoint AJAX técnico sin nonce) + `fetchInfra()` en `page-tecnicos.php` envía el nonce. **L8** `rc_tech_my_tickets` devuelve `note` explicando el mismatch de login WP↔Mantis cuando el filtro deja la lista vacía. **L9** `rc_tech_factura_inline` aplica clamp `0–1000` a `horas`/`tarifa` de GET. PHP `-l` limpio en los tres ficheros. |
 | 2026-05-30 | **Registro de clientes provisionado + mejora visual home** (tema `resolvecore-theme`). (1) **Bug en producción**: el enlace «Acceso clientes → /registro/» daba 404 porque la plantilla `page-registro.php` existía pero ninguna página WP la usaba (no había auto-provisión). Nueva `rc_provision_pages()` en `functions.php` (idempotente, guard `rc_pages_provision_ver` v**2** + hooks `after_switch_theme`/`init`): crea las páginas que el nav da por hechas (`/registro/` con `[rc_registro_cliente]`, `/dashboard/` con `[rc_cliente_dashboard]`, y docs/changelog/fleet-status/tecnicos/contacto/legales con su plantilla). **Fix v2**: si la página ya existe pero su `post_content` no contiene el shortcode requerido (caso real: `/registro/` existía vacía y solo pintaba la cabecera del template, sin formulario, porque `page-registro.php` hace `the_content()`), se inyecta el shortcode vía `wp_update_post` (comprobación `has_shortcode`, sin duplicar). (2) **Mejora visual de la portada** (color **verde de marca `#00e5a0` conservado/restaurado** — el primer deploy había subido azul a `origin/main`; revertidos tokens `style.css` + 37 hardcodeados de `front-page.php`): hero rehecho a **dos columnas** (copy izquierda + tarjeta-mockup de diagnóstico a la derecha: anillo de salud 87, barras CPU/Memoria/Disco, píldoras de estado) con grid `1.05fr/.95fr` que apila en ≤880px; botón secundario del hero «CREAR CUENTA» → `/registro/`. **Demo interactiva conservada** (terminal animado por plataforma/módulo + gauge); `runDemo()` gana guard `if(!output||!bar) return`. Tarjetas de **servicios** refinadas (icono 52px protagonista, lift en hover, barra de acento superior). **Nav**: corregido el desplegable «Recursos» que partía el caret `▾` a otra línea (`inline-flex` + `white-space:nowrap` + `flex-shrink:0` en el caret). (3) **Branding de wp-login** (`rc_login_branding` vía `login_enqueue_scripts` + filtros `login_headerurl`/`login_headertext`): las pantallas de login, «¿Olvidaste tu contraseña?» y reset `action=rp` (las de los emails de activación) se visten con el logo ResolveCore y la paleta oscura/verde en vez de la pantalla genérica de WordPress; el flujo nativo seguro se conserva, solo se reestiliza. PHP `-l` limpio en `front-page.php` y `functions.php`. |
 | 2026-05-30 | **Fuga de datos en dashboard de cliente — fix de seguridad** (`rc-core` v1.5.1 → **v1.5.2**). Síntoma reportado en producción: el dashboard de un cliente listaba **los 15 tickets de Mantis de todos los clientes** (antonio, María, Smoke, PEPE…) y sus stats (15/9/6). Causa: el endpoint `/api/rest/issues` de Mantis **ignora** el parámetro `search`, así que `RC_Mantis_API::search_issues($email)` devolvía la lista completa sin filtrar. Fix: nueva `rc_mantis_filtrar_por_cliente($issues, $email)` que recorta en PHP la lista a SOLO los del cliente — pertenencia por (1) `reporter.email == email` o (2) el email embebido como «Solicitado por: <email>» en la descripción (lo inyecta `rc_mantis_crear_ticket()`). Aplicado en las dos vías de `rc_mantis_listar_tickets()` (API centralizada + fallback REST). Las stats (`rc_cliente_calcular_stats`) ya cuadran al operar sobre la lista filtrada. **Mejora UI del dashboard**: tarjetas de ticket con badge de estado coloreado + punto y borde-acento izquierdo por familia de estado (pendiente ámbar `<50` / en curso azul `50-79` / hecho verde `≥80`), prioridad como chip (urgent/high en naranja), y línea «Creado … · Actualizado …» (usa `updated_at` de Mantis). Cabecera del dashboard (`page-dashboard.php`) con chip de email + enlace «Cerrar sesión». **Email de activación (infra)**: causa = el VPS no tenía relay SMTP, así que `wp_mail()` (PHP `mail()`) no entregaba. Nuevo `scripts/server/ops/setup-mail-ionos.sh` (idempotente, `set -euo pipefail`): instala `msmtp`+`msmtp-mta`, escribe `/etc/msmtprc` (relay `smtp.ionos.es:587` autenticado con buzón del dominio, `0640 root:www-data`, password por argumento — no se versiona) y cablea `sendmail_path = msmtp -t -i` en PHP-FPM/CLI 8.3 + reload. El From ya lo alinea `resolvecore_mail_from` al `admin_email` (debe ser el buzón). PHP `-l` limpio en `rc-core.php`, `page-dashboard.php`; `bash -n` limpio en el script. |
+| 2026-05-31 | **Cuarta auditoría (§8) + sincronización de este documento con el árbol real**. **A11 (causa raíz)**: el commit `12890ac` había borrado 44 ficheros fuente (−18.793 líneas). Decisión del autor: **restaurar solo el núcleo esencial** — arquitectura Hexagonal Python `scripts/common/{domain,ports,adapters}` + `escaner_nmap.py`/`generar_informe.py`/`generar_factura.py`/`adjuntar_informe_mantis.py` + `vulnerabilities/migrations/0001_init.sql` (16 ficheros desde `12890ac^`, compila limpio). También restaurados (indispensables): los **launchers** `ResolveCore.{sh,ps1}` (Linux/Android/Windows) y `scripts/servicios/` **source** (congelación/clonación/kit) → O11–O13 vuelven a ✅. **No** restaurados (en histórico): `scripts/macos/`, `scripts/setup/`, el binario `kit/anydesk.exe` (7.9 MB, lo aporta el técnico) y `setup-mail-dkim.sh` (superado por `setup-mail-ionos.sh`). **A8/A9/A10** (limpieza): destrackeados `wordpress-db.sql` (traía el **hash bcrypt del admin** + emails), `php.ini` del servidor y el fichero basura `-Headers` — **pendiente rotar la contraseña del admin** (hash en histórico). **D5/D6/D7/D8** cerrados alineando CLAUDE.md, `correo-dkim.md` (ruta real msmtp+IONOS `.website`, DKIM s1/s2) y `schema-diagnostico.md`. Este documento se actualiza: banner de estado del árbol, objetivos O4/O11–O13 → ROADMAP/[EN HISTÓRICO], §6 macOS y §15b servicios marcadas, guion de demo pasos 8-10 advierten de restaurar `scripts/servicios/` antes de demostrar. **S7** queda abierto (referencias a launchers en docs de defensa). Correo de activación verificado a **inbox** (no spam). |
 | 2026-05-23 | **Auditoría — quick-wins + CI**: cerrados 9 items pendientes de `docs/defensa/auditoria-mejoras.md`. **E4** `.editorconfig` raíz (UTF-8 + LF globales, CRLF para `.ps1`, indent 2 YAML/JSON, tab Makefile). **E5** `LICENSE` con texto oficial GPL-3.0 (35 149 bytes); GitHub ya detecta la licencia. **D3** nueva sección "Versiones por componente" en README — tabla con 12 componentes (producto, tema, plugin, los 8 scripts diag/optim, escáner CVE, schema JSON) y regla de paridad `_meta.version` ≡ versión cabecera de script. **S4** (ya hecho — verificación): los 4 puntos de inyección HTML escapan `</`→`<\/` (`scripts/windows/diagnostico.ps1:820`, `scripts/linux/diagnostico.sh:933`, `scripts/android/diagnostico.sh:522`, `reports/generate-report.php:82`) sobre template `<script type="application/json" id="rc-data">` parseado con `JSON.parse()`. **W3** `strlen`→`mb_strlen` en `RC_Mantis_API::sanitize_summary/description()` (sync ambas copias del plugin: `wordpress/plugins/` + `wp/wp-content/plugins/`). **W4** cabeceras estándar de WP en `rc-mantisbt.php`: `Requires at least: 6.0`, `Tested up to: 6.5`, `Requires PHP: 8.0`, `License URI`, `Domain Path`; license alineada a `GPL-3.0-or-later` (era `GPL-2.0+`). **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en las dos asignaciones `@field_id`/`@anydesk_field_id` de `mantisbt/sql/resolvecore-setup.sql` (evita warnings strict-mode). **C1** `.github/workflows/lint.yml` con 4 jobs paralelos: shellcheck (`ludeeus/action-shellcheck@2.0.0`), PSScriptAnalyzer (Windows runner), phpcs WordPress-Core (`shivammathur/setup-php@v2` + composer WPCS 3.x), ruff + `py_compile` sobre `scripts/common/`. **C2** `.pre-commit-config.yaml` con `pre-commit-hooks@v4.6.0` + `shellcheck-py@v0.10.0.1` + `ruff-pre-commit@v0.5.0` + hook local `phpcs` opcional (skip si no está en PATH). Pendientes diferidos en `auditoria-mejoras.md`: E2 mover zips a GitHub Releases (manual), D4 testar macOS en hardware real, S3 test con hostnames `"\\\n`, S5 modularizar `buscar_vulnerabilidades.py` (solo si crece). |

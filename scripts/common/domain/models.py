@@ -1,78 +1,93 @@
 # -*- coding: utf-8 -*-
-"""Modelos de dominio puros — sin dependencias externas."""
+"""
+ResolveCore — Modelos de dominio (sin clases, sin librerías externas).
 
-from dataclasses import dataclass, field
-from typing import List, Optional
+Aquí no usamos clases. Un "modelo" es solo un diccionario normal de Python
+con unas claves conocidas. Las funciones `nueva_*` crean esos diccionarios
+con valores por defecto, y las funciones `es_*` / `contar_*` los consultan.
 
+Se hace así a propósito: es más fácil de leer sin saber clases, y los dicts
+se convierten directos a JSON sin pasos intermedios.
 
-@dataclass(frozen=True)
-class Vulnerability:
-    """CVE detectado en un host o software."""
-    cve: str
-    cvss: Optional[float] = None
-    summary: str = ""
-
-    @property
-    def is_critical(self) -> bool:
-        return self.cvss is not None and self.cvss >= 9.0
-
-    @property
-    def is_high(self) -> bool:
-        return self.cvss is not None and 7.0 <= self.cvss < 9.0
+Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+Versión: 2.0
+"""
 
 
-@dataclass(frozen=True)
-class Service:
-    """Servicio expuesto en un puerto (nmap, etc)."""
-    port: int
-    transport: str = "tcp"
-    product: str = ""
-    version: str = ""
-
-    def __str__(self) -> str:
-        if self.product:
-            base = self.product
-            if self.version:
-                base += f"/{self.version}"
-            return f"{base} ({self.port}/{self.transport})"
-        return f"port {self.port}/{self.transport}"
+# Vulnerability — un CVE detectado en un host o software.
+# dict: {"cve", "cvss", "summary"}
+def nueva_vulnerabilidad(cve, cvss=None, summary=""):
+    return {"cve": cve, "cvss": cvss, "summary": summary}
 
 
-@dataclass(frozen=True)
-class AttachmentResult:
-    """Resultado de subir un fichero a un ticket MantisBT."""
-    ok: bool
-    ticket_id: int
-    file_name: str
-    status_code: Optional[int] = None
-    error: Optional[str] = None
+def es_critica(vuln):
+    # CVSS 9.0 o más = crítica.
+    return vuln.get("cvss") is not None and vuln["cvss"] >= 9.0
 
 
-@dataclass
-class Host:
-    """Inventario de exposicion de un host (resultado tipico de nmap)."""
-    ip: str
-    hostnames: List[str] = field(default_factory=list)
-    org: str = ""
-    isp: str = ""
-    country: str = ""
-    country_code: str = ""
-    os: Optional[str] = None
-    asn: str = ""
-    last_update: str = ""
-    ports: List[int] = field(default_factory=list)
-    services: List[Service] = field(default_factory=list)
-    vulnerabilities: List[Vulnerability] = field(default_factory=list)
-    error: Optional[str] = None
+def es_alta(vuln):
+    # CVSS entre 7.0 y 9.0 = alta.
+    cvss = vuln.get("cvss")
+    return cvss is not None and 7.0 <= cvss < 9.0
 
-    @property
-    def has_error(self) -> bool:
-        return self.error is not None
 
-    @property
-    def critical_count(self) -> int:
-        return sum(1 for v in self.vulnerabilities if v.is_critical)
+# Service — un servicio expuesto en un puerto.
+# dict: {"port", "transport", "product", "version"}
+def nuevo_servicio(port, transport="tcp", product="", version=""):
+    return {"port": port, "transport": transport, "product": product, "version": version}
 
-    @property
-    def high_count(self) -> int:
-        return sum(1 for v in self.vulnerabilities if v.is_high)
+
+def servicio_str(svc):
+    # Texto legible del servicio. Si no hay producto, solo el puerto.
+    if svc.get("product"):
+        base = svc["product"]
+        if svc.get("version"):
+            base += "/" + svc["version"]
+        return base + " (" + str(svc["port"]) + "/" + svc["transport"] + ")"
+    return "port " + str(svc["port"]) + "/" + svc["transport"]
+
+
+# AttachmentResult — resultado de subir un fichero a un ticket MantisBT.
+def nuevo_attachment_result(ok, ticket_id, file_name, status_code=None, error=None):
+    return {
+        "ok": ok,
+        "ticket_id": ticket_id,
+        "file_name": file_name,
+        "status_code": status_code,
+        "error": error,
+    }
+
+
+# Host — inventario de exposición de un host (resultado típico de nmap).
+def nuevo_host(ip, hostnames=None, org="", isp="", country="", country_code="",
+               os=None, asn="", last_update="", ports=None, services=None,
+               vulnerabilities=None, error=None):
+    # Las listas se crean dentro: si pusiéramos [] como valor por defecto en
+    # los argumentos, Python la comparte entre llamadas (bug clásico).
+    return {
+        "ip": ip,
+        "hostnames": hostnames if hostnames is not None else [],
+        "org": org,
+        "isp": isp,
+        "country": country,
+        "country_code": country_code,
+        "os": os,
+        "asn": asn,
+        "last_update": last_update,
+        "ports": ports if ports is not None else [],
+        "services": services if services is not None else [],
+        "vulnerabilities": vulnerabilities if vulnerabilities is not None else [],
+        "error": error,
+    }
+
+
+def host_tiene_error(host):
+    return host.get("error") is not None
+
+
+def contar_criticas(host):
+    return sum(1 for v in host.get("vulnerabilities", []) if es_critica(v))
+
+
+def contar_altas(host):
+    return sum(1 for v in host.get("vulnerabilities", []) if es_alta(v))

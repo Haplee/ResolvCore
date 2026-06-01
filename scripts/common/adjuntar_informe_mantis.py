@@ -17,7 +17,7 @@ Exit codes:
     1  fallo de subida (red, HTTP, fichero)
     2  argumentos invalidos o entorno mal configurado
 
-Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
+Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 """
 
 import argparse
@@ -30,11 +30,11 @@ if __package__ in (None, ""):
     _parent = os.path.dirname(_here)
     if _parent not in sys.path:
         sys.path.insert(0, _parent)
-    from common.adapters.mantis_rest import MantisRestSink
+    from common.adapters import mantis_rest
 else:
-    from .adapters.mantis_rest import MantisRestSink
+    from .adapters import mantis_rest
 
-SCRIPT_VERSION = "1.0.0"
+SCRIPT_VERSION = "2.0.0"
 
 
 def main(argv=None):
@@ -44,17 +44,17 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     try:
-        sink = MantisRestSink.from_env()
-    except (RuntimeError, ValueError) as exc:
+        config = mantis_rest.config_desde_entorno()
+    except RuntimeError as exc:
         print(f"[ERR] {exc}", file=sys.stderr)
         return 2
 
-    result = sink.attach(args.ticket, args.pdf)
-    if result.ok:
-        print(f"[OK] ticket #{result.ticket_id}: {result.file_name} subido ({result.status_code})")
+    result = mantis_rest.attach(args.ticket, args.pdf, config=config)
+    if result["ok"]:
+        print(f"[OK] ticket #{result['ticket_id']}: {result['file_name']} subido ({result['status_code']})")
         return 0
 
-    print(f"[FAIL] ticket #{result.ticket_id}: {result.error}", file=sys.stderr)
+    print(f"[FAIL] ticket #{result['ticket_id']}: {result['error']}", file=sys.stderr)
     return 1
 
 

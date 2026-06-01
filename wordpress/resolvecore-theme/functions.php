@@ -53,20 +53,6 @@ function rc_handle_technician_download(): void {
 		wp_die( 'Fichero no disponible en este momento.', 'No encontrado', array( 'response' => 404 ) );
 	}
 
-	// Log de descarga (error_log + tabla rc_download_log)
-	$user = wp_get_current_user();
-	$ip   = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
-	error_log(
-		sprintf(
-			'[ResolveCore] Descarga: %s | usuario: %s | IP: %s | %s',
-			esc_html( $key ),
-			esc_html( $user->user_login ),
-			$ip,
-			gmdate( 'Y-m-d H:i:s' )
-		)
-	);
-	rc_log_download( $key, $user->user_login, $ip );
-
 	header( 'Content-Type: ' . $allowed[ $key ]['type'] );
 	header( 'Content-Disposition: attachment; filename="' . basename( $filepath ) . '"' );
 	header( 'Content-Length: ' . filesize( $filepath ) );
@@ -493,41 +479,24 @@ add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_tick
 // =============================================================================
 
 /**
- * Crea la tabla rc_download_log si no existe.
+ * Limpieza one-shot: elimina la tabla rc_download_log y su opción de versión.
  *
- * dbDelta es caro (lanza SHOW TABLES / SHOW COLUMNS): NO debe correr en cada
- * request. Lo guardamos con una opción de versión, de modo que el esquema solo
- * se evalúa la primera vez y cuando RC_DL_LOG_SCHEMA_VER cambie.
+ * El registro de descargas (contador del hero + tail logs) se retiró del área
+ * de técnicos. Esta función borra los restos en instalaciones existentes. Es
+ * idempotente (DROP TABLE IF EXISTS) y corre una sola vez gracias al guard de
+ * opción. Tras desplegarse y ejecutarse una vez, esta función puede borrarse.
  */
-const RC_DL_LOG_SCHEMA_VER = '1';
-
-function rc_create_download_log_table(): void {
-	if ( get_option( 'rc_dl_log_schema_ver' ) === RC_DL_LOG_SCHEMA_VER ) {
+function rc_cleanup_download_log(): void {
+	if ( get_option( 'rc_download_log_removed' ) === '1' ) {
 		return;
 	}
-
 	global $wpdb;
-	$table   = $wpdb->prefix . 'rc_download_log';
-	$charset = $wpdb->get_charset_collate();
-	$sql     = "CREATE TABLE IF NOT EXISTS {$table} (
-		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-		file_key VARCHAR(64) NOT NULL,
-		user_login VARCHAR(128) NOT NULL,
-		ip VARCHAR(45) NOT NULL,
-		ua VARCHAR(255) NOT NULL DEFAULT '',
-		downloaded_at DATETIME NOT NULL,
-		PRIMARY KEY (id),
-		KEY idx_user (user_login),
-		KEY idx_file (file_key),
-		KEY idx_date (downloaded_at)
-	) {$charset};";
-	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-	dbDelta( $sql );
-
-	update_option( 'rc_dl_log_schema_ver', RC_DL_LOG_SCHEMA_VER );
+	$table = $wpdb->prefix . 'rc_download_log';
+	$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	delete_option( 'rc_dl_log_schema_ver' );
+	update_option( 'rc_download_log_removed', '1' );
 }
-add_action( 'after_switch_theme', 'rc_create_download_log_table' );
-add_action( 'after_setup_theme', 'rc_create_download_log_table' );
+add_action( 'after_setup_theme', 'rc_cleanup_download_log' );
 
 /**
  * Provisiona (idempotente) las páginas WP que el flujo y el menú de navegación
@@ -685,21 +654,6 @@ function rc_login_logo_text() {
 	return get_bloginfo( 'name' );
 }
 add_filter( 'login_headertext', 'rc_login_logo_text' );
-
-function rc_log_download( string $key, string $user_login, string $ip ): void {
-	global $wpdb;
-	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->prefix . 'rc_download_log',
-		array(
-			'file_key'      => $key,
-			'user_login'    => $user_login,
-			'ip'            => $ip,
-			'ua'            => substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ), 0, 255 ),
-			'downloaded_at' => current_time( 'mysql' ),
-		),
-		array( '%s', '%s', '%s', '%s', '%s' )
-	);
-}
 
 /**
  * Metadata real de cada fichero descargable (size + sha256 + mtime).
@@ -959,26 +913,6 @@ TXT;
 add_action( 'admin_post_rc_tech_build_readme', 'rc_tech_build_readme' );
 
 /**
- * AJAX: últimas 20 descargas de la tabla rc_download_log (todas, no solo del user).
- */
-function rc_tech_logs_tail(): void {
-	if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
-		wp_send_json_error( array( 'msg' => 'forbidden' ), 403 );
-	}
-	check_ajax_referer( 'rc_tech_nonce', 'nonce' );
-
-	global $wpdb;
-	$table = $wpdb->prefix . 'rc_download_log';
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-	$rows = $wpdb->get_results(
-		"SELECT id, file_key, user_login, ip, downloaded_at FROM {$table} ORDER BY id DESC LIMIT 20", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		ARRAY_A
-	);
-	wp_send_json_success( array( 'rows' => $rows ?: array() ) );
-}
-add_action( 'wp_ajax_rc_tech_logs_tail', 'rc_tech_logs_tail' );
-
-/**
  * AJAX: añade nota pública al ticket Mantis.
  */
 function rc_tech_add_note(): void {
@@ -1139,20 +1073,3 @@ footer{margin-top:3rem;font-size:.8rem;color:#888;border-top:1px solid #eee;padd
 	exit;
 }
 add_action( 'template_redirect', 'rc_tech_factura_inline', 4 );
-
-/**
- * Estadísticas rápidas del técnico (descargas propias últimas 30d).
- */
-function rc_tech_my_stats(): array {
-	global $wpdb;
-	$user  = wp_get_current_user();
-	$table = $wpdb->prefix . 'rc_download_log';
-	// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-	$sql = 'SELECT COUNT(*) AS total, MAX(downloaded_at) AS last_at FROM ' . $table . ' WHERE user_login = %s AND downloaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
-	$row = $wpdb->get_row( $wpdb->prepare( $sql, $user->user_login ), ARRAY_A );
-	// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-	return array(
-		'total'   => (int) ( $row['total'] ?? 0 ),
-		'last_at' => (string) ( $row['last_at'] ?? '' ),
-	);
-}

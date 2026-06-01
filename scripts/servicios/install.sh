@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# =============================================================================
-# ResolveCore — Bootstrap de servicios adicionales para Linux
+# ─────────────────────────────────────────────────────────────────────────────
+# ResolveCore — Bootstrap de los servicios adicionales en Linux.
 #
-# Instala automaticamente todas las dependencias necesarias:
-#   - btrfs-progs, snapper (congelacion BTRFS)
-#   - jq (clonacion + parsing JSON)
-#   - curl (integracion MantisBT)
+# Instala las dependencias que necesitan la congelación y la clonación antes
+# de poder usarlas:
+#   - btrfs-progs, snapper  (congelación BTRFS)
+#   - jq                    (clonación + parseo de JSON)
+#   - curl                  (integración con MantisBT)
 #
-# Uso rapido:
-#   curl -fsSL https://resolvecore.website/install.sh | sudo bash
-# O local:
-#   bash scripts/servicios/install.sh
+# Uso:
+#   curl -fsSL https://resolvecore.website/install.sh | sudo bash   # remoto
+#   bash scripts/servicios/install.sh                               # local
 #
-# Exit codes: 0 OK  1 Error  2 Dependencia critica no instalable
-# =============================================================================
+# Exit codes: 0 OK · 1 error · 2 dependencia crítica no instalable.
+#
+# Probado en:  Ubuntu 22.04 / 24.04, Debian 12.
+#
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+# Versión: 2.0
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
 
