@@ -12,9 +12,10 @@
 
 ## Nota sobre el uso de IA
 
-Durante el desarrollo de ResolveCore se ha utilizado **Claude (Anthropic)** como
-asistente de programación, de forma análoga a como se usa Stack Overflow, la
-documentación oficial o un compañero más experimentado. El rol de la IA ha sido:
+Durante el desarrollo de ResolveCore se ha utilizado una **herramienta de IA
+generativa** como asistente de programación, de forma análoga a como se usa
+Stack Overflow, la documentación oficial o un compañero más experimentado. El
+rol de la IA ha sido:
 
 - Sugerir estructuras y detectar errores en el código escrito por el alumno.
 - Explicar APIs y comportamientos de herramientas (MantisBT REST, NVD API, udev).
