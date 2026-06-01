@@ -340,7 +340,7 @@ get_header();
 </section>
 
 <!-- ── Dashboard ticket activo (pinned) ────────────────────────────────── -->
-<section class="rc-tec-dash" id="rc-dash">
+<section class="rc-tec-dash" id="rc-dash" hidden>
 	<div class="rc-tec-wrap">
 		<div class="rc-dash-header">
 			<div class="rc-dash-pin">
@@ -449,6 +449,9 @@ get_header();
 
 <style>
 /* ── Reset / base ─────────────────────────────────────────────────────── */
+/* Oculta el nav de marketing y el FAB de contacto en el portal técnico:
+   es una app de trabajo, ya tiene su barra propia (simplificación 01-06-2026). */
+.rc-header, .rc-fab-contact { display: none !important; }
 .rc-tec { background: #06080c; color: #e8eaf0; }
 .rc-tec * { box-sizing: border-box; }
 .rc-tec-wrap { max-width: 920px; margin: 0 auto; padding: 0 1.5rem; }
@@ -495,7 +498,7 @@ get_header();
 }
 .rc-tec-status-refresh {
 	display: inline-flex; align-items: center; gap: .4rem;
-	background: none; border: 1px solid #1e2130; color: #7a7f8e;
+	background: none; border: 1px solid #1e2130; color: #8b909e;
 	padding: .35rem .7rem; border-radius: 6px; cursor: pointer;
 	font-size: .75rem;
 }
@@ -541,7 +544,7 @@ get_header();
 }
 .rc-tab {
 	background: none; border: none; cursor: pointer;
-	color: #7a7f8e; font-size: .9rem; font-weight: 600;
+	color: #8b909e; font-size: .9rem; font-weight: 600;
 	padding: .7rem 1.4rem;
 	border-bottom: 2px solid transparent;
 	margin-bottom: -2px;
@@ -584,7 +587,7 @@ get_header();
 .rc-dl-icon--linux { background: rgba(42,31,0,.5);  color: #ffd54f; border: 1px solid #ffd54f30; }
 .rc-dl-icon--kit   { background: rgba(26,45,26,.5); color: #00e5a0; border: 1px solid #00e5a040; }
 .rc-dl-card-title { font-size: 1.2rem; font-weight: 700; color: #e8eaf0; margin: 0 0 .2rem; }
-.rc-dl-card-sub   { font-size: .8rem; color: #7a7f8e; margin: 0; }
+.rc-dl-card-sub   { font-size: .8rem; color: #8b909e; margin: 0; }
 .rc-dl-badge {
 	margin-left: auto; font-size: .7rem; font-weight: 700;
 	padding: .25rem .6rem; border-radius: 2rem; text-transform: uppercase;
@@ -720,7 +723,7 @@ get_header();
 /* ── Checklist ────────────────────────────────────────────────────────── */
 .rc-dl-steps { margin-top: 1.75rem; }
 .rc-dl-steps-title {
-	font-size: .85rem; font-weight: 700; color: #7a7f8e;
+	font-size: .85rem; font-weight: 700; color: #8b909e;
 	letter-spacing: .06em; text-transform: uppercase; margin-bottom: .75rem;
 }
 .rc-checklist { list-style: none; margin: 0; padding: 0; }
@@ -745,7 +748,7 @@ get_header();
 /* ── Includes table ───────────────────────────────────────────────────── */
 .rc-dl-includes { margin-top: 1.5rem; }
 .rc-dl-includes h3 {
-	font-size: .85rem; font-weight: 700; color: #7a7f8e;
+	font-size: .85rem; font-weight: 700; color: #8b909e;
 	letter-spacing: .06em; text-transform: uppercase; margin-bottom: .75rem;
 }
 .rc-dl-table { width: 100%; border-collapse: collapse; font-size: .85rem; color: #9da2b0; }
@@ -767,7 +770,7 @@ get_header();
 	margin-top: .75rem;
 }
 .rc-kit-form label { display: flex; flex-direction: column; gap: .25rem; flex: 1; min-width: 140px; }
-.rc-kit-form span  { font-size: .7rem; color: #7a7f8e; text-transform: uppercase; letter-spacing: .05em; }
+.rc-kit-form span  { font-size: .7rem; color: #8b909e; text-transform: uppercase; letter-spacing: .05em; }
 .rc-kit-form input {
 	background: #04060a; border: 1px solid #1e2130; border-radius: 6px;
 	padding: .5rem .7rem; color: #e8eaf0; font-size: .85rem;
@@ -781,7 +784,7 @@ get_header();
 	margin-bottom: 1rem;
 }
 .rc-tec-tickets-head h2 {
-	font-size: .85rem; font-weight: 700; color: #7a7f8e;
+	font-size: .85rem; font-weight: 700; color: #8b909e;
 	letter-spacing: .08em; text-transform: uppercase; margin: 0;
 }
 .rc-tickets-list { display: flex; flex-direction: column; gap: .5rem; }
@@ -811,7 +814,7 @@ get_header();
 	display: flex; flex-direction: column; align-items: center; gap: .5rem;
 	background: rgba(19,21,28,.6); border: 1px solid #1e2130; border-radius: 10px;
 	padding: 1.1rem 1rem; text-decoration: none; color: #9da2b0;
-	font-size: .82rem; transition: all .15s;
+	font-size: .82rem; transition: color .15s, border-color .15s, background-color .15s, transform .15s;
 }
 .rc-tlink:hover { border-color: #00e5a040; color: #00e5a0; transform: translateY(-2px); }
 .rc-tlink svg { stroke: currentColor; }
@@ -867,7 +870,7 @@ get_header();
 	border-radius: 10px; padding: .85rem;
 }
 .rc-dash-block h4 {
-	font-size: .7rem; font-weight: 700; color: #7a7f8e;
+	font-size: .7rem; font-weight: 700; color: #8b909e;
 	letter-spacing: .08em; text-transform: uppercase; margin: 0 0 .6rem;
 }
 .rc-dash-block textarea, .rc-dash-block input {
@@ -885,7 +888,7 @@ get_header();
 	margin-top: .5rem;
 }
 .rc-fact-form { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: .4rem; margin-bottom: .5rem; }
-.rc-fact-form label { display: flex; flex-direction: column; font-size: .65rem; color: #7a7f8e; text-transform: uppercase; gap: .2rem; }
+.rc-fact-form label { display: flex; flex-direction: column; font-size: .65rem; color: #8b909e; text-transform: uppercase; gap: .2rem; }
 .rc-anydesk-recent {
 	list-style: none; margin: .6rem 0 0; padding: 0;
 	max-height: 80px; overflow-y: auto;
@@ -927,7 +930,7 @@ get_header();
 }
 .rc-palette-input-row kbd {
 	background: #1e2130; border: 1px solid #2a2d3e; border-bottom-width: 2px;
-	padding: 1px 6px; border-radius: 3px; font-size: .65rem; color: #7a7f8e;
+	padding: 1px 6px; border-radius: 3px; font-size: .65rem; color: #8b909e;
 }
 .rc-palette-list {
 	list-style: none; margin: 0; padding: .4rem 0;
@@ -1138,11 +1141,11 @@ get_header();
 		savePinned();
 	}
 	function renderDash() {
-		// Panel siempre visible (simplificación 01-06-2026): si no hay ticket fijado
-		// muestra placeholder; AnyDesk funciona sin ticket, nota/informe/factura piden fijar uno.
+		// Oculto hasta fijar un ticket; aparece al pulsar «Pin» en «Mis tickets» (01-06-2026).
+		if (!pinned) { dash.hidden = true; return; }
 		dash.hidden = false;
-		dashId.textContent = pinned ? '#' + pinned.id : '#—';
-		dashSum.textContent = pinned ? ( pinned.summary || '' ) : 'Fija un ticket desde «Mis tickets abiertos»';
+		dashId.textContent = '#' + pinned.id;
+		dashSum.textContent = pinned.summary || '';
 		dashToggleBtn.textContent = timer.running ? 'Pausar' : (timer.accumulated ? 'Reanudar' : 'Iniciar');
 		if (!timer.intervalId) timer.intervalId = setInterval(tickTimer, 500);
 		tickTimer();
