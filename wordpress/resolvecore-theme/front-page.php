@@ -920,7 +920,12 @@
 			<a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
 			<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-btn-outline">CREAR CUENTA</a>
 		</div>
-		<?php // Bloque de estadísticas del hero eliminado (01-06-2026). ?>
+		<div class="rc-hero-stats">
+			<div><div class="rc-stat-num">&lt;2h</div><div class="rc-stat-label">Respuesta inicial</div></div>
+			<div><div class="rc-stat-num">3</div><div class="rc-stat-label">Plataformas soportadas</div></div>
+			<div><div class="rc-stat-num">7</div><div class="rc-stat-label">Fases del proceso</div></div>
+			<div><div class="rc-stat-num">GPL-3</div><div class="rc-stat-label">Open Source</div></div>
+		</div>
 		</div>
 
 		<aside class="rc-hero-visual" aria-hidden="true">
