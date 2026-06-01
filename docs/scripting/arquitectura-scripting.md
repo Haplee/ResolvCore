@@ -80,75 +80,93 @@ Es el equipo del usuario final que presenta la incidencia. Cumple con la políti
 
 ---
 
-## 6. Arquitectura interna Python — Hexagonal (Ports & Adapters)
+## 6. Arquitectura interna Python — Ports & Adapters (sin clases)
 
-A partir de mayo 2026 los scripts Python aplican **Hexagonal Architecture** (Alistair Cockburn) para desacoplar la lógica de dominio (CVE scoring, correlación de vulnerabilidades, análisis de exposición) de las dependencias externas (NVD, OSV, MantisBT).
+Los scripts Python separan la lógica propia (puntuar CVEs, correlacionar
+vulnerabilidades, analizar exposición) de las dependencias externas (NVD, OSV,
+MantisBT). La idea es la misma que la arquitectura Hexagonal de Alistair Cockburn,
+pero **sin usar clases**: las entidades son diccionarios y todo lo demás son
+funciones de módulo. Se hizo así a propósito para que el código se lea sin saber
+programación orientada a objetos.
+
+### Las tres capas
+
+- **`domain/`** — las entidades. No son clases: son diccionarios que crean
+  funciones `nueva_vulnerabilidad()`, `nuevo_servicio()`, `nuevo_host()`. Las
+  reglas (¿es crítica?, ¿cuántas críticas tiene el host?) son funciones sueltas:
+  `es_critica()`, `contar_criticas()`. No importa nada de fuera, ni red ni ficheros.
+- **`ports/`** — los contratos. Aquí no hay código que importar: cada fichero es
+  solo un docstring que dice qué función debe ofrecer un adapter (su nombre y sus
+  argumentos). Es el "qué necesito", no el "cómo".
+- **`adapters/`** — el código que toca el mundo. Cada adapter es un módulo con
+  funciones que cumplen un contrato: `nvd_rest.get_vulns(product, version)` y
+  `nmap_local.get_host_info(ip)`. Solo aquí se hacen llamadas HTTP, subprocesos
+  y lectura de variables de entorno.
 
 ### Justificación para el TFG
 
-| Pregunta tribunal probable | Respuesta basada en hexagonal |
-|---------------------------|-------------------------------|
-| ¿Cómo testeas sin llamadas reales a APIs? | Inyecto un `FakeHostIntelSource` que cumple el Port. Dominio no sabe que es fake. |
-| ¿Qué pasa si cambias de proveedor de inteligencia? | Implemento un nuevo Adapter cumpliendo el mismo Port. Cero cambio en dominio. |
+| Pregunta tribunal probable | Respuesta |
+|---------------------------|-----------|
+| ¿Cómo testeas sin llamadas reales a APIs? | El dominio solo trabaja con dicts. Le paso un host de prueba hecho a mano con `nuevo_host(...)` y compruebo las reglas; no toco la red. |
+| ¿Qué pasa si cambias de proveedor de inteligencia? | Escribo otro módulo adapter con la misma función (`get_vulns`/`get_host_info`). El dominio no se entera. |
 | ¿Cómo evitas dependencias pip? | El dominio no importa nada. Solo los adapters tocan red, y siguen usando `urllib.request` (stdlib). |
+| ¿Por qué sin clases? | Para que el código se entienda sin orientación a objetos. Diccionarios + funciones hacen lo mismo y van directos a JSON. |
 
 ### Estructura de paquetes
 
 ```
 scripts/common/
 ├── __init__.py
-├── domain/                    # Entidades puras, sin IO ni red
+├── domain/                    # Entidades = dicts, reglas = funciones. Sin IO ni red.
 │   ├── __init__.py
-│   └── models.py              # Host, Service, Vulnerability (dataclasses)
-├── ports/                     # Interfaces abstractas (Protocols PEP 544)
+│   └── models.py              # nueva_vulnerabilidad(), nuevo_servicio(), nuevo_host()...
+├── ports/                     # Contratos escritos en docstrings. Sin código.
 │   ├── __init__.py
-│   └── host_intel_source.py   # Port: HostIntelSource
-├── adapters/                  # Implementaciones sobre APIs externas
+│   ├── host_intel_source.py   # Contrato: get_host_info(ip) -> dict
+│   ├── vuln_source.py         # Contrato: get_vulns(product, version) -> list
+│   └── mantis_attachment_sink.py
+├── adapters/                  # Funciones que tocan APIs externas.
 │   ├── __init__.py
-│   └── mantis_rest.py         # Adapter: MantisRestSink
-├── escaner_nmap.py            # Escáner de puertos LAN
-└── buscar_vulnerabilidades.py # MONOLITO LEGACY — migración fase 2 (Strangler Fig)
+│   ├── nvd_rest.py            # get_vulns()  — consulta NVD NIST
+│   └── nmap_local.py          # get_host_info() — escaneo nmap LAN
+└── buscar_vulnerabilidades.py # Escáner de puertos por socket (independiente)
 ```
 
 ### Regla de dependencias
 
+Quién puede importar a quién. Las flechas no se invierten nunca:
+
 ```
-cli ────────────────► adapters ────────────────► ports
-                         │                          ▲
-                         └──────────────────────────┘
-                                  cumple
-                         │
-                         ▼
-                       domain  ◄──── (no importa NADA hacia afuera)
+adapters ──importa──► domain
+   │
+   └──cumple el contrato de──► ports  (solo docstrings, no se importa)
+
+domain  ◄──── no importa NADA hacia afuera
 ```
 
-- `domain/` no importa de `ports/`, `adapters/` ni `cli/`.
-- `ports/` solo importa de `domain/`.
-- `adapters/` importan de `ports/` y `domain/`.
-- `cli/` (entry points) cablean adapter → port → dominio.
-
-### Estado de migración (Strangler Fig)
-
-| Módulo | Estado |
-|--------|--------|
-| `escaner_nmap.py` | 🟡 Pendiente migración fase 2 |
-| `buscar_vulnerabilidades.py` | 🟡 Monolito 2709 líneas. Migración progresiva planificada por subdominios (CVE source → KEV → EPSS → MantisBT sink). |
+- `domain/` no importa de `ports/` ni de `adapters/`.
+- `adapters/` importan de `domain/` (para crear los dicts) y cumplen lo que dice `ports/`.
+- `ports/` no tiene código: son la documentación del contrato.
 
 ### Ejemplo de testabilidad
 
 ```python
-# tests/test_dominio.py (sin red, sin pip)
-from common.domain import Host, Vulnerability
-from common.ports import HostIntelSource
+# Probar las reglas del dominio sin red y sin pip.
+from common.domain import nuevo_host, nueva_vulnerabilidad, contar_criticas
 
-class FakeHostIntel:
-    def get_host_info(self, ip: str) -> Host:
-        return Host(ip=ip, ports=[22], vulnerabilities=[
-            Vulnerability(cve="CVE-2024-1234", cvss=9.8)
-        ])
+def test_contar_criticas():
+    # Host de prueba hecho a mano: un CVE crítico (CVSS 9.8).
+    host = nuevo_host("1.2.3.4", ports=[22], vulnerabilities=[
+        nueva_vulnerabilidad("CVE-2024-1234", 9.8),
+    ])
+    assert contar_criticas(host) == 1
+```
 
-def test_critical_count():
-    source: HostIntelSource = FakeHostIntel()
-    host = source.get_host_info("1.2.3.4")
-    assert host.critical_count == 1
+Para simular una fuente de datos sin tocar la red, basta una función con el mismo
+nombre que el contrato:
+
+```python
+def get_vulns_falso(product, version):
+    # Cumple el contrato VulnSource sin salir a internet.
+    return [nueva_vulnerabilidad("CVE-2024-1234", 9.8)]
 ```

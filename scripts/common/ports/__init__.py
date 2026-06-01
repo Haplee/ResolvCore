@@ -1,11 +1,8 @@
-"""Ports: interfaces abstractas (Protocols PEP 544).
+"""Ports: contratos escritos (sin clases).
 
-Define que necesita el dominio del mundo exterior, sin atarse a una
-implementacion concreta. Adapters cumplen estos contratos.
+Cada módulo de ports describe en su docstring qué función debe ofrecer un
+adapter. No hay código que importar: son solo el contrato documentado que
+las funciones de adapters/ cumplen.
 """
 
-from .host_intel_source import HostIntelSource
-from .mantis_attachment_sink import MantisAttachmentSink
-from .vuln_source import VulnSource
-
-__all__ = ["HostIntelSource", "MantisAttachmentSink", "VulnSource"]
+__all__ = []

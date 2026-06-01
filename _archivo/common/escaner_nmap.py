@@ -16,7 +16,7 @@ Uso:
     python3 escaner_nmap.py --ip 192.168.1.0/24 --json
     python3 escaner_nmap.py --ip 192.168.1.0/24 --sV      # detección de versiones
 
-Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
+Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 """
 
 import argparse

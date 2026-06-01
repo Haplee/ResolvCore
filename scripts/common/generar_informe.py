@@ -17,7 +17,7 @@ Uso:
     python3 generar_informe.py --json diagnostico.json --out /ruta/informe.html
     python3 generar_informe.py --json diagnostico.json --pdf --ticket 42
 
-Autor: Francisco Vidal Mateo (Haplee) - TFG ASIR ResolveCore
+Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 """
 
 import argparse

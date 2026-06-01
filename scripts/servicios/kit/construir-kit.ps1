@@ -40,6 +40,9 @@
       0  ok
       1  error de empaquetado
       2  AnyDesk portable no encontrado
+
+    Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+    Versión: 1.0.0
 #>
 
 [CmdletBinding()]

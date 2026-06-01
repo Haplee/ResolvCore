@@ -30,7 +30,7 @@
 #   1  argumentos inválidos
 #   2  imagen no encontrada
 #
-# Autor:   FranVi / ResolveCore
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 # Versión: 1.0.0
 # ─────────────────────────────────────────────────────────────────────────────
 

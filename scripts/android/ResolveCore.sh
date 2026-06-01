@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
-# =============================================================================
-# ResolveCore - Menu Android
-# Menu interactivo para tecnicos ResolveCore en Android
-# =============================================================================
+# ─────────────────────────────────────────────────────────────────────────────
+# ResolveCore — Menú del técnico para Android.
+#
+# Lanzador interactivo para el técnico. Reúne diagnóstico, optimización y
+# escaneo de vulnerabilidades del dispositivo Android, llamando a los demás
+# scripts de la carpeta. Funciona vía ADB sobre USB o en local con Termux.
+#
+# Uso:
+#   bash ResolveCore.sh                 # menú interactivo (ADB/Termux)
+#
+# Probado en:  Android 12–14 (ADB), Termux sobre Android 13.
+#
+# Autor:   Francisco Vidal Mateo (GitHub: Haplee)
+# Versión: 2.0
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
 

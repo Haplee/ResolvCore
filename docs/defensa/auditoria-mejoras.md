@@ -370,6 +370,89 @@ Si solo pudieras hacer dos tareas: **E1 + E2** (saca 41 MB del repo y deja de ve
 
 ---
 
+# 8. Auditoría 2026-05-31 — regresión de secretos + deriva docs↔repo
+
+> Cuarta pasada. Repo en **175 ficheros** trackeados (sano: 64 docs, 45 wordpress,
+> 23 scripts). Sin vendor ni `wp/` (A1 se sostiene). Dos focos nuevos: **un dump de
+> BD con hash de admin volvió a colarse** pese a la regla `.gitignore`, y la
+> documentación (CLAUDE.md incluido) referencia **scripts y migraciones que ya no
+> existen** en el árbol. Código propio sigue limpio: sin secretos hardcoded,
+> shebangs `#!/usr/bin/env bash` correctos, sin `# Requires` inerte.
+>
+> **Causa raíz (A11): el commit `12890ac` borró 44 ficheros fuente** (−18.793
+> líneas). D5/D6/D7/D8/S7 son síntomas de ese borrado, no deriva de docs. Decisión
+> del autor (2026-05-31): **restaurar solo el núcleo esencial** (Hexagonal Python
+> `scripts/common/*` + `vulnerabilities/migrations/0001_init.sql`); el resto
+> (`scripts/{macos,setup,servicios}`, launchers `ResolveCore.*`, `setup-mail-dkim.sh`)
+> queda en histórico (recuperable) y se marca ROADMAP en las docs.
+
+### `A11` — Borrado masivo de 44 ficheros fuente en `12890ac`  🟡 parcial
+- **Severidad**: alta · **Esfuerzo**: medio · **Reversible**: sí (todo en histórico)
+- **Por qué**: el commit `12890ac` ("initialize system scripts...") eliminó 44 ficheros (−18.793 líneas): arquitectura Hexagonal completa (`scripts/common/{domain,ports,adapters}` + `escaner_nmap.py`, `generar_informe.py`, `generar_factura.py`, `adjuntar_informe_mantis.py`), `scripts/servicios/` (congelación/clonación + binario `anydesk.exe`), `scripts/macos/`, `scripts/setup/`, `scripts/server/setup-mail-dkim.sh`, `vulnerabilities/migrations/0001_init.sql`. Las docs no mentían: el código desapareció.
+- **Acciones**:
+  - [x] Restaurado el núcleo esencial desde `12890ac^`: `scripts/common/*` (16 ficheros, compila limpio) + `vulnerabilities/migrations/0001_init.sql`.
+  - [x] Restaurados los **launchers** `ResolveCore.{sh,ps1}` (Linux/Android/Windows, `bash -n` limpio) — son el menú/UX central que citan todas las defensas.
+  - [x] Restaurado `scripts/servicios/` **source** (8 ficheros, congelación/clonación/kit) → O11–O13 vivos de nuevo; el launcher guarda llamadas ausentes con `if [[ ! -f ]]`.
+  - [x] **No** restaurados (decisión): `macos/`, `setup/`, binario `kit/anydesk.exe` (7.9 MB, anti-patrón E1/A1), `setup-mail-dkim.sh` (superado) — recuperables en histórico.
+  - [x] **Archivados** a `_archivo/common/` (decisión 2026-05-31, conservados pero fuera del árbol activo): `escaner_nmap.py`, `generar_informe.py`, `generar_factura.py`, `adjuntar_informe_mantis.py`, `adapters/mantis_rest.py`. `adapters/__init__.py` ajustado (quitado `MantisRestSink`); común vivo y archivo compilan por separado. CLAUDE.md comenta esos comandos como archivados.
+
+### `A8` — Dump `wordpress-db.sql` con hash de admin versionado  ⬜ pendiente
+- **Severidad**: alta (seguridad) · **Esfuerzo**: bajo · **Reversible**: el destrackeo sí; la **filtración no** (queda en histórico)
+- **Por qué**: `wordpress-db.sql` (413 líneas) está **trackeado** pese a estar en `.gitignore` (se añadió en `a7a5dbf`, antes de la regla, y nunca se destrackeó). Contiene `INSERT INTO wp_users` con el hash bcrypt real del admin (`$wp$2y$10$O45QPGME…`) + `user_email`. Mismo patrón que `A2`: secreto filtrado en git. El `.gitignore` ya advierte que un dump completo trae `wp_users` (hashes), emails y tokens.
+- **Acciones**:
+  - [ ] `git rm --cached wordpress-db.sql` (local intacto; ya está en `.gitignore`).
+  - [~] **Rotar la contraseña del admin** — NO se rota por decisión del autor (riesgo asumido; el hash bcrypt sigue en el histórico). Misma postura que A2 con el token Mantis.
+  - [ ] (Opcional) `git filter-repo` para purgar el dump del histórico.
+
+### `A9` — `php.ini` del servidor versionado  ⬜ pendiente
+- **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `php.ini` (1.879 líneas) está trackeado pese a la regla `/php.ini` en `.gitignore` (añadido en `d595075`). Es config del servidor PHP, no del repo de aplicación. El propio `.gitignore` dice "documentar valores en docs/".
+- **Acciones**:
+  - [ ] `git rm --cached php.ini` (la regla ya lo cubre para el futuro).
+
+### `A10` — Fichero basura `-Headers` en la raíz  ⬜ pendiente
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: existe un fichero vacío llamado `-Headers` (blob vacío `e69de29`, añadido en `b87cb4a`). Artefacto accidental de un `Invoke-WebRequest`/`curl` con el flag `-Headers` redirigido a fichero. El nombre con guion inicial además molesta a herramientas CLI.
+- **Acciones**:
+  - [ ] `git rm -- -Headers` y borrar el fichero local (`rm ./-Headers`).
+
+### `D5` — CLAUDE.md referencia scripts inexistentes  ✅ (alineado)
+- **Severidad**: media (CLAUDE.md) · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: la sección "Comandos esenciales" y el árbol "Arquitectura del proyecto" de `.claude/CLAUDE.md` citan rutas que **no están en el repo**:
+  - `scripts/macos/diagnostico.sh` — la carpeta `scripts/macos/` ya no existe.
+  - `scripts/setup/setup-tecnico-windows.ps1` — `scripts/setup/` no existe.
+  - `scripts/common/escaner_nmap.py` y `scripts/common/generar_informe.py` — solo existe `buscar_vulnerabilidades.py`.
+  - subdirs `scripts/common/{domain,ports,adapters}/` de la arquitectura Hexagonal — no presentes.
+- **Acciones**:
+  - [x] `escaner_nmap.py` + `generar_informe.py` + Hexagonal restaurados (A11) → esos comandos vuelven a ser ciertos.
+  - [x] `macos/` y `setup/` marcados ROADMAP en CLAUDE.md (comandos, árbol y módulo 1).
+
+### `D6` — `docs/tecnica/correo-dkim.md` desalineado (script + dominio)  ✅ (alineado)
+- **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: el doc instruye `scripts/server/setup-mail-dkim.sh` (Postfix+OpenDKIM), que **no existe**; el real es `scripts/server/ops/setup-mail-ionos.sh` (msmtp+relay). Además usa dominio `resolvecore.es` cuando el real es `resolvecore.website`. El correo en producción se configuró por la ruta msmtp+relay IONOS (verificado 2026-05-31: SPF+DKIM s1/s2+DMARC, activación llega a inbox).
+- **Acciones**:
+  - [x] Banner al inicio de `correo-dkim.md`: ruta real msmtp+relay IONOS + `.website` + DKIM IONOS s1/s2; OpenDKIM marcado como alternativa no presente.
+
+### `D7` — `vulnerabilities/migrations/` desaparecido (regresión de D2)  ✅
+- **Severidad**: media · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `D2` daba por creado `vulnerabilities/migrations/0001_init.sql` y `CLAUDE.md` obliga a comprobar ese directorio antes de crear tablas SQL. Hoy `vulnerabilities/` **no tiene ficheros trackeados**. La migración se perdió (borrada o nunca commiteada).
+- **Acciones**:
+  - [x] Restaurado `vulnerabilities/migrations/0001_init.sql` desde `12890ac^` (A11). D2 vuelve a su estado cerrado.
+
+### `D8` — `schema-diagnostico.md` lista macOS que ya no existe  ✅ (alineado)
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `docs/scripting/schema-diagnostico.md:3,21,27` documenta `macos/diagnostico.sh` como `0.1.0-demo (stub)`, pero `scripts/macos/` ya no está en el repo. `D4` (confirmar estado de macOS) queda obsoleto: no hay script que confirmar.
+- **Acciones**:
+  - [x] macOS marcado ROADMAP en `schema-diagnostico.md` (cabecera + tabla de versiones). `D4` se cierra: no hay script macOS que confirmar mientras esté en roadmap.
+
+### `S7` — Launchers `ResolveCore.*` retirados sin actualizar docs  ✅ (restaurados)
+- **Severidad**: baja · **Esfuerzo**: bajo · **Reversible**: sí
+- **Por qué**: `S1`/`S2`/`S6` trabajaron sobre `linux/ResolveCore.sh`, `macos/ResolveCore.sh`, `android/ResolveCore.sh`, `windows/ResolveCore.ps1` (menú unificado). Hoy **ninguno está trackeado**; solo quedan `diagnostico.*` y `optimizacion.*` sueltos. Si la retirada del menú es intencional, las referencias quedaron colgando.
+- **Acciones**:
+  - [x] Restaurados los 3 launchers funcionales (Linux/Android/Windows) desde `12890ac^` (A11). macOS launcher no se restaura mientras macOS siga ROADMAP (su menú llamaría a `macos/diagnostico.sh` ausente).
+
+---
+
 # Orden recomendado de ejecución
 
 Por **ROI** (impacto / esfuerzo):
@@ -398,4 +481,5 @@ Por **ROI** (impacto / esfuerzo):
 | 2026-05-29  | **Segunda auditoría — regresión vendor + secretos**. **A1** cerrado: `wp/` (WordPress core, 3119 ficheros = 95 % del repo) destrackeado y añadido a `.gitignore`; repo 3285 → **165** ficheros. **A2** parcial: `wp-config.php` + `wp/wp-config.php` (con `RC_MANTIS_TOKEN` filtrado) destrackeados y en `.gitignore` — **pendiente ROTAR el token** (sigue en histórico). **A5** cerrado por A1 (copia stale de plugins en `wp/`). Abiertos: **A3** alta pública sin verificación de email, **A4** consolidar 3 repos del VPS (`sync-wp.sh` ya creado), **A6** unificar formato de autor en cabeceras, **A7** código muerto tras separar flujos home/dashboard. |
 | 2026-05-29  | **Cierre 2ª auditoría (sin rotar token, decisión del autor)**. **A3** cerrado: throttle por-email + `rc_pending_activation` + `after_password_reset` (verificación) + cron de purga a 7 días en `rc-core` 1.4.0→**1.5.0**. **A6** cerrado: 8 cabeceras `(FranVi)`→`(GitHub: Haplee)`. **A7** cerrado: borrada `resolvecore_send_client_confirmation()` (sin callers); tracker de tickets conservado como feature viva. **A4** documentado en `despliegue-ionos.md` §8.0 (repo canónico `-repo`, comandos de consolidación) — falta solo el `rm -rf` manual en el VPS. **A2**: token NO rotado por decisión del autor (riesgo asumido; sigue en histórico). |
 | 2026-05-30  | **Tercera auditoría — lógica del flujo cliente/técnico (§7)**. 9 hallazgos corregidos en `rc-core` (1.5.0→**1.5.1**) + `functions.php` + `page-tecnicos.php`. **L1** rate-limit incrementado tras validar (no antes) — los typos ya no bloquean. **L2** stats del dashboard por `status.id>=80` en vez de nombre localizado. **L3** auto-login fallido redirige a login con `?alta=ok` + mensaje. **L4** `<details>` colapsa solo tras enviar su form. **L5** `dbDelta` con guard de versión (`rc_dl_log_schema_ver`) — fin del `SHOW` en cada request. **L6** `RESOLVECORE_MAINTENANCE` con `if(!defined)`. **L7** `check_ajax_referer` en `rc_tech_infra_status` + nonce en `fetchInfra()`. **L8** `my_tickets` devuelve `note` si el filtro por login deja la lista vacía. **L9** clamp 0–1000 en horas/tarifa de la factura. PHP `-l` limpio. |
+| 2026-05-31  | **Cuarta auditoría — secretos + deriva docs↔repo (§8)**. Repo sano en **175 ficheros** (sin vendor ni `wp/`). 9 hallazgos. **A11 (causa raíz)**: el commit `12890ac` borró 44 ficheros fuente (−18.793 líneas); restaurado el núcleo esencial (`scripts/common/*` Hexagonal + `vulnerabilities/migrations/0001_init.sql`) + indispensables (**launchers** `ResolveCore.{sh,ps1}` Linux/Android/Windows + `scripts/servicios/` source). No restaurados (histórico): `macos/`, `setup/`, binario `anydesk.exe`, `setup-mail-dkim.sh`. **A8/A9/A10** destrackeados (`wordpress-db.sql`, `php.ini`, `-Headers`) — falta rotar password admin. **D5/D6/D7/D8/S7** cerrados (restauración + alineado CLAUDE.md/correo-dkim/schema-diagnostico). Código propio limpio: sin secretos hardcoded, shebangs OK, sin `# Requires` inerte. |
 | 2026-05-23  | Bloque quick-wins + CI cerrado: **E4** `.editorconfig` (UTF-8/LF + CRLF para PS1 + idents YAML/Makefile). **E5** `LICENSE` GPL-3.0 oficial. **D3** sección "Versiones por componente" en README con regla de paridad `_meta.version`. **S4** verificado: `<script type="application/json">` + `JSON.parse()` con escape `</`→`<\/` en 4 puntos de inyección (PS1, linux.sh, android.sh, PHP). **W3** `strlen`→`mb_strlen` en `sanitize_summary/description` (sync wordpress/ + wp/). **W4** cabeceras WP `Requires at least/Tested up to/Requires PHP/License URI`, license alineada a GPL-3.0. **W5** `SELECT id ... LIMIT 1` → `SELECT MAX(id)` en setup Mantis. **C1** `.github/workflows/lint.yml` con jobs shellcheck/PSScriptAnalyzer/phpcs WP/ruff+py_compile. **C2** `.pre-commit-config.yaml` con pre-commit-hooks + shellcheck-py + ruff + local phpcs opcional. |
