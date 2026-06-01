@@ -512,28 +512,48 @@ section[style] > div,
 .rc-cliente-msg--err { background: rgba(255,107,53,.08); color: #ff8a5c;
                        border-color: rgba(255,107,53,.3); }
 
-/* Stats arriba — tres cards lado a lado */
-.rc-cliente-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--rc-s4);
+/* Stats arriba — píldoras con color semántico (rediseño 01-06-2026)
+   verde = cerrado/éxito · ámbar = en curso · neutro = total. */
+.rc-cliente-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--rc-s4);
                     margin-bottom: var(--rc-s6); }
-.rc-stat { background: var(--rc-grad-surface); border: 1px solid var(--rc-border); border-radius: var(--rc-radius);
-           padding: var(--rc-s5); box-shadow: var(--rc-shadow); }
-.rc-stat-num { font-family: var(--rc-mono); font-size: 2.1rem; font-weight: 700;
-               line-height: 1; color: var(--rc-text); margin-bottom: .35rem; }
-.rc-stat-num--warn { color: var(--rc-accent2); }
-.rc-stat-num--ok   { color: var(--rc-accent); }
-.rc-stat-label { font-size: .82rem; color: var(--rc-muted); letter-spacing: .02em;
-                 text-transform: uppercase; }
+.rc-pill { display: flex; flex-direction: column; gap: .35rem;
+           border-radius: 14px; padding: 1.4rem 1.5rem; border: 1px solid var(--rc-border);
+           position: relative; overflow: hidden; box-shadow: var(--rc-shadow); }
+.rc-pill::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.rc-pill-num { font-family: var(--rc-mono); font-size: 2.1rem; font-weight: 700; line-height: 1; }
+.rc-pill-label { font-size: .8rem; color: var(--rc-muted); letter-spacing: .03em; text-transform: uppercase; }
+.rc-pill--total    { background: var(--rc-grad-surface); }
+.rc-pill--total::before { background: var(--rc-muted); }
+.rc-pill--total .rc-pill-num { color: var(--rc-text); }
+.rc-pill--progress { background: linear-gradient(180deg, rgba(254,188,46,.07), var(--rc-surface));
+                     border-color: rgba(254,188,46,.25); }
+.rc-pill--progress::before { background: #febc2e; }
+.rc-pill--progress .rc-pill-num { color: #febc2e; }
+.rc-pill--done     { background: linear-gradient(180deg, rgba(0,229,160,.07), var(--rc-surface));
+                     border-color: rgba(0,229,160,.25); }
+.rc-pill--done::before { background: var(--rc-accent); }
+.rc-pill--done .rc-pill-num { color: var(--rc-accent); }
 
-/* Formulario solicitud */
-.rc-cliente-solicitar { background: var(--rc-surface); border: 1px solid var(--rc-border);
-                        border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2.5rem; }
-.rc-cliente-solicitar summary { cursor: pointer; font-size: 1rem; color: var(--rc-text);
-                                list-style: none; outline: none; }
+/* Módulo «Solicitar informe» — estilo SaaS premium */
+.rc-cliente-solicitar { background: var(--rc-grad-surface); border: 1px solid var(--rc-border2);
+                        border-radius: 14px; padding: 0; margin-bottom: 2.5rem; overflow: hidden;
+                        box-shadow: var(--rc-shadow); transition: border-color .2s, box-shadow .2s; }
+.rc-cliente-solicitar[open] { border-color: rgba(0,229,160,.3); box-shadow: var(--rc-shadow-lg); }
+.rc-cliente-solicitar summary { cursor: pointer; list-style: none; outline: none;
+                                display: flex; align-items: center; justify-content: space-between;
+                                gap: 1rem; padding: 1.3rem 1.5rem; }
 .rc-cliente-solicitar summary::-webkit-details-marker { display: none; }
-.rc-cliente-solicitar summary::before { content: '+ '; color: var(--rc-accent);
-                                        font-family: var(--rc-mono); font-weight: 700; }
-.rc-cliente-solicitar[open] summary::before { content: '− '; }
-.rc-cliente-form { display: grid; gap: 1.2rem; margin-top: 1.4rem; }
+.rc-solicitar-summary-main { display: flex; align-items: center; gap: 1rem; }
+.rc-solicitar-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px;
+                     display: grid; place-items: center; font-size: 24px; line-height: 1;
+                     background: rgba(0,229,160,.1); color: var(--rc-accent);
+                     border: 1px solid rgba(0,229,160,.25); transition: transform .25s; }
+.rc-cliente-solicitar[open] .rc-solicitar-icon { transform: rotate(45deg); }
+.rc-solicitar-summary-text strong { display: block; font-size: 1rem; color: var(--rc-text); }
+.rc-solicitar-summary-text small { color: var(--rc-muted); font-size: .82rem; }
+.rc-solicitar-chevron { color: var(--rc-muted); transition: transform .25s; flex-shrink: 0; }
+.rc-cliente-solicitar[open] .rc-solicitar-chevron { transform: rotate(180deg); }
+.rc-cliente-form { display: grid; gap: 1.2rem; padding: 0 1.5rem 1.5rem; }
 .rc-cliente-label { display: block; font-size: .85rem; color: var(--rc-muted);
                     letter-spacing: .02em; }
 .rc-cliente-form input,
@@ -675,6 +695,30 @@ section[style] > div,
                     margin: .2rem 0 0; line-height: 1.6; }
 .rc-registro-nota a { color: var(--rc-accent); }
 .rc-hp { position: absolute !important; left: -9999px !important; }
+
+/* ── Auth Card — rediseño 01-06-2026 ───────────────────────────────────── */
+/* Tarjeta de autenticación centrada con sombreado difuminado. */
+.rc-auth { max-width: min(440px, 100% - var(--rc-s6)); margin: 3rem auto; }
+.rc-auth-tabs { gap: 0; padding: 5px; border-radius: 10px; background: var(--rc-surface2); }
+.rc-auth-tab { border-radius: 7px;
+               transition: background .25s ease, color .25s ease, box-shadow .25s ease; }
+.rc-auth-tab.active { box-shadow: 0 2px 10px rgba(0,229,160,.25); }
+.rc-auth-panel--registro .rc-registro-form,
+.rc-auth-panel--login #rc-login-form {
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45), 0 0 0 1px var(--rc-border2);
+}
+/* Padding generoso + bordes redondeados 8px en inputs. */
+.rc-registro-form input,
+#rc-login-form input[type="text"],
+#rc-login-form input[type="password"] {
+    padding: .85rem 1rem; border-radius: 8px; font-size: 15px;
+    transition: border-color .2s, box-shadow .2s;
+}
+.rc-registro-form .rc-cliente-label,
+#rc-login-form label { margin-bottom: 2px; }
+.rc-registro-form .rc-btn--accent,
+#rc-login-form .login-submit input { border-radius: 8px; padding: .95rem 1.3rem; }
 
 @media (max-width: 760px) {
   .rc-dash-hero { padding: var(--rc-s7) var(--rc-s5) var(--rc-s6); }
