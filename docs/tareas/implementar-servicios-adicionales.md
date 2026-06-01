@@ -1,7 +1,7 @@
 # Tarea: Implementar los scripts de servicios adicionales
 
-> **Prompt de tarea diferida.** Generado el 2026-05-22 — ejecutar otro día.
-> Para lanzarlo: abre Claude Code en la raíz del repo y di:
+> **Prompt de tarea diferida.** Redactado el 2026-05-22 — ejecutar otro día.
+> Para lanzarlo: abre tu agente de IA en la raíz del repo y di:
 > *"Implementa la tarea descrita en `docs/tareas/implementar-servicios-adicionales.md`."*
 
 ---
@@ -137,4 +137,4 @@ Copia AnyDesk portable, copia los scripts de diagnóstico existentes
 
 ---
 
-*Generado el 2026-05-22 por Claude Code. Scaffolding asociado: `scripts/servicios/`.*
+*Redactado el 2026-05-22. Scaffolding asociado: `scripts/servicios/`.*
