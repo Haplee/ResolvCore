@@ -16,7 +16,9 @@ get_header();
 	<section class="rc-fleet-block" aria-label="Panel de la flota">
 	<?php
 	if ( function_exists( 'rc_fleet_render_stats' ) ) {
-		echo wp_kses_post( rc_fleet_render_stats() ); // HTML de confianza generado por el plugin rc-fleet
+		// HTML de confianza generado por el plugin rc-fleet. NO usar wp_kses_post():
+		// elimina el bloque <style> y vuelca el CSS como texto a la página (fix 01-06-2026).
+		echo rc_fleet_render_stats(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	} else {
 		echo '<div class="rc-fleet-panel"><div class="rc-fleet-empty">'
 			. 'El módulo <strong>Fleet</strong> no está activo. Actívalo en Plugins para ver el panel.'

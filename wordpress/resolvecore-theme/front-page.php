@@ -603,17 +603,17 @@
 		gap: 1px; background: var(--rc-border); border: 1px solid var(--rc-border);
 		margin-top: 2rem;
 	}
-	.rc-pricing-card { background: var(--rc-surface); padding: 2rem 1.75rem; position: relative; }
+	.rc-pricing-card { background: var(--rc-surface); padding: 2rem 1.75rem; position: relative; text-align: center; }
 	.rc-pricing-card.featured { background: var(--rc-surface2); border-top: 2px solid var(--rc-accent); }
 	.rc-pricing-label { font-family: var(--rc-mono); font-size: 10px; letter-spacing: .1em; color: var(--rc-muted); margin-bottom: .75rem; }
 	.rc-pricing-badge { font-family: var(--rc-mono); font-size: 9px; color: var(--rc-accent); border: 1px solid rgba(0,229,160,.3); padding: 2px 8px; display: inline-block; margin-bottom: .75rem; }
 	.rc-pricing-name { font-family: var(--rc-mono); font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
-	.rc-pricing-price { margin: 1.25rem 0; display: flex; align-items: baseline; gap: 4px; }
+	.rc-pricing-price { margin: 1.25rem 0; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
 	.price-currency { font-family: var(--rc-mono); font-size: 1rem; color: var(--rc-muted); }
 	.price-num { font-family: var(--rc-mono); font-size: 2.3rem; font-weight: 700; }
 	.price-period { font-size: 12px; color: var(--rc-muted); }
 	.rc-pricing-divider { height: 1px; background: var(--rc-border); margin: 1.25rem 0; }
-	.rc-pricing-feature { font-size: 13px; color: var(--rc-muted); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+	.rc-pricing-feature { font-size: 13px; color: var(--rc-muted); padding: 5px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
 	.rc-beta-tag {
 		display: inline-block; padding: 1px 6px; margin-left: 4px;
 		font-family: var(--rc-mono); font-size: 9px; letter-spacing: .1em;
@@ -1368,9 +1368,9 @@
 		gap: 1rem; margin-bottom: 2.5rem;
 	}
 	.rc-channel {
-		display: flex; align-items: center; gap: 1rem;
+		display: flex; flex-direction: column; align-items: center; text-align: center; gap: .85rem;
 		background: var(--rc-surface); border: 1px solid var(--rc-border);
-		padding: 1.1rem 1.25rem; text-decoration: none;
+		padding: 1.6rem 1.25rem; text-decoration: none;
 		transition: border-color .2s, transform .2s, background .2s;
 	}
 	.rc-channel:hover {
