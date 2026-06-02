@@ -684,11 +684,16 @@ add_action( 'init', 'rc_provision_pages' );
  * pantalla genérica de WordPress al pulsar «¿Olvidaste tu contraseña?».
  */
 function rc_login_branding() {
-	$logo = get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg';
+	// Logo CLARO: el fondo del login es oscuro (#0a0c10); el logo oscuro era
+	// invisible y parecia que la pantalla estaba rota.
+	$logo = get_template_directory_uri() . '/assets/logo/resolvcore-logo-light.svg';
 	?>
 	<style>
 		body.login {
 			background: #0a0c10;
+			background-image:
+				radial-gradient(1200px 600px at 70% -10%, rgba(0,229,160,.10), transparent 60%),
+				radial-gradient(900px 500px at 0% 10%, rgba(0,153,255,.08), transparent 55%);
 			color: #e8eaf0;
 			font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 		}
@@ -696,9 +701,10 @@ function rc_login_branding() {
 			background-image: url('<?php echo esc_url( $logo ); ?>');
 			background-size: contain;
 			background-position: center;
-			width: 240px; height: 60px;
-			margin: 0 auto 16px;
+			width: 260px; height: 64px;
+			margin: 0 auto 20px;
 		}
+		.login #login { padding: 6% 0 0; width: 340px; }
 		.login form {
 			background: #111318;
 			border: 1px solid rgba(255,255,255,0.07);

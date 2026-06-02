@@ -535,13 +535,6 @@ section[style] > div,
 .rc-cliente-msg--feedback { background: rgba(255,196,0,.08); color: #ffce4d;
                             border-color: rgba(255,196,0,.32); }
 
-/* Cerrar sesión al pie del dashboard (el usuario no siempre sube al hero). */
-.rc-dash-foot-logout { margin: 2.5rem 0 1rem; text-align: center; }
-.rc-btn--logout { display: inline-flex; align-items: center; color: var(--rc-muted);
-                  border-color: var(--rc-border); }
-.rc-btn--logout:hover { color: #ff8a5c; border-color: rgba(255,107,53,.4);
-                        background: rgba(255,107,53,.06); }
-
 /* Stats arriba — píldoras con color semántico (rediseño 01-06-2026)
    verde = cerrado/éxito · ámbar = en curso · neutro = total. */
 .rc-cliente-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--rc-s4);
