@@ -1045,49 +1045,49 @@
 		<div class="rc-flow-num">01</div>
 		<div class="rc-flow-icon">◎</div>
 		<div class="rc-flow-title">SOLICITUD</div>
-		<div class="rc-flow-desc">El usuario crea su cuenta y abre la petición desde el <a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>">portal de registro</a></div>
+		<div class="rc-flow-desc">El cliente crea su cuenta y describe la incidencia desde el <a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>">portal de registro</a></div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">02</div>
 		<div class="rc-flow-icon">◈</div>
 		<div class="rc-flow-title">TICKET</div>
-		<div class="rc-flow-desc">Se crea incidencia en MantisBT con prioridad y categoría</div>
+		<div class="rc-flow-desc">La solicitud se registra como incidencia con prioridad, categoría y número de seguimiento</div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">03</div>
 		<div class="rc-flow-icon">⊞</div>
 		<div class="rc-flow-title">CONEXIÓN</div>
-		<div class="rc-flow-desc">Acceso remoto seguro al equipo del usuario vía AnyDesk</div>
+		<div class="rc-flow-desc">Acceso remoto seguro al equipo del cliente vía AnyDesk, previa autorización</div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">04</div>
 		<div class="rc-flow-icon">⬡</div>
 		<div class="rc-flow-title">DIAGNÓSTICO</div>
-		<div class="rc-flow-desc">Scripts PowerShell/Bash analizan el sistema y generan un informe JSON</div>
+		<div class="rc-flow-desc">Scripts PowerShell/Bash recogen métricas del sistema y producen un diagnóstico estructurado en JSON</div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">05</div>
 		<div class="rc-flow-icon">◇</div>
 		<div class="rc-flow-title">RESOLUCIÓN</div>
-		<div class="rc-flow-desc">Optimización, parches de seguridad y corrección de fallos detectados</div>
+		<div class="rc-flow-desc">Optimización, parches de seguridad y corrección de los fallos detectados en el diagnóstico</div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">06</div>
 		<div class="rc-flow-icon">◎</div>
 		<div class="rc-flow-title">INFORME PDF</div>
-		<div class="rc-flow-desc">Informe técnico completo generado y adjunto al ticket en MantisBT</div>
+		<div class="rc-flow-desc">El JSON del diagnóstico se transforma en un informe técnico PDF y se adjunta a la incidencia</div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">07</div>
 		<div class="rc-flow-icon">⬡</div>
 		<div class="rc-flow-title">FACTURACIÓN</div>
-		<div class="rc-flow-desc">Factura automática por intervención o cargo a suscripción mensual</div>
+		<div class="rc-flow-desc">Al cerrar la incidencia se emite factura por intervención o cargo a la suscripción mensual</div>
 	</div>
 	</div>
 </section>

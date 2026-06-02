@@ -481,11 +481,27 @@ function rc_cliente_render_tickets( $tickets ) {
 					</div>
 				<?php endif; ?>
 
-				<a class="rc-ticket-link"
-				   href="<?php echo esc_url( $base . '/view.php?id=' . intval( $ticket['id'] ) ); ?>"
-				   target="_blank" rel="noopener">
-					Ver detalle en MantisBT
-				</a>
+				<?php
+				// Progreso de la incidencia para el cliente — 4 fases derivadas del
+				// estado del ticket. NO se expone enlace a MantisBT: el cliente solo
+				// debe ver en qué punto está su incidencia, nunca la herramienta interna.
+				// Mapeo igual que resolvecore_handle_ticket_status() (theme functions.php):
+				// 10 new · 20 feedback · 30 ack · 40 confirmed · 50 assigned · 80 resolved · 90 closed.
+				$fase  = ( $status_id >= 80 ) ? 4 : ( ( $status_id >= 50 ) ? 3 : ( ( $status_id >= 30 ) ? 2 : 1 ) );
+				$fases = array( 'Recibido', 'En diagnóstico', 'En resolución', 'Resuelto' );
+				?>
+				<div class="rc-ticket-progress" role="img"
+				     aria-label="<?php echo esc_attr( 'Progreso: ' . $fases[ $fase - 1 ] . ' — fase ' . $fase . ' de 4' ); ?>">
+					<?php foreach ( $fases as $i => $nombre ) :
+						$n   = $i + 1;
+						$cls = ( $n < $fase ) ? 'is-done' : ( ( $n === $fase ) ? 'is-active' : '' );
+						?>
+						<div class="rc-prog-step <?php echo esc_attr( $cls ); ?>">
+							<span class="rc-prog-dot" aria-hidden="true"></span>
+							<span class="rc-prog-label"><?php echo esc_html( $nombre ); ?></span>
+						</div>
+					<?php endforeach; ?>
+				</div>
 
 			</li>
 		<?php endforeach; ?>

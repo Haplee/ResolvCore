@@ -498,7 +498,7 @@ function resolvecore_handle_ticket_status() {
 		array(
 			'phase' => 4,
 			'label' => 'Resuelto',
-			'desc'  => 'Incidencia cerrada. El informe técnico está adjunto al ticket en MantisBT.',
+			'desc'  => 'Incidencia cerrada. El informe técnico está disponible en el historial de tu cuenta.',
 		),
 	);
 
