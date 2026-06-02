@@ -161,10 +161,31 @@ function rc_mantis_crear_ticket( $summary, $description, $user_email ) {
  * descripción. Como nosotros mismos metemos el email en la descripción al
  * crear el ticket, esto basta.
  *
- * TODO: cuando el volumen crezca, cachear con set_transient 60s para no
- * castigar la API en cada visita a la página.
+ * Resultado cacheado 60 s con set_transient para no castigar la API de
+ * MantisBT en cada visita a la página (la clave incluye el hash del email).
  */
 function rc_mantis_listar_tickets( $user_email ) {
+
+	$cache_key = 'rc_mantis_tickets_' . md5( strtolower( trim( $user_email ) ) );
+	$cached    = get_transient( $cache_key );
+	if ( false !== $cached ) {
+		return $cached;
+	}
+
+	$tickets = rc_mantis_listar_tickets_uncached( $user_email );
+
+	// Cache corta (60 s): suficiente para absorber refrescos/navegación rápida
+	// sin servir datos perceptiblemente obsoletos al cliente.
+	set_transient( $cache_key, $tickets, 60 );
+
+	return $tickets;
+}
+
+/**
+ * Lógica real de consulta a MantisBT (sin cache). No llamar directamente desde
+ * las vistas: usar rc_mantis_listar_tickets(), que añade la capa de transient.
+ */
+function rc_mantis_listar_tickets_uncached( $user_email ) {
 
 	$issues = array();
 

@@ -28,6 +28,7 @@ MANTIS_DIR="${MANTIS_DIR:-/var/www/mantis}"
 MANTIS_CONFIG="${MANTIS_DIR}/config/config_inc.php"
 MANTIS_IMAGES="${MANTIS_DIR}/images"
 REMOTE_LOGO="${MANTIS_IMAGES}/rc-logo-dark.png"
+REMOTE_FAVICON="${MANTIS_IMAGES}/rc-favicon.png"
 REMOTE_FOOTER="${MANTIS_DIR}/config/rc_footer.php"
 MARKER="# RC_BRANDING_BLOCK"   # centinela de idempotencia en config_inc.php
 
@@ -35,6 +36,8 @@ MARKER="# RC_BRANDING_BLOCK"   # centinela de idempotencia en config_inc.php
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 SRC_LOGO="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/resolvcore-logo-dark.png"
+# Favicon de origen: icono CUADRADO (no el logo apaisado).
+SRC_FAVICON="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/resolvcore-icon.png"
 
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
@@ -43,6 +46,7 @@ APPLY=0
 command -v ssh >/dev/null 2>&1 || { echo "ERROR: falta 'ssh'." >&2; exit 1; }
 command -v scp >/dev/null 2>&1 || { echo "ERROR: falta 'scp'." >&2; exit 1; }
 [ -f "$SRC_LOGO" ] || { echo "ERROR: no existe el logo de origen: $SRC_LOGO" >&2; exit 1; }
+[ -f "$SRC_FAVICON" ] || { echo "ERROR: no existe el favicon de origen: $SRC_FAVICON" >&2; exit 1; }
 
 echo "==> Branding MantisBT ResolveCore"
 echo "    Destino : ${VPS_USER}@${VPS_HOST}:${MANTIS_DIR}"
@@ -56,9 +60,10 @@ if [ "$APPLY" -eq 0 ]; then
 	exit 0
 fi
 
-# ── 1) Subir el logo a /tmp del VPS ──────────────────────────────────────────
-echo "==> Subiendo logo a /tmp del VPS…"
-scp "$SRC_LOGO" "${VPS_USER}@${VPS_HOST}:/tmp/rc-logo-dark.png"
+# ── 1) Subir el logo y el favicon a /tmp del VPS ─────────────────────────────
+echo "==> Subiendo logo y favicon a /tmp del VPS…"
+scp "$SRC_LOGO"    "${VPS_USER}@${VPS_HOST}:/tmp/rc-logo-dark.png"
+scp "$SRC_FAVICON" "${VPS_USER}@${VPS_HOST}:/tmp/rc-favicon.png"
 
 # ── 2) Ejecutar el resto en remoto (instalar logo + footer + parchear config) ─
 echo "==> Aplicando branding en remoto…"
@@ -67,15 +72,18 @@ ssh "${VPS_USER}@${VPS_HOST}" \
 	MANTIS_CONFIG="$MANTIS_CONFIG" \
 	MANTIS_IMAGES="$MANTIS_IMAGES" \
 	REMOTE_LOGO="$REMOTE_LOGO" \
+	REMOTE_FAVICON="$REMOTE_FAVICON" \
 	REMOTE_FOOTER="$REMOTE_FOOTER" \
 	MARKER="$MARKER" \
 	'bash -s' <<'REMOTE'
 set -euo pipefail
 
-# 2.1 — Logo: instalar con permisos del servidor web.
+# 2.1 — Logo + favicon: instalar con permisos del servidor web.
 install -o www-data -g www-data -m 0644 /tmp/rc-logo-dark.png "$REMOTE_LOGO"
-rm -f /tmp/rc-logo-dark.png
-echo "    [ok] logo -> $REMOTE_LOGO"
+install -o www-data -g www-data -m 0644 /tmp/rc-favicon.png   "$REMOTE_FAVICON"
+rm -f /tmp/rc-logo-dark.png /tmp/rc-favicon.png
+echo "    [ok] logo    -> $REMOTE_LOGO"
+echo "    [ok] favicon -> $REMOTE_FAVICON"
 
 # 2.2 — Footer: CSS que oculta «Powered by» + enlaces de soporte de Mantis.
 cat > "$REMOTE_FOOTER" <<'PHP'
@@ -103,7 +111,7 @@ $MARKER  (ResolveCore White-Label — mantis-branding.sh)
 \$g_window_title        = 'ResolveCore · Soporte';
 \$g_logo_image          = 'images/rc-logo-dark.png';
 \$g_logo_url            = 'https://resolvecore.website';
-\$g_favicon_image       = 'images/rc-logo-dark.png';
+\$g_favicon_image       = 'images/rc-favicon.png';
 \$g_copyright_statement = '';
 \$g_show_version        = OFF;
 \$g_bottom_include_page = '$REMOTE_FOOTER';

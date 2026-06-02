@@ -69,8 +69,10 @@ bash ./scripts/server/linux/post-install.sh
 # recuperable de histórico. Ver auditoría A11/D5.)
 # pwsh ./scripts/setup/setup-tecnico-windows.ps1
 
-# Generar informe PDF (cuando esté implementado)
-php artisan resolvecore:report --ticket=ID
+# Generar informe PDF: NO hay comando CLI. El informe lo genera WordPress vía
+# RC_Tech_Report::generate( $issue_id, $client_email ) (plugin rc-tech), que
+# renderiza HTML → PDF (wkhtmltopdf, fallback HTML) y lo adjunta al ticket.
+# Se dispara desde el panel técnico (endpoint REST /action/pdf).
 ```
 
 ---

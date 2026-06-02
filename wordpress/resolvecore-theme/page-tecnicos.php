@@ -112,6 +112,14 @@ get_header();
 			<button type="button" class="rc-tec-bar-link rc-tec-bar-pal" id="rc-bar-palette">
 				<kbd>Ctrl</kbd>+<kbd>K</kbd>
 			</button>
+			<span class="rc-tec-bar-user" title="Técnico conectado">
+				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+				<?php echo esc_html( wp_get_current_user()->display_name ); ?>
+			</span>
+			<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="rc-tec-bar-link rc-tec-bar-link--logout">
+				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+				Cerrar sesión
+			</a>
 		</nav>
 	</div>
 </header>
@@ -480,6 +488,13 @@ get_header();
 }
 .rc-tec-bar-link:hover { color: #00e5a0; border-color: #00e5a040; }
 .rc-tec-bar-link--primary { color: #00e5a0; border-color: #00e5a040; background: rgba(0,229,160,.06); }
+.rc-tec-bar-user {
+	display: inline-flex; align-items: center; gap: .35rem;
+	color: #c8cad8; font-size: .78rem; font-weight: 600;
+	padding: .35rem .5rem .35rem .6rem; border-left: 1px solid #1e2130; margin-left: .2rem;
+}
+.rc-tec-bar-link--logout { color: #ff8f8f; border-color: #ff6b6b33; }
+.rc-tec-bar-link--logout:hover { color: #ff6b6b; border-color: #ff6b6b66; background: rgba(255,107,107,.06); }
 .rc-tec-bar-pal kbd {
 	background: #1e2130; border: 1px solid #2a2d3e; border-bottom-width: 2px;
 	padding: 1px 5px; border-radius: 3px; font-size: .62rem; color: #c8cad8;

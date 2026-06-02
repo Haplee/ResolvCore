@@ -188,7 +188,23 @@
       "Bash(python -m py_compile common/generar_informe.py common/generar_factura.py common/adjuntar_informe_mantis.py common/adapters/mantis_rest.py)",
       "Bash(python common/adjuntar_informe_mantis.py --ticket 1 --pdf nonexistent.pdf)",
       "PowerShell($null = [System.Management.Automation.Language.Parser]::ParseFile\\(\"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\scripts\\\\windows\\\\ResolveCore.ps1\", [ref]$null, [ref]$e\\); if \\($e\\) { $e | ForEach-Object { $_.Message } } else { \"PS_PARSE_OK\" })",
-      "PowerShell(php -l wordpress/resolvecore-theme/functions.php)"
+      "PowerShell(php -l wordpress/resolvecore-theme/functions.php)",
+      "PowerShell(git check-ignore *)",
+      "PowerShell(git log --oneline -8; \"---- estado vs origin ----\"; git status -sb; \"---- commits sin pushear ----\"; git log --oneline origin/fix/tecnicos-informe-factura-y-panel..HEAD 2>&1)",
+      "PowerShell(git fetch *)",
+      "Bash(grep -nE \"^#{1,3} |changelog|Changelog|CHANGELOG|## [0-9]\" \"C:/Users/franc/proyecto/ResolvCore/docs/defensa/defensa-tfg.md\")",
+      "WebFetch(domain:mantis.resolvecore.website)",
+      "WebFetch(domain:resolvecore.website)",
+      "Bash(command -v skills)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python scripts/contrast_checker.py --fg \"#00e5a0\" --bg \"#0a0c10\")",
+      "Bash(python scripts/contrast_checker.py --fg \"#e8eaf0\" --bg \"#0a0c10\")",
+      "Bash(python scripts/contrast_checker.py --fg \"#7a7f8e\" --bg \"#0a0c10\")",
+      "Bash(python scripts/contrast_checker.py --fg \"#7a7f8e\" --bg \"#111318\")",
+      "Bash(python scripts/contrast_checker.py --fg \"#0099ff\" --bg \"#0a0c10\")",
+      "Bash(python scripts/a11y_scanner.py \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\" --format table)",
+      "Bash(python scripts/a11y_scanner.py \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\" --format text)",
+      "Bash(python \"C:\\\\Users\\\\franc\\\\.claude\\\\skills\\\\resume\\\\scripts\\\\setup_experiment.py\" --list)"
     ]
   }
 }
