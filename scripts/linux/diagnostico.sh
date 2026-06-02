@@ -77,6 +77,11 @@ fi
 
 cat > "$FILE" <<EOF
 {
+  "_meta": {
+    "plataforma": "linux",
+    "hostname": "$HOST",
+    "version": "2.0"
+  },
   "timestamp": "$(date -Iseconds)",
   "hostname": "$HOST",
   "os": "$os_name",
@@ -104,3 +109,45 @@ EOF
 
 info "Diagnóstico guardado en:"
 echo "    $FILE"
+
+# ── Subida automática a WordPress (Fase 5) ──────────────────────────────────
+# Variables de entorno (todas opcionales salvo email+token para activar):
+#   RC_CLIENT_EMAIL  email del cliente (obligatorio para subir)
+#   RC_FLEET_TOKEN   token Bearer del endpoint de flota (obligatorio para subir)
+#   RC_FLEET_URL     endpoint REST (def: https://resolvecore.website/wp-json/rc/v1/fleet)
+#   RC_TICKET_ID     id de ticket Mantis a asociar (opcional)
+# Un fallo de red avisa pero NO rompe el script: el JSON local ya está a salvo.
+
+RC_CLIENT_EMAIL="${RC_CLIENT_EMAIL:-}"
+RC_FLEET_TOKEN="${RC_FLEET_TOKEN:-}"
+RC_FLEET_URL="${RC_FLEET_URL:-https://resolvecore.website/wp-json/rc/v1/fleet}"
+RC_TICKET_ID="${RC_TICKET_ID:-}"
+
+if [ -n "$RC_CLIENT_EMAIL" ] && [ -n "$RC_FLEET_TOKEN" ]; then
+    if ! command -v curl >/dev/null 2>&1; then
+        warn "curl no disponible: no se puede subir el diagnóstico (JSON local en $FILE)."
+    else
+        info "Subiendo diagnóstico a $RC_FLEET_URL ..."
+        # Envolvemos el JSON del diagnóstico en el sobre que espera el endpoint.
+        # El fichero ya es un objeto JSON válido, así que se incrusta tal cual.
+        ticket_field=""
+        [ -n "$RC_TICKET_ID" ] && ticket_field="\"ticket_id\": ${RC_TICKET_ID},"
+        payload="{\"client_email\": \"${RC_CLIENT_EMAIL}\", ${ticket_field} \"diagnostico\": $(cat "$FILE")}"
+
+        http_code=$(curl -sS -o /tmp/rc_fleet_resp.$$ -w '%{http_code}' \
+            -X POST "$RC_FLEET_URL" \
+            -H "Authorization: Bearer ${RC_FLEET_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "$payload" --max-time 15 || echo "000")
+
+        if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            info "Subida OK: $(cat /tmp/rc_fleet_resp.$$)"
+        else
+            warn "Fallo al subir (HTTP $http_code): $(cat /tmp/rc_fleet_resp.$$ 2>/dev/null)"
+            warn "El JSON local sigue disponible en: $FILE"
+        fi
+        rm -f /tmp/rc_fleet_resp.$$
+    fi
+else
+    info "(Subida automática omitida: exporta RC_CLIENT_EMAIL y RC_FLEET_TOKEN para activarla.)"
+fi

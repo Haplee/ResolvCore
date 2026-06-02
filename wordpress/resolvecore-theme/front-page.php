@@ -194,6 +194,8 @@
 		margin-right: .5rem; border-radius: var(--rc-radius); transition: color .25s, background .25s;
 	}
 	.rc-nav-access:hover { color: var(--rc-accent); background: var(--rc-surface2); }
+	.rc-nav-access--tech { border: 1px solid var(--rc-border2); }
+	.rc-nav-access--tech:hover { border-color: var(--rc-accent); }
 	.rc-mobile-access { color: var(--rc-accent) !important; font-weight: 600; }
 	.rc-hamburger {
 		display: none; flex-direction: column; gap: 5px;
@@ -409,7 +411,8 @@
 		SERVICES
 	============================================================ */
 	.rc-services-grid {
-		display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		display: grid; grid-template-columns: repeat(3, 1fr);
+		justify-content: center;
 		gap: 1.5px; background: var(--rc-border); border: 1px solid var(--rc-border);
 	}
 	.rc-service-card {
@@ -679,10 +682,17 @@
 	/* ============================================================
 		FLUJO DE SERVICIO (Cómo funciona)
 	============================================================ */
-	.rc-flow { display: flex; align-items: flex-start; margin-top: 2.5rem; flex-wrap: wrap; }
-	.rc-flow-step {
-		flex: 1; min-width: 110px; text-align: center; padding: 1.5rem .5rem;
+	.rc-flow {
+		display: flex; align-items: stretch; justify-content: center;
+		margin-top: 2.5rem; flex-wrap: wrap; gap: .25rem;
 	}
+	.rc-flow-step {
+		flex: 1 1 0; min-width: 120px; max-width: 170px;
+		display: flex; flex-direction: column; align-items: center;
+		text-align: center; padding: 1.5rem .5rem;
+	}
+	.rc-flow-desc a { color: var(--rc-accent); text-decoration: none; border-bottom: 1px dotted rgba(0,229,160,.45); }
+	.rc-flow-desc a:hover { color: var(--rc-text); }
 	.rc-flow-step:hover .rc-flow-icon {
 		border-color: rgba(0,229,160,.45); background: rgba(0,229,160,.04);
 	}
@@ -880,6 +890,7 @@
 	</li>
 	<li><a href="#contacto">Contacto</a></li>
 	</ul>
+	<a href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>" class="rc-nav-access rc-nav-access--tech">⚿ Login técnicos</a>
 	<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-nav-access">Acceso clientes →</a>
 	<a href="#contacto" class="rc-nav-cta">SOLICITAR SOPORTE</a>
 	<button type="button" class="rc-hamburger" id="rc-hamburger"
@@ -900,6 +911,7 @@
 	<a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a>
 	<a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a>
 	<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-mobile-access">Acceso clientes →</a>
+	<a href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>" class="rc-mobile-access rc-mobile-access--tech">⚿ Login técnicos</a>
 </div>
 
 <main id="main-content">
@@ -1033,7 +1045,7 @@
 		<div class="rc-flow-num">01</div>
 		<div class="rc-flow-icon">◎</div>
 		<div class="rc-flow-title">SOLICITUD</div>
-		<div class="rc-flow-desc">El usuario abre una petición vía formulario web o email</div>
+		<div class="rc-flow-desc">El usuario crea su cuenta y abre la petición desde el <a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>">portal de registro</a></div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
