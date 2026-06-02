@@ -48,12 +48,15 @@ class ResolveCoreBranding extends MantisPlugin {
 	}
 
 	/**
-	 * Favicon cuadrado (corrige el favicon deformado: el core apuntaba al logo
-	 * apaisado). El icono se copia a images/ con mantis-branding.sh.
+	 * Favicon cuadrado. El core apuntaba a un icono apaisado/deformado; usamos
+	 * el icono cuadrado servido desde la web principal (mismo asset que el tema),
+	 * con SVG + PNG de respaldo y tamano explicito.
 	 */
 	private function favicon_link() {
-		$icon = 'images/rc-favicon.png';
-		return '<link rel="icon" type="image/png" href="' . htmlspecialchars( $icon ) . '">' . "\n";
+		$base = 'https://resolvecore.website/wp-content/themes/resolvecore-theme/assets/logo';
+		return '<link rel="icon" type="image/svg+xml" href="' . htmlspecialchars( $base . '/resolvcore-icon.svg' ) . '">' . "\n"
+		     . '<link rel="icon" type="image/png" sizes="32x32" href="' . htmlspecialchars( $base . '/resolvcore-icon.png' ) . '">' . "\n"
+		     . '<link rel="apple-touch-icon" href="' . htmlspecialchars( $base . '/resolvcore-icon.png' ) . '">' . "\n";
 	}
 
 	/**
@@ -104,7 +107,41 @@ const initMenuToggle = () => {
 	});
 };
 
-const rcInit = () => { fixAnonymousFields(); initMenuToggle(); };
+// Borra el pie del core de Mantis: "Powered by", "Copyright (c) ... MantisBT
+// Team" y "Contacta con el administrador por ayuda". No queremos marca de
+// Mantis: el unico pie es .rc-mantis-footer (lo deja page_footer).
+const cleanFooter = () => {
+	const scopes = document.querySelectorAll('#footer, footer, .bottom-padding');
+	const matchTxt = (t) => {
+		t = (t || '').toLowerCase();
+		return t.includes('powered by')
+			|| t.includes('mantisbt team')
+			|| t.includes('copyright')
+			|| t.includes('administrador por ayuda')
+			|| t.includes('administrator for assistance');
+	};
+	scopes.forEach((foot) => {
+		// Enlaces/imagenes a mantisbt.org (Powered by).
+		foot.querySelectorAll('a[href*="mantisbt.org"], img[src*="mantis"]').forEach((e) => {
+			const w = e.closest('address, p, span, li') || e;
+			w.remove();
+		});
+		// Lineas de copyright / contacto admin (sin tocar .rc-mantis-footer).
+		foot.querySelectorAll('address, p, span, div, li').forEach((e) => {
+			if (e.closest('.rc-mantis-footer')) return;
+			if (matchTxt(e.textContent) && e.children.length === 0) {
+				e.remove();
+			}
+		});
+		foot.querySelectorAll('address').forEach((e) => {
+			if (!e.closest('.rc-mantis-footer') && matchTxt(e.textContent)) {
+				e.remove();
+			}
+		});
+	});
+};
+
+const rcInit = () => { fixAnonymousFields(); initMenuToggle(); cleanFooter(); };
 if (document.readyState !== 'loading') rcInit();
 else document.addEventListener('DOMContentLoaded', rcInit);
 </script>
@@ -225,6 +262,13 @@ input[type=submit]:hover, input[type=button]:hover, button:hover, .btn:hover {
 	color: var(--rc-muted);
 	font-size: 11px;
 	border-top: 1px solid var(--rc-border);
+}
+
+/* Respaldo CSS por si el JS no llega: oculta "Powered by Mantis" del pie core. */
+#footer a[href*="mantisbt.org"],
+footer a[href*="mantisbt.org"],
+#footer img[src*="mantis"] {
+	display: none !important;
 }
 
 /* ── Responsive movil ─────────────────────────────────────────────────────
