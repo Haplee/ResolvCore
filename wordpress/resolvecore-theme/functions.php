@@ -549,6 +549,31 @@ function resolvecore_handle_ticket_status() {
 add_action( 'wp_ajax_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
 add_action( 'wp_ajax_nopriv_resolvecore_ticket_status', 'resolvecore_handle_ticket_status' );
 
+/**
+ * Redirección tras iniciar sesión según el rol del usuario.
+ *
+ * Sin esto, técnicos y clientes aterrizan en la URL por defecto de WordPress
+ * (/wp-admin/ o la página de origen). Cada rol va a su panel:
+ *   - editor (técnico)  -> /tecnicos/
+ *   - rc_cliente         -> /dashboard/
+ *   - administrator y resto: comportamiento por defecto de WP.
+ */
+function rc_login_redirect( $redirect_to, $request, $user ) {
+	if ( ! is_wp_error( $user ) && isset( $user->roles ) && is_array( $user->roles ) ) {
+		if ( in_array( 'administrator', $user->roles, true ) ) {
+			return $redirect_to; // admin: no tocar (suele ir a wp-admin).
+		}
+		if ( in_array( 'editor', $user->roles, true ) ) {
+			return home_url( '/tecnicos/' );
+		}
+		if ( in_array( 'rc_cliente', $user->roles, true ) ) {
+			return home_url( '/dashboard/' );
+		}
+	}
+	return $redirect_to;
+}
+add_filter( 'login_redirect', 'rc_login_redirect', 10, 3 );
+
 // =============================================================================
 //  Área de técnicos — backend
 // =============================================================================

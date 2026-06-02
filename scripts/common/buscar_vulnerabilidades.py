@@ -125,7 +125,7 @@ def _vulns_de_paquete(paquete, plataforma, ecosistema, api_key):
     return nvd_rest.get_vulns(nombre, version, api_key)
 
 
-def modo_cve(plataforma, serial, maximo, api_key):
+def modo_cve(plataforma, serial, maximo, api_key, salida_json=""):
     print("Recogiendo inventario de software ({0})...".format(plataforma), file=sys.stderr)
     inventario = inventario_local.get_software(plataforma, serial, maximo)
     if not inventario:
@@ -179,6 +179,17 @@ def modo_cve(plataforma, serial, maximo, api_key):
     }
     print(json.dumps(resultado, indent=2, ensure_ascii=False))
 
+    # Volcado a fichero para que el launcher lea un JSON limpio (sin mezclar con
+    # las barras de progreso, que van por stderr). El menu de desinstalacion del
+    # launcher consume este fichero.
+    if salida_json:
+        try:
+            with open(salida_json, "w", encoding="utf-8") as f:
+                json.dump(resultado, f, ensure_ascii=False, indent=2)
+            print("[i] Resultado escrito en {0}".format(salida_json), file=sys.stderr)
+        except OSError as e:
+            print("[!] No se pudo escribir --salida-json: {0}".format(e), file=sys.stderr)
+
     # Resumen legible por stderr para el tecnico.
     n_kev = sum(1 for v in todas if v["kev"])
     n_crit = sum(1 for v in todas if es_critica(v))
@@ -211,6 +222,9 @@ def main():
     parser.add_argument("--api-key", default=None, help="API key de la NVD (o variable NVD_API_KEY).")
     parser.add_argument("--puertos", nargs="?", const="127.0.0.1", default=None,
                         help="Modo legacy: escaneo de puertos del host indicado (def: 127.0.0.1).")
+    parser.add_argument("--salida-json", dest="salida_json", default="",
+                        help="Escribe el resultado completo (incluye 'avisos') a este fichero, "
+                             "ademas de imprimirlo. Lo usa el launcher para el menu de desinstalacion.")
     args = parser.parse_args()
 
     if args.puertos is not None:
@@ -221,7 +235,7 @@ def main():
         parser.error("indica --plataforma {linux,windows,android} o usa --puertos.")
 
     api_key = args.api_key if args.api_key is not None else os.getenv("NVD_API_KEY", "")
-    modo_cve(args.plataforma, args.serial, args.maximo, api_key)
+    modo_cve(args.plataforma, args.serial, args.maximo, api_key, args.salida_json)
 
 
 if __name__ == "__main__":

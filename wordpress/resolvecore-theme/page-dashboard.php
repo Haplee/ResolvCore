@@ -34,7 +34,11 @@ $current_user = is_user_logged_in() ? wp_get_current_user() : null;
 						<span class="rc-dash-hero-dot" aria-hidden="true"></span>
 						<?php echo esc_html( $current_user->user_email ); ?>
 					</span>
-					<a class="rc-dash-hero-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">Cerrar sesión</a>
+					<a class="rc-dash-hero-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">
+						<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-2px;margin-right:.35rem">
+							<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+						</svg>Cerrar sesión
+					</a>
 				</div>
 			<?php endif; ?>
 		</div>
@@ -48,6 +52,16 @@ $current_user = is_user_logged_in() ? wp_get_current_user() : null;
 			the_content();
 		endwhile;
 		?>
+
+		<?php if ( $current_user ) : ?>
+			<div class="rc-dash-foot-logout">
+				<a class="rc-btn rc-btn--logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">
+					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-3px;margin-right:.4rem">
+						<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+					</svg>Cerrar sesión
+				</a>
+			</div>
+		<?php endif; ?>
 		</div>
 	</section>
 
