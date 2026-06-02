@@ -405,7 +405,7 @@ function rc_cliente_render_form( $tickets = array() ) {
 	// rc_cliente_procesar_form() antes de llegar aquí.
 	$rc_form_enviado = isset( $_POST['rc_solicitar_informe'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 	?>
-	<details class="rc-cliente-solicitar" <?php echo $rc_form_enviado ? '' : 'open'; ?>>
+	<details id="solicitar" class="rc-cliente-solicitar" <?php echo $rc_form_enviado ? '' : 'open'; ?>>
 		<summary>
 			<span class="rc-solicitar-summary-main">
 				<span class="rc-solicitar-icon" aria-hidden="true">+</span>
@@ -998,8 +998,11 @@ function rc_crear_cuenta_cliente( $email, $nombre, $password = '' ) {
 		return array( 'created' => false, 'reason' => 'error', 'msg' => 'No se pudo crear la cuenta.' );
 	}
 
-	// Flujo con contraseña: cuenta activa al instante, sin email de activación.
+	// Flujo con contraseña: cuenta activa al instante. Aun así enviamos un correo
+	// de bienvenida (el cliente espera recibir confirmación de que su cuenta se
+	// creó). No incluye contraseña: solo confirma el alta y enlaza al panel.
 	if ( $has_password ) {
+		rc_cliente_email_bienvenida( $email, $nombre, $login );
 		return array( 'created' => true, 'user_id' => (int) $user_id );
 	}
 
@@ -1115,6 +1118,80 @@ function rc_registro_cliente_email( $email, $nombre, $login, $reset_url ) {
 
 	if ( ! $sent ) {
 		error_log( '[rc-core] email credenciales: wp_mail devolvió false para ' . $email );
+	}
+	return (bool) $sent;
+}
+
+/**
+ * Email de bienvenida para el alta CON contraseña (cuenta ya activa). No envía
+ * contraseña ni enlace de reset: confirma el alta y enlaza al panel de cliente.
+ *
+ * @return bool true si wp_mail aceptó el envío.
+ */
+function rc_cliente_email_bienvenida( $email, $nombre, $login ) {
+
+	$e_nombre = esc_html( $nombre );
+	$e_login  = esc_html( $login );
+	$dash_url = esc_url( home_url( '/dashboard/' ) );
+
+	$html =
+			'<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+		. '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+		. '<body style="margin:0;padding:0;background:#0a0c10;">'
+		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0c10;">'
+		. '<tr><td align="center" style="padding:28px 14px;">'
+		. '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
+		. 'style="max-width:600px;width:100%;background:#111318;border:1px solid #1f232c;border-radius:14px;overflow:hidden;">'
+		. '<tr><td style="padding:22px 32px;background:#0a0c10;border-bottom:1px solid #1f232c;">'
+		. '<span style="color:#f5f6f8;font-family:monospace;font-size:18px;font-weight:700;">ResolveCore</span>'
+		. '<span style="color:#00e5a0;font-family:monospace;font-size:11px;letter-spacing:.12em;'
+		. 'float:right;padding-top:6px;">// CUENTA</span>'
+		. '</td></tr>'
+		. '<tr><td style="padding:32px;">'
+		. '<h1 style="margin:0 0 6px;color:#f5f6f8;font-family:Arial,sans-serif;font-size:21px;">'
+		. 'Bienvenido a ResolveCore</h1>'
+		. '<p style="margin:0 0 20px;color:#c5c8cf;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;">'
+		. 'Hola <strong>' . $e_nombre . '</strong>, tu cuenta de cliente ya está activa. '
+		. 'Tu usuario es <strong style="color:#00e5a0;font-family:monospace;">' . $e_login . '</strong>. '
+		. 'Entra a tu panel para solicitar informes y seguir tus tickets:</p>'
+		. '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">'
+		. '<tr><td style="border-radius:8px;background:#00e5a0;">'
+		. '<a href="' . $dash_url . '" style="display:inline-block;padding:13px 26px;color:#05140f;'
+		. 'font-size:14px;font-weight:700;text-decoration:none;font-family:Arial,sans-serif;">'
+		. 'Ir a mi panel &rarr;</a>'
+		. '</td></tr></table>'
+		. '<p style="margin:20px 0 0;color:#7a7f8e;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;">'
+		. 'Inicia sesión con tu email y la contraseña que elegiste. Si la olvidas, usa '
+		. '«He olvidado mi contraseña» en la pantalla de acceso.</p>'
+		. '</td></tr>'
+		. '<tr><td style="padding:18px 32px;background:#0a0c10;border-top:1px solid #1f232c;">'
+		. '<p style="margin:0;color:#5a5f6c;font-family:Arial,sans-serif;font-size:11px;line-height:1.6;">'
+		. 'Este correo es automático.<br>'
+		. 'ResolveCore — Solución a tus problemas informáticos.</p>'
+		. '</td></tr>'
+		. '</table></td></tr></table></body></html>';
+
+	$text  = "Bienvenido a ResolveCore\n\n";
+	$text .= 'Hola ' . $nombre . ", tu cuenta de cliente ya esta activa.\n\n";
+	$text .= 'Usuario: ' . $login . "\n";
+	$text .= 'Panel: ' . home_url( '/dashboard/' ) . "\n\n";
+	$text .= "Inicia sesion con tu email y la contrasena que elegiste.\n\n";
+	$text .= "—\nEste correo es automatico.\nResolveCore — Solucion a tus problemas informaticos.\n";
+
+	$headers = array(
+		'Content-Type: text/html; charset=UTF-8',
+		'Reply-To: ' . get_option( 'admin_email' ),
+	);
+
+	$alt_body = static function ( $phpmailer ) use ( $text ) {
+		$phpmailer->AltBody = $text;
+	};
+	add_action( 'phpmailer_init', $alt_body );
+	$sent = @wp_mail( $email, 'ResolveCore — Tu cuenta está lista', $html, $headers );
+	remove_action( 'phpmailer_init', $alt_body );
+
+	if ( ! $sent ) {
+		error_log( '[rc-core] email bienvenida: wp_mail devolvió false para ' . $email );
 	}
 	return (bool) $sent;
 }

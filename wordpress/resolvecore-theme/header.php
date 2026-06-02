@@ -50,7 +50,7 @@ $rc_is_cliente = ! $rc_is_tech && in_array( 'rc_cliente', $rc_user_roles, true )
 	<?php if ( $rc_is_tech ) : ?>
 	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>">Panel tecnico</a>
 	<?php elseif ( $rc_is_cliente ) : ?>
-	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>">Mi panel</a>
+	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/dashboard/#solicitar' ) ); ?>">Solicitar informe</a>
 	<?php else : ?>
 	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>">
 		Contacta con nosotros →
