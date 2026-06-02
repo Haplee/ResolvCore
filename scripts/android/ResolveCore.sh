@@ -284,16 +284,88 @@ run_vulnerabilidades() {
         echo ""
         SERIAL=$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')
         if [ -n "$SERIAL" ]; then
-            python3 "$VULN" --plataforma android --serial "$SERIAL" 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+            python3 "$VULN" --plataforma android --serial "$SERIAL" --salida-json /tmp/rc-vuln-android.json >/dev/null \
+                || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         else
-            python3 "$VULN" --plataforma android 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+            python3 "$VULN" --plataforma android --salida-json /tmp/rc-vuln-android.json >/dev/null \
+                || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         fi
         echo ""
         echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
+        desinstalar_vulns_android /tmp/rc-vuln-android.json "$SERIAL"
     else
         echo -e "  ${RED}[X] No encontrado: $VULN${NC}"
     fi
     read -p "  Presiona ENTER para continuar..."
+}
+
+# Menu de desinstalacion Android (adb uninstall). Excluye paquetes del sistema
+# (com.android.*, com.google.android.*). Nada se desinstala sin seleccion +
+# confirmacion explicita.
+desinstalar_vulns_android() {
+    local json="$1" serial="$2"
+    [ -f "$json" ] || return 0
+    if ! command -v jq >/dev/null 2>&1; then
+        echo -e "  ${YELLOW}[!] jq no disponible: menu de desinstalacion omitido (instala jq).${NC}"
+        return 0
+    fi
+
+    local pkgs=()
+    mapfile -t pkgs < <(jq -r '
+        [.avisos[] | select(.kev==true or (.cvss!=null and .cvss>=7.0))]
+        | group_by(.paquete)
+        | map({paquete: .[0].paquete,
+               kev:    (any(.[]; .kev==true)),
+               cvss:   (map(.cvss // 0) | max),
+               n:      length})
+        | sort_by([(.kev | not), (- .cvss)])
+        | .[] | "\(.paquete)\t\(.kev)\t\(.cvss)\t\(.n)"' "$json" 2>/dev/null \
+        | grep -Ev '^(com\.android\.|com\.google\.android\.|android$)' || true)
+
+    if [ "${#pkgs[@]}" -eq 0 ]; then
+        echo -e "  ${GREEN}[OK] Sin apps peligrosas desinstalables (KEV o CVSS>=7.0).${NC}"
+        return 0
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}APPS VULNERABLES DETECTADAS${NC}"
+    echo ""
+    local i=1 line p kev cvss n tag
+    for line in "${pkgs[@]}"; do
+        IFS=$'\t' read -r p kev cvss n <<<"$line"
+        tag="   "; [ "$kev" = "true" ] && tag="KEV"
+        printf "    %d. [%s] %-40s CVSS %s (%s CVE)\n" "$i" "$tag" "$p" "$cvss" "$n"
+        i=$((i + 1))
+    done
+    echo ""
+    echo -e "  ${RED}[!] La desinstalacion es IRREVERSIBLE. Nada se toca sin que lo confirmes.${NC}"
+    read -rp "  Numeros a desinstalar separados por coma (ENTER = cancelar): " sel
+    [ -z "$sel" ] && { echo "  Cancelado."; return 0; }
+
+    local sel_pkgs=() idx
+    for idx in ${sel//,/ }; do
+        [[ "$idx" =~ ^[0-9]+$ ]] || continue
+        if [ "$idx" -ge 1 ] && [ "$idx" -le "${#pkgs[@]}" ]; then
+            IFS=$'\t' read -r p _ _ _ <<<"${pkgs[$((idx - 1))]}"
+            sel_pkgs+=("$p")
+        fi
+    done
+    [ "${#sel_pkgs[@]}" -eq 0 ] && { echo "  Seleccion vacia o invalida."; return 0; }
+
+    echo ""
+    echo -e "  ${YELLOW}Vas a desinstalar:${NC}"
+    printf '    - %s\n' "${sel_pkgs[@]}"
+    read -rp "  Escribe 'SI' para confirmar: " conf
+    [ "$conf" = "SI" ] || { echo "  Cancelado."; return 0; }
+
+    local adb_cmd="adb"
+    [ -n "$serial" ] && adb_cmd="adb -s $serial"
+    for p in "${sel_pkgs[@]}"; do
+        echo -e "  ${CYAN:-}Desinstalando $p...${NC}"
+        $adb_cmd uninstall "$p" 2>/dev/null \
+            || $adb_cmd shell pm uninstall --user 0 "$p" 2>/dev/null \
+            || echo -e "  ${YELLOW}[!] No se pudo desinstalar $p${NC}"
+    done
 }
 
 run_diagnostico() {

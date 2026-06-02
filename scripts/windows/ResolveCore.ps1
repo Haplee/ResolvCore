@@ -98,17 +98,17 @@ OPTIONS DEL LAUNCHER
     -h, -Help         Muestra esta ayuda y sale.
 
 MENU
-    1. DIAGNOSTICO     Llama a diagnostico.ps1 (genera JSON + HTML).
+    1. DIAGNOSTICO     Llama a diagnostico.ps1 (genera JSON + resumen en pantalla).
     2. OPTIMIZACION    Llama a optimizacion.ps1 (niveles ligero/estandar/
                        rendimiento/extreme).
     3. VULNERABILIDADES Llama a buscar_vulnerabilidades.py (Python).
-    4. INFORME         Genera HTML/PDF desde el ultimo JSON y opcionalmente
-                       lo adjunta a un ticket MantisBT.
-    5. FACTURA         Genera factura PDF y opcionalmente la sube a Mantis
-                       y la envia por email al cliente.
-    6. SERVICIOS       Congelacion / Clonacion / Kit de cliente.
-    7. AYUDA           Guia rapida embebida.
-    8. SALIR           Cierra el programa.
+    4. INFORME         Genera una plantilla .txt (apartados en blanco) desde el
+                       ultimo JSON; el tecnico la rellena y la sube a MantisBT.
+    5. SERVICIOS       Congelacion / Clonacion / Kit de cliente.
+    6. AYUDA           Guia rapida embebida.
+    7. SALIR           Cierra el programa.
+
+    (La facturacion se gestiona desde MantisBT, no desde este menu.)
 
 FLAGS DE DIAGNOSTICO (forward a diagnostico.ps1)
     -O, -OutputDir, -Output <dir>   Directorio salida JSON/HTML
@@ -175,6 +175,27 @@ $PROJECT_ROOT = Split-Path -Parent $PSScriptRoot
 $SERVICIOS_DIR = Join-Path $PROJECT_ROOT "servicios"
 
 $SYSTEM_ISSUES = @()
+
+# Ticket de MantisBT de la sesion. Se pide una vez al inicio y se reutiliza para
+# que diagnostico e informe se guarden juntos en reparaciones\<ticket>\.
+$TICKET_SESION = ''
+
+function Read-TicketSesion {
+    Write-Host ""
+    $t = Read-Host "  Numero de ticket MantisBT para esta reparacion (ENTER = sin ticket)"
+    if ($t -match '^\d+$') {
+        $script:TICKET_SESION = $t
+        Write-Host ("  [i] Sesion asociada al ticket #{0}. Salidas en reparaciones\{1}\" -f $t, ('{0:D5}' -f [int]$t)) -ForegroundColor Cyan
+    } else {
+        $script:TICKET_SESION = ''
+        if ($t -ne '') {
+            Write-Host "  [!] '$t' no es un numero de ticket valido; sesion sin ticket." -ForegroundColor Yellow
+        } else {
+            Write-Host "  [i] Sesion sin ticket (salidas en reparaciones\sin-ticket\)." -ForegroundColor Gray
+        }
+    }
+    Start-Sleep 1
+}
 
 function Add-Issue {
     param($severity, $category, $message)
@@ -367,10 +388,9 @@ function Show-Menu {
     Write-Host "    2.  [OPTIMIZACION]     - Optimizar rendimiento" -ForegroundColor Yellow
     Write-Host "    3.  [VULNERABILIDADES] - Buscar y corregir CVEs" -ForegroundColor Magenta
     Write-Host "    4.  [INFORME]          - Plantilla .txt para rellenar a mano" -ForegroundColor Cyan
-    Write-Host "    5.  [FACTURA]          - Plantilla .txt para rellenar a mano" -ForegroundColor Cyan
-    Write-Host "    6.  [SERVICIOS]        - Congelacion / Clonacion / Kit cliente" -ForegroundColor White
-    Write-Host "    7.  [AYUDA]            - Ver guia rapida" -ForegroundColor Gray
-    Write-Host "    8.  [SALIR]            - Salir" -ForegroundColor Red
+    Write-Host "    5.  [SERVICIOS]        - Congelacion / Clonacion / Kit cliente" -ForegroundColor White
+    Write-Host "    6.  [AYUDA]            - Ver guia rapida" -ForegroundColor Gray
+    Write-Host "    7.  [SALIR]            - Salir" -ForegroundColor Red
     Write-Host ""
     Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
     Write-Host ""
@@ -386,8 +406,8 @@ function Show-Help {
     Write-Host "  OPTIMIZACION:    Aplica mejoras segun nivel seleccionado"
     Write-Host "  VULNERABILIDADES: Escaneo CVE multi-feed (NVD/KEV/OSV/EPSS)"
     Write-Host "  INFORME:         Plantilla .txt con apartados; el tecnico la rellena y sube a Mantis"
-    Write-Host "  FACTURA:         Plantilla .txt con campos; el tecnico la rellena y entrega al cliente"
     Write-Host "  SERVICIOS:       Congelacion / Clonacion / Kit de cliente"
+    Write-Host "  (La facturacion se gestiona desde MantisBT, no desde este menu.)"
     Write-Host ""
     Read-Host "  Presiona ENTER"
 }
@@ -417,7 +437,9 @@ function Invoke-Diagnostico {
 
     $script = Join-Path $SCRIPT_DIR "diagnostico.ps1"
     if (Test-Path $script) {
-        & $script
+        $argsDiag = @()
+        if ($script:TICKET_SESION) { $argsDiag += @('-Ticket', $script:TICKET_SESION) }
+        & $script @argsDiag
         Write-Host ""
         Write-Host "  [OK] Completado" -ForegroundColor Green
     }
@@ -483,15 +505,118 @@ function Invoke-Vulnerabilidades {
         return
     }
 
+    $outJson = Join-Path $env:TEMP 'rc-vuln.json'
+    if (Test-Path $outJson) { Remove-Item $outJson -Force -ErrorAction SilentlyContinue }
+
     try {
-        & $py.Source $script --plataforma windows @args
+        & $py.Source $script --plataforma windows --salida-json $outJson @args
         Write-Host ""
         Write-Host "  [OK] Escaneo completado" -ForegroundColor Green
     } catch {
         Write-Host "  [!] Error durante escaneo: $_" -ForegroundColor Yellow
     }
 
+    Invoke-DesinstalacionVulns -JsonPath $outJson
+
     Read-Host "  Presiona ENTER"
+}
+
+# Servicios/componentes que NUNCA se proponen para desinstalar. El Spooler (cola
+# de impresion) es critico para el usuario final y se excluye siempre, igual que
+# componentes del sistema y runtimes.
+$VULN_EXCLUIR = @('spooler','windefend','defender','microsoft','windows',
+                  'visual c++','.net','redistributable','runtime','driver')
+
+function Invoke-DesinstalacionVulns {
+    param([string]$JsonPath)
+
+    if (-not (Test-Path $JsonPath)) { return }
+    try {
+        $data = Get-Content -Raw -Path $JsonPath -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        Write-Host "  [!] No se pudo leer el resultado del escaneo." -ForegroundColor Yellow
+        return
+    }
+
+    $avisos = @($data.avisos)
+    if ($avisos.Count -eq 0) {
+        Write-Host ""
+        Write-Host "  [OK] Sin software marcado como peligroso (KEV o CVSS >= 7.0)." -ForegroundColor Green
+        return
+    }
+
+    # Agrupar por paquete: peor CVSS + si alguno es KEV. Excluir criticos.
+    $grupos = $avisos | Group-Object paquete | ForEach-Object {
+        $kev  = @($_.Group | Where-Object { $_.kev }).Count -gt 0
+        $cvss = ($_.Group | ForEach-Object { $_.cvss } | Where-Object { $null -ne $_ } | Measure-Object -Maximum).Maximum
+        [PSCustomObject]@{ Paquete = $_.Name; Kev = $kev; Cvss = $cvss; N = $_.Count }
+    } | Where-Object {
+        $_.Paquete -and ($_.Kev -or ($null -ne $_.Cvss -and $_.Cvss -ge 7.0))
+    } | Where-Object {
+        $p = $_.Paquete.ToLower()
+        -not ($VULN_EXCLUIR | Where-Object { $p -like "*$_*" })
+    } | Sort-Object @{ Expression = { -not $_.Kev } }, @{ Expression = { - [double]($_.Cvss) } }
+
+    $grupos = @($grupos)
+    if ($grupos.Count -eq 0) {
+        Write-Host ""
+        Write-Host "  [OK] No hay software desinstalable (los criticos se excluyen siempre)." -ForegroundColor Green
+        return
+    }
+
+    Write-Host ""
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor Yellow
+    Write-Host "  |  SOFTWARE VULNERABLE DETECTADO                                |" -ForegroundColor Yellow
+    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor Yellow
+    Write-Host ""
+    for ($i = 0; $i -lt $grupos.Count; $i++) {
+        $g = $grupos[$i]
+        $tag = if ($g.Kev) { '[KEV]' } else { '     ' }
+        $cv  = if ($null -ne $g.Cvss) { ('CVSS {0}' -f $g.Cvss) } else { 'CVSS  -' }
+        Write-Host ("    {0}. {1} {2,-40} {3} ({4} CVE)" -f ($i + 1), $tag, $g.Paquete, $cv, $g.N)
+    }
+    Write-Host ""
+    Write-Host "  [!] La desinstalacion es IRREVERSIBLE. Nada se toca sin que lo confirmes." -ForegroundColor Yellow
+    $sel = Read-Host "  Numeros a desinstalar separados por coma (ENTER = cancelar)"
+    if ([string]::IsNullOrWhiteSpace($sel)) {
+        Write-Host "  Cancelado. No se desinstalo nada." -ForegroundColor Gray
+        return
+    }
+
+    $indices = $sel -split '[,\s]+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ }
+    $aDesinstalar = foreach ($idx in $indices) {
+        if ($idx -ge 1 -and $idx -le $grupos.Count) { $grupos[$idx - 1].Paquete }
+    }
+    $aDesinstalar = @($aDesinstalar | Select-Object -Unique)
+    if ($aDesinstalar.Count -eq 0) {
+        Write-Host "  Seleccion vacia o invalida. No se desinstalo nada." -ForegroundColor Gray
+        return
+    }
+
+    Write-Host ""
+    Write-Host "  Vas a desinstalar:" -ForegroundColor Yellow
+    $aDesinstalar | ForEach-Object { Write-Host "    - $_" -ForegroundColor Yellow }
+    Write-Host "  Escribe 'SI' (mayusculas) para confirmar:" -ForegroundColor Red
+    if ((Read-Host) -ne 'SI') {
+        Write-Host "  Cancelado. No se desinstalo nada." -ForegroundColor Gray
+        return
+    }
+
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    foreach ($pkg in $aDesinstalar) {
+        Write-Host ""
+        Write-Host "  Desinstalando '$pkg'..." -ForegroundColor Cyan
+        if ($winget) {
+            try {
+                & winget uninstall --name $pkg --silent --accept-source-agreements 2>&1 | Out-Host
+                Write-Host "  [OK] Orden de desinstalacion enviada para '$pkg'." -ForegroundColor Green
+            } catch {
+                Write-Host "  [!] winget fallo con '$pkg': $_" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "  [!] winget no disponible. Desinstala '$pkg' manualmente desde Apps y caracteristicas." -ForegroundColor Yellow
+        }
+    }
 }
 
 function Invoke-Informe {
@@ -514,8 +639,20 @@ function Invoke-Informe {
         return
     }
 
-    # Buscar el JSON de diagnostico mas reciente
-    $diagDir = Join-Path $PROJECT_ROOT "diagnosticos"
+    # Buscar el JSON de diagnostico mas reciente. Si hay ticket de sesion, se
+    # prioriza reparaciones\<ticket>\; si no, la carpeta legacy scripts\diagnosticos.
+    $repoRoot = Split-Path -Parent $PROJECT_ROOT
+    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path $repoRoot 'reparaciones' }
+    if ($script:TICKET_SESION) {
+        $ticketDir = Join-Path $baseRep ('{0:D5}' -f [int]$script:TICKET_SESION)
+    } else {
+        $ticketDir = $null
+    }
+    if ($ticketDir -and (Test-Path $ticketDir) -and (Get-ChildItem -Path $ticketDir -Filter '*.json' -ErrorAction SilentlyContinue)) {
+        $diagDir = $ticketDir
+    } else {
+        $diagDir = Join-Path $PROJECT_ROOT "diagnosticos"
+    }
     if (-not (Test-Path $diagDir)) {
         Write-Host "  [X] No hay diagnosticos en $diagDir" -ForegroundColor Red
         Write-Host "      Ejecuta antes la opcion 1 (DIAGNOSTICO)" -ForegroundColor Yellow
@@ -558,44 +695,13 @@ function Invoke-Informe {
 
     $cliArgs = @($genScript)
     if (-not [string]::IsNullOrWhiteSpace($jsonPath)) { $cliArgs += @('--json', $jsonPath) }
+    if ($script:TICKET_SESION) { $cliArgs += @('--ticket', $script:TICKET_SESION) }
 
     try {
         & $py.Source @cliArgs
         Write-Host ""
         Write-Host "  [i] Rellena los apartados a mano y sube tu el informe a MantisBT." -ForegroundColor Cyan
         Write-Host "  [OK] Plantilla generada" -ForegroundColor Green
-    } catch {
-        Write-Host "  [!] Error: $_" -ForegroundColor Yellow
-    }
-
-    Read-Host "  Presiona ENTER"
-}
-
-function Invoke-Factura {
-    Write-Host ""
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor Cyan
-    Write-Host "  |  GENERAR FACTURA AL CLIENTE                                   |" -ForegroundColor Cyan
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor Cyan
-    Write-Host ""
-
-    $py = Ensure-Python
-    if (-not $py) { Read-Host "  Presiona ENTER"; return }
-
-    $facScript = Join-Path $PROJECT_ROOT "common\generar_factura.py"
-    if (-not (Test-Path $facScript)) {
-        Write-Host "  [X] No encontrado: $facScript" -ForegroundColor Red
-        Read-Host "  Presiona ENTER"
-        return
-    }
-
-    Write-Host "  Generando plantilla de factura (.txt)..." -ForegroundColor Yellow
-    Write-Host ""
-
-    try {
-        & $py.Source $facScript
-        Write-Host ""
-        Write-Host "  [i] Rellena los campos a mano y entrega la factura al cliente." -ForegroundColor Cyan
-        Write-Host "  [OK] Proceso de factura terminado" -ForegroundColor Green
     } catch {
         Write-Host "  [!] Error: $_" -ForegroundColor Yellow
     }
@@ -671,7 +777,15 @@ function Get-BashExe {
 function Invoke-BashScript {
     param([string]$Script, [string[]]$Args = @(), [hashtable]$BashInfo)
     if ($BashInfo.Type -eq 'wsl') {
-        $linuxPath = ($Script -replace '\\', '/') -replace '^([A-Za-z]):', { "/mnt/$($args[0].ToLower())" }
+        # Conversion explicita Windows -> WSL (C:\ruta\x -> /mnt/c/ruta/x).
+        # No usar -replace con scriptblock + $args[0]: en un scriptblock de
+        # -replace la variable del match es $_ (no $args), y el literal se colaba
+        # como texto al shell de WSL provocando "parse error near )" (2026-06-02).
+        if ($Script -match '^([A-Za-z]):(.*)$') {
+            $linuxPath = '/mnt/' + $Matches[1].ToLower() + ($Matches[2] -replace '\\', '/')
+        } else {
+            $linuxPath = $Script -replace '\\', '/'
+        }
         & wsl bash $linuxPath @Args
     } else {
         & $BashInfo.Cmd $Script @Args
@@ -848,6 +962,8 @@ if (-not $isInteractive) {
 }
 
 function Main-Menu {
+    Show-Banner
+    Read-TicketSesion
     while ($true) {
         Show-Banner
 
@@ -858,17 +974,16 @@ function Main-Menu {
 
         Show-Menu
 
-        $opcion = Read-Host "  Selecciona (1-8)"
+        $opcion = Read-Host "  Selecciona (1-7)"
 
         switch ($opcion) {
             "1" { Invoke-Diagnostico }
             "2" { Invoke-Optimizacion }
             "3" { Invoke-Vulnerabilidades }
             "4" { Invoke-Informe }
-            "5" { Invoke-Factura }
-            "6" { Invoke-Servicios }
-            "7" { Show-Help }
-            "8" {
+            "5" { Invoke-Servicios }
+            "6" { Show-Help }
+            "7" {
                 Write-Host "  [ResolveCore] Sesion finalizada correctamente." -ForegroundColor Cyan
                 Write-Host "  Gracias $usuario por utilizar nuestras herramientas de soporte." -ForegroundColor Gray
                 Write-Host "  Hasta la proxima!" -ForegroundColor White

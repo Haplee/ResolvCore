@@ -27,9 +27,37 @@ if ! command -v adb >/dev/null 2>&1; then
     exit 1
 fi
 
-SERIAL="${1:-}"
-OUTPUT_DIR="${2:-$(dirname "$0")/../diagnosticos}"
-mkdir -p "$OUTPUT_DIR"
+# ── Argumentos ────────────────────────────────────────────────────────────────
+# [serial]        primer posicional: serial ADB (uso historico)
+# [dir]           segundo posicional u --output <dir>: carpeta explicita
+# --ticket <N>    organiza la salida en reparaciones/<NNNNN>/diagnostico.json
+SERIAL=""
+OUTPUT_DIR=""
+TICKET=""
+_pos=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ticket) TICKET="${2:-}"; shift 2 ;;
+        --output) OUTPUT_DIR="${2:-}"; shift 2 ;;
+        *)
+            if [[ $_pos -eq 0 ]]; then SERIAL="$1"
+            elif [[ -z "$OUTPUT_DIR" ]]; then OUTPUT_DIR="$1"; fi
+            _pos=$((_pos + 1)); shift ;;
+    esac
+done
+
+# Resolucion de carpeta de salida (organizada por ticket).
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/reparaciones}"
+if [[ -n "$OUTPUT_DIR" ]]; then
+    DEST_DIR="$OUTPUT_DIR"
+elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
+    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
+else
+    DEST_DIR="$BASE_REP/sin-ticket"
+    echo "[!] No se ha indicado ticket. Guardando en reparaciones/sin-ticket/"
+fi
+mkdir -p "$DEST_DIR"
 
 # Si nos pasan serial, hablamos solo con ese dispositivo. Si no, ADB
 # escogerá el único conectado (o fallará si hay varios).
@@ -57,9 +85,37 @@ bat_temp=$($ADB shell dumpsys battery  2>/dev/null | awk -F: '/temperature:/{gsu
 # Almacenamiento de /data — formato "TOTAL LIBRE" (en bloques de 1K).
 storage=$($ADB shell df /data 2>/dev/null | awk 'NR==2 {print $2" "$4}')
 
+# ── Recogida ampliada (best-effort; cada campo cae a vacio si no responde) ────
+fabricante=$($ADB shell getprop ro.product.manufacturer 2>/dev/null | tr -d '\r\n')
+marca=$($ADB shell getprop ro.product.brand 2>/dev/null | tr -d '\r\n')
+seguridad_patch=$($ADB shell getprop ro.build.version.security_patch 2>/dev/null | tr -d '\r\n')
+
+# IP de wlan0 (red Wi-Fi). Vacio si no hay interfaz/permiso.
+ip_local=$($ADB shell ip -o -4 addr show wlan0 2>/dev/null | awk '{print $4}' | head -1 | tr -d '\r\n')
+
+# Top procesos por CPU (toybox top). Guardamos nombre+cpu como array de strings.
+procesos_json=""
+while IFS= read -r linea; do
+    [ -z "$linea" ] && continue
+    linea=$(echo "$linea" | tr -d '\r' | sed 's/"/\\"/g')
+    [ -n "$procesos_json" ] && procesos_json="$procesos_json,"
+    procesos_json="$procesos_json\"$linea\""
+done < <($ADB shell top -b -n 1 2>/dev/null | awk 'NR>6 {print $NF" "$(NF-2)}' | head -5)
+
 TS=$(date +%Y%m%d_%H%M%S)
 DEVICE_SAFE="${DEVICE// /_}"
-FILE="$OUTPUT_DIR/diagnostico_android_${DEVICE_SAFE}_${TS}.json"
+if [[ "$TICKET" =~ ^[0-9]+$ && -z "$OUTPUT_DIR" ]]; then
+    # Modo ticket: nombre fijo, con sufijo _vN si ya existe.
+    FILE="$DEST_DIR/diagnostico.json"
+    if [[ -f "$FILE" ]]; then
+        n=2
+        while [[ -f "$DEST_DIR/diagnostico_v$n.json" ]]; do n=$((n + 1)); done
+        FILE="$DEST_DIR/diagnostico_v$n.json"
+        echo "[i] Ya existia diagnostico.json; guardando como $(basename "$FILE")"
+    fi
+else
+    FILE="$DEST_DIR/diagnostico_android_${DEVICE_SAFE}_${TS}.json"
+fi
 
 # ── Volcado JSON ────────────────────────────────────────────────────────────
 # Blindamos los campos numericos: si el getprop/dumpsys no devolvio nada, un
@@ -67,29 +123,50 @@ FILE="$OUTPUT_DIR/diagnostico_android_${DEVICE_SAFE}_${TS}.json"
 SDK=${SDK:-0}
 bat_level=${bat_level:-0}
 bat_temp=${bat_temp:-0}
+procesos_json=${procesos_json:-}
 
 cat > "$FILE" <<EOF
 {
   "_meta": {
     "plataforma": "android",
     "hostname": "$DEVICE",
-    "version": "2.0"
+    "version": "2.2"
   },
   "timestamp": "$(date -Iseconds)",
   "dispositivo": "$DEVICE",
+  "fabricante": "$fabricante",
+  "marca": "$marca",
   "android": "$ANDROID",
   "sdk": $SDK,
+  "parche_seguridad": "$seguridad_patch",
   "bateria": {
     "nivel": $bat_level,
     "temp_decimas_grado": $bat_temp
   },
-  "almacenamiento_data": "$storage"
+  "almacenamiento_data": "$storage",
+  "red": {
+    "ip": "$ip_local"
+  },
+  "procesos_top": [$procesos_json]
 }
 EOF
 
 if command -v python3 >/dev/null 2>&1; then
     python3 -m json.tool "$FILE" >/dev/null 2>&1 || echo "[!] El JSON generado parece invalido: $FILE" >&2
 fi
+
+# ── Resumen legible en terminal ──────────────────────────────────────────────
+bat_temp_c=$(awk "BEGIN{printf \"%.1f\", ${bat_temp:-0}/10}")
+echo ""
+echo "  +----------------- RESUMEN DEL DIAGNOSTICO (Android) -----------------+"
+echo "   Dispositivo ..: $marca $DEVICE ($fabricante)"
+echo "   Android ......: $ANDROID (SDK $SDK)"
+echo "   Parche segur. : ${seguridad_patch:-(desconocido)}"
+echo "   Bateria ......: ${bat_level}% / ${bat_temp_c} C"
+echo "   Almacen /data : $storage (bloques 1K: total libre)"
+[ -n "$ip_local" ] && echo "   Red wlan0 ....: $ip_local"
+echo "  +---------------------------------------------------------------------+"
+echo ""
 
 echo "[+] Diagnóstico Android guardado en:"
 echo "    $FILE"

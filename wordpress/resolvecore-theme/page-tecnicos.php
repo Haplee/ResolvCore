@@ -990,6 +990,21 @@ get_header();
 	.rc-dl-meta { grid-template-columns: 1fr; }
 	.rc-tabs { overflow-x: auto; }
 	.rc-tec-hotkeys { display: none; }
+
+	/* La barra de trabajo desbordaba: el nav largo no cabia junto a la marca. */
+	.rc-tec-bar-inner { flex-wrap: wrap; gap: .5rem; padding: .6rem 1rem; }
+	.rc-tec-bar-nav { flex-wrap: wrap; gap: .3rem; width: 100%; }
+	.rc-tec-bar-brand { width: 100%; }
+	.rc-tec-bar-user { border-left: none; margin-left: 0; padding-left: 0; }
+
+	/* Dashboard de ticket activo y formularios a una sola columna. */
+	.rc-dash-grid { grid-template-columns: 1fr; }
+	.rc-fact-form { grid-template-columns: 1fr; }
+	.rc-dash-header { flex-direction: column; align-items: flex-start; }
+
+	/* Tabla de "que instala" sin desbordar (scroll horizontal si hace falta). */
+	.rc-dl-includes { overflow-x: auto; }
+	.rc-tec-wrap { padding: 0 1rem; }
 }
 </style>
 

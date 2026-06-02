@@ -24,12 +24,45 @@ set -uo pipefail
 # separador es siempre el punto y el JSON queda valido.
 export LC_ALL=C
 
-OUTPUT_DIR="${1:-$(dirname "$0")/../diagnosticos}"
-mkdir -p "$OUTPUT_DIR"
+# ── Argumentos ────────────────────────────────────────────────────────────────
+# --output <dir>  carpeta de salida explicita (back-compat / CI)
+# --ticket <N>    organiza la salida en reparaciones/<NNNNN>/diagnostico.json
+# Tambien acepta un dir posicional (uso historico: bash diagnostico.sh /tmp).
+OUTPUT_DIR=""
+TICKET=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --output)  OUTPUT_DIR="${2:-}"; shift 2 ;;
+        --ticket)  TICKET="${2:-}";     shift 2 ;;
+        --silent|--install|--auto-install) shift ;;   # aceptados, sin efecto aqui
+        *) [[ -z "$OUTPUT_DIR" ]] && OUTPUT_DIR="$1"; shift ;;
+    esac
+done
 
 HOST=$(hostname)
 TS=$(date +%Y%m%d_%H%M%S)
-FILE="$OUTPUT_DIR/diagnostico_${HOST}_${TS}.json"
+
+# ── Resolucion de carpeta de salida (organizada por ticket) ──────────────────
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/reparaciones}"
+if [[ -n "$OUTPUT_DIR" ]]; then
+    DEST_DIR="$OUTPUT_DIR"
+    FILE="$DEST_DIR/diagnostico_${HOST}_${TS}.json"
+elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
+    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
+    FILE="$DEST_DIR/diagnostico.json"
+    if [[ -f "$FILE" ]]; then
+        n=2
+        while [[ -f "$DEST_DIR/diagnostico_v$n.json" ]]; do n=$((n + 1)); done
+        FILE="$DEST_DIR/diagnostico_v$n.json"
+        echo "[i] Ya existia diagnostico.json; guardando como $(basename "$FILE")"
+    fi
+else
+    DEST_DIR="$BASE_REP/sin-ticket"
+    FILE="$DEST_DIR/diagnostico_${HOST}_${TS}.json"
+    echo "[!] No se ha indicado ticket. Guardando en reparaciones/sin-ticket/"
+fi
+mkdir -p "$DEST_DIR"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +109,69 @@ uptime_horas=$(awk '{printf "%.1f", $1/3600}' /proc/uptime)
 actualizaciones=0
 if command -v apt-get >/dev/null 2>&1; then
     actualizaciones=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)
+elif command -v dnf >/dev/null 2>&1; then
+    actualizaciones=$(dnf -q check-update 2>/dev/null | grep -c '^[a-zA-Z0-9]' || true)
 fi
+
+# ── Recogida ampliada (cada bloque tolera fallo: no aborta el diagnostico) ────
+
+# Ultimo arranque (para el informe). Vacio si 'uptime -s' no esta.
+ultimo_arranque=$(uptime -s 2>/dev/null || echo "")
+
+# Servicios criticos. cups = cola de impresion: SIEMPRE se reporta, nunca se toca.
+servicios_json=""
+for s in ssh cron cups systemd-journald NetworkManager; do
+    estado=$(systemctl is-active "$s" 2>/dev/null || echo "desconocido")
+    [ -n "$servicios_json" ] && servicios_json="$servicios_json,"
+    servicios_json="$servicios_json{\"nombre\":\"$s\",\"estado\":\"$estado\"}"
+done
+
+# Top procesos por CPU (nombre/cpu/mem). comm no suele llevar espacios.
+procesos_json=""
+while read -r pcpu pmem pcomm; do
+    [ -z "$pcomm" ] && continue
+    pcpu=${pcpu:-0}; pmem=${pmem:-0}
+    [ -n "$procesos_json" ] && procesos_json="$procesos_json,"
+    procesos_json="$procesos_json{\"nombre\":\"$pcomm\",\"cpu\":$pcpu,\"mem\":$pmem}"
+done < <(ps -eo %cpu,%mem,comm --sort=-%cpu 2>/dev/null | tail -n +2 | head -10)
+
+# Red: IP/gateway/DNS + puertos en escucha.
+ip_local=$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | head -1)
+gateway=$(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')
+dns_json=""
+while read -r d; do
+    [ -z "$d" ] && continue
+    [ -n "$dns_json" ] && dns_json="$dns_json,"
+    dns_json="$dns_json\"$d\""
+done < <(grep -h '^nameserver' /etc/resolv.conf 2>/dev/null | awk '{print $2}')
+puertos_escucha=$(ss -tlnH 2>/dev/null | awk '{print $4}' | sed 's/.*://' \
+                  | grep -E '^[0-9]+$' | sort -un | paste -sd, -)
+
+# Seguridad: firewall (ufw/iptables).
+firewall="false"
+if command -v ufw >/dev/null 2>&1; then
+    ufw status 2>/dev/null | grep -qi "Status: active" && firewall="true"
+elif command -v iptables >/dev/null 2>&1; then
+    # Si hay alguna regla mas alla de las cadenas por defecto, lo damos por activo.
+    [ "$(iptables -S 2>/dev/null | grep -vc '^-P')" -gt 0 ] 2>/dev/null && firewall="true"
+fi
+
+# SMART del primer disco (requiere smartctl; null si no disponible o sin permiso).
+smart_status="null"
+if command -v smartctl >/dev/null 2>&1; then
+    disk=$(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2=="disk"{print $1; exit}')
+    if [ -n "$disk" ]; then
+        sm=$(smartctl -H "/dev/$disk" 2>/dev/null | grep -i 'overall-health' \
+             | awk -F: '{gsub(/^[ \t]+/,"",$2); print $2}')
+        [ -n "$sm" ] && smart_status="\"$sm\""
+    fi
+fi
+
+# Blindaje de arrays/cadenas vacias para que el JSON quede valido.
+servicios_json=${servicios_json:-}
+procesos_json=${procesos_json:-}
+dns_json=${dns_json:-}
+puertos_escucha=${puertos_escucha:-}
 
 # ── Volcado JSON ────────────────────────────────────────────────────────────
 # Se escribe manual para no depender de jq. Blindamos los campos numericos:
@@ -95,13 +190,19 @@ cat > "$FILE" <<EOF
   "_meta": {
     "plataforma": "linux",
     "hostname": "$HOST",
-    "version": "2.0"
+    "version": "3.1"
   },
   "timestamp": "$(date -Iseconds)",
   "hostname": "$HOST",
   "os": "$os_name",
   "kernel": "$kernel",
   "uptime_horas": $uptime_horas,
+  "sistema": {
+    "nombre": "$os_name",
+    "kernel": "$kernel",
+    "uptime_horas": $uptime_horas,
+    "ultimo_arranque": "$ultimo_arranque"
+  },
   "cpu": {
     "modelo": "$cpu_model",
     "cores": $cpu_cores,
@@ -116,8 +217,20 @@ cat > "$FILE" <<EOF
     "libre": "$disk_libre",
     "porcentaje_uso": $disk_porcentaje
   },
+  "disco_smart": $smart_status,
   "actualizaciones": {
     "pendientes": $actualizaciones
+  },
+  "servicios_criticos": [$servicios_json],
+  "procesos_top": [$procesos_json],
+  "red": {
+    "ip": "$ip_local",
+    "gateway": "$gateway",
+    "dns": [$dns_json],
+    "puertos_escucha": [$puertos_escucha]
+  },
+  "seguridad": {
+    "firewall": $firewall
   }
 }
 EOF
@@ -127,6 +240,25 @@ EOF
 if command -v python3 >/dev/null 2>&1; then
     python3 -m json.tool "$FILE" >/dev/null 2>&1 || warn "El JSON generado parece invalido: $FILE"
 fi
+
+# ── Resumen legible en terminal ──────────────────────────────────────────────
+echo ""
+echo "  +-------------------- RESUMEN DEL DIAGNOSTICO --------------------+"
+echo "   Equipo .......: $HOST"
+echo "   Sistema ......: $os_name ($kernel)"
+echo "   Uptime .......: ${uptime_horas} h"
+echo "   CPU ..........: $cpu_model (${cpu_cores} cores, carga 1min ${cpu_load})"
+echo "   RAM ..........: ${mem_libre} GB libres de ${mem_total} GB"
+echo "   Disco / .....: ${disk_libre} libres (${disk_porcentaje}% usado)"
+[ -n "$ip_local" ] && echo "   Red ..........: IP ${ip_local} | GW ${gateway} | puertos ${puertos_escucha:-(ninguno)}"
+echo "   Firewall .....: $firewall"
+echo "   Updates ......: ${actualizaciones} pendientes"
+echo "   Servicios ....: $(echo "$servicios_json" | grep -o '"nombre":"[^"]*","estado":"[^"]*"' | sed 's/"nombre":"//;s/","estado":"/=/;s/"//' | paste -sd' ' -)"
+echo "   Top procesos (CPU):"
+ps -eo %cpu,%mem,comm --sort=-%cpu 2>/dev/null | tail -n +2 | head -5 \
+    | awk '{printf "     - %-20s cpu=%s%% mem=%s%%\n", $3, $1, $2}'
+echo "  +-----------------------------------------------------------------+"
+echo ""
 
 info "Diagnóstico guardado en:"
 echo "    $FILE"

@@ -45,6 +45,10 @@ __pycache__/
 # Diagnósticos generados (datos locales con hostnames/IPs reales)
 scripts/diagnosticos/
 
+# Reparaciones por ticket (diagnostico.json + informe.txt del tecnico).
+# Datos locales con hostnames/IPs reales — nunca se versionan.
+reparaciones/
+
 # Empaquetados del tema/plugin (distribuir vía GitHub Releases)
 wordpress/*.zip
 builds/*.zip

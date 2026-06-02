@@ -85,8 +85,28 @@ const fixAnonymousFields = () => {
 		});
 	});
 };
-if (document.readyState !== 'loading') fixAnonymousFields();
-else document.addEventListener('DOMContentLoaded', fixAnonymousFields);
+
+// Menu hamburguesa: en movil no se abria. El core de Mantis pinta un toggle con
+// el icono FontAwesome 'fa-bars'; el override !important del CSS de marca podia
+// estar tapando el comportamiento nativo. Enganchamos el click para alternar una
+// clase propia (rc-menu-open) que el CSS responsive de abajo hace visible.
+// Si la version de Mantis usa otro selector, ampliar la lista de candidatos.
+const initMenuToggle = () => {
+	const icon = document.querySelector('.fa-bars, .fa-navicon, i.menu-toggle');
+	const toggle = icon ? (icon.closest('a, button') || icon)
+		: document.querySelector('#menu-toggle, .menu-collapse, a.bars');
+	const menu = document.querySelector(
+		'#sidebar, .responsive-menu, #navbar, nav.menu, ul.menu, #nav-container');
+	if (!toggle || !menu) return;
+	toggle.addEventListener('click', (e) => {
+		e.preventDefault();
+		menu.classList.toggle('rc-menu-open');
+	});
+};
+
+const rcInit = () => { fixAnonymousFields(); initMenuToggle(); };
+if (document.readyState !== 'loading') rcInit();
+else document.addEventListener('DOMContentLoaded', rcInit);
 </script>
 JS;
 	}
@@ -205,6 +225,37 @@ input[type=submit]:hover, input[type=button]:hover, button:hover, .btn:hover {
 	color: var(--rc-muted);
 	font-size: 11px;
 	border-top: 1px solid var(--rc-border);
+}
+
+/* ── Responsive movil ─────────────────────────────────────────────────────
+   Mantis no adapta bien las tablas de bugs ni el menu en pantallas pequenas. */
+@media (max-width: 768px) {
+	/* Tablas anchas: scroll horizontal en vez de desbordar la pagina. */
+	.table-container,
+	.width100,
+	table.width100 {
+		display: block;
+		max-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	/* Formularios e inputs no deben salirse del viewport. */
+	input, select, textarea { max-width: 100%; box-sizing: border-box; }
+	.form-container, .widget-container { padding: 8px !important; }
+
+	/* Menu desplegable al pulsar el hamburguesa (clase puesta por initMenuToggle).
+	   Cubrimos los selectores de menu mas comunes del core. */
+	#sidebar.rc-menu-open,
+	.responsive-menu.rc-menu-open,
+	#navbar.rc-menu-open,
+	nav.menu.rc-menu-open,
+	ul.menu.rc-menu-open,
+	#nav-container.rc-menu-open {
+		display: block !important;
+		max-height: none !important;
+		visibility: visible !important;
+	}
+	.rc-mantis-topbar img { height: 22px; }
 }
 </style>
 CSS;
