@@ -229,9 +229,12 @@ show_devices() {
     echo -e "  ${CYAN}Dispositivos conectados:${NC}"
     echo -e "  ${GRAY}-------------------------------------------${NC}"
 
-    adb devices -l | grep "device$" | while read line; do
-        SERIAL=$(echo $line | awk '{print $1}')
-        MODEL=$(adb -s $SERIAL shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+    # 'adb devices' (sin -l) lista una linea por dispositivo terminada en la
+    # palabra de estado. Filtramos los que estan en estado "device" y sacamos
+    # el serial de la primera columna. Con -l las lineas acaban en
+    # "transport_id:N" y el grep "device$" no casaba (lista vacia).
+    adb devices | awk 'NR>1 && $2=="device" {print $1}' | while read -r SERIAL; do
+        MODEL=$(adb -s "$SERIAL" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
         echo -e "  ${WHITE}$SERIAL${NC} - $MODEL"
     done
 
@@ -279,11 +282,11 @@ run_vulnerabilidades() {
         echo ""
         echo -e "  ${YELLOW}Ejecutando escaneo de vulnerabilidades Android...${NC}"
         echo ""
-        SERIAL=$(adb devices | grep "device$" | head -n1 | awk '{print $1}')
+        SERIAL=$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')
         if [ -n "$SERIAL" ]; then
-            python3 "$VULN" --platform A --serial "$SERIAL" 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+            python3 "$VULN" --plataforma android --serial "$SERIAL" 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         else
-            python3 "$VULN" --platform A 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+            python3 "$VULN" --plataforma android 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         fi
         echo ""
         echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
@@ -334,30 +337,46 @@ run_optimizacion() {
 
     echo ""
     echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |  ${WHITE}SELECCIONA NIVEL DE OPTIMIZACION:${NC}                            |"
+    echo -e "  |  ${WHITE}OPTIMIZACION ANDROID (limpieza de cache)${NC}                     |"
     echo -e "  +---------------------------------------------------------------+"
     echo ""
-    echo -e "    ${GREEN}1.${NC}  BASICO       - Limpieza de cache"
-    echo -e "    ${YELLOW}2.${NC}  ESTANDAR     - Limpieza y optimizacion (recomendado)"
-    echo -e "    ${RED}3.${NC}  VOLVER al menu principal"
+    echo -e "    ${GREEN}1.${NC}  LIMPIAR cache de apps + /data/local/tmp"
+    echo -e "    ${RED}2.${NC}  VOLVER al menu principal"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
 
-    read -p "  Selecciona opcion (1-3): " nivel
+    read -p "  Selecciona opcion (1-2): " nivel
 
     case $nivel in
-        1) nivel_opt="ligero" ;;
-        2) nivel_opt="estandar" ;;
-        3) return ;;
+        1) : ;;   # continuar
+        2) return ;;
         *) echo -e "  ${RED}Opcion no valida${NC}"; return ;;
     esac
+
+    # 'pm clear' vacia tambien ajustes y sesiones de cada app (es destructivo):
+    # exigimos confirmacion explicita del tecnico antes de pasar --confirm.
+    echo ""
+    echo -e "  ${YELLOW}[!] ATENCION: esto vacia la cache Y los ajustes/sesiones de cada app.${NC}"
+    echo -e "  ${YELLOW}    Confirma con el cliente antes de continuar.${NC}"
+    read -rp "  Escribe 'SI' para confirmar: " conf
+    if [[ "$conf" != "SI" ]]; then
+        echo -e "  ${GRAY}Cancelado.${NC}"
+        read -p "  Presiona ENTER para continuar..."
+        return
+    fi
 
     echo ""
     echo -e "  ${YELLOW}Ejecutando optimizacion...${NC}"
     echo ""
 
     cd "$SCRIPT_DIR" || exit 1
-    bash "$SCRIPT_DIR/optimizacion.sh" "$nivel_opt"
+    # Pasamos el serial detectado (si lo hay) y la flag --confirm obligatoria.
+    SERIAL=$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')
+    if [[ -n "$SERIAL" ]]; then
+        bash "$SCRIPT_DIR/optimizacion.sh" "$SERIAL" --confirm
+    else
+        bash "$SCRIPT_DIR/optimizacion.sh" --confirm
+    fi
 
     echo ""
     echo -e "  ${GREEN}[OK] Optimizacion completada${NC}"

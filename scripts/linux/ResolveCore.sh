@@ -173,13 +173,13 @@ show_menu() {
     echo -e "                       - Escaneo NVD + CISA KEV + OSV + EPSS"
     echo -e "                       - Audita configuracion y puertos abiertos"
     echo ""
-    echo -e "    ${CYAN}4.${NC}  [INFORME]       - Generar HTML/PDF + adjuntar a Mantis"
-    echo -e "                       - Lee el ultimo JSON de diagnostico"
-    echo -e "                       - Adjunta el PDF al ticket MantisBT (opcional)"
+    echo -e "    ${CYAN}4.${NC}  [INFORME]       - Plantilla .txt para rellenar a mano"
+    echo -e "                       - Apartados predefinidos del informe tecnico"
+    echo -e "                       - El tecnico lo sube a MantisBT manualmente"
     echo ""
-    echo -e "    ${CYAN}5.${NC}  [FACTURA]       - Generar factura PDF + email al cliente"
-    echo -e "                       - Asistente interactivo: tecnico, cliente, items"
-    echo -e "                       - Sube a Mantis y envia email al cliente"
+    echo -e "    ${CYAN}5.${NC}  [FACTURA]       - Plantilla .txt para rellenar a mano"
+    echo -e "                       - Campos predefinidos: tecnico, cliente, items"
+    echo -e "                       - Se entrega al cliente junto con el informe"
     echo ""
     echo -e "    ${WHITE}6.${NC}  [SERVICIOS]     - Congelacion / Clonacion de sistemas"
     echo -e "                       - Snapper/BTRFS, registro de imagenes"
@@ -311,7 +311,7 @@ run_vulnerabilidades() {
         echo ""
         echo -e "  ${YELLOW}Ejecutando escaneo de vulnerabilidades...${NC}"
         echo ""
-        python3 "$VULN" 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+        python3 "$VULN" --plataforma linux 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         echo ""
         echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
     else
@@ -366,11 +366,11 @@ run_informe() {
     echo -e "  ${GRAY}    fecha:${NC} $(date -r "$latest_json" '+%Y-%m-%d %H:%M:%S')"
     echo ""
 
-    read -rp "  Usar este JSON? (S/n) " use_latest
+    read -rp "  Usar este JSON para pre-rellenar la cabecera? (S/n) " use_latest
     local json_path="$latest_json"
     if [[ "$use_latest" =~ ^[nN] ]]; then
-        read -rp "  Ruta al JSON: " custom_json
-        if [[ ! -f "$custom_json" ]]; then
+        read -rp "  Ruta al JSON (ENTER = ninguno): " custom_json
+        if [[ -n "$custom_json" && ! -f "$custom_json" ]]; then
             echo -e "  ${RED}[X] Fichero no existe${NC}"
             read -p "  Presiona ENTER..."
             return
@@ -378,35 +378,20 @@ run_informe() {
         json_path="$custom_json"
     fi
 
-    read -rp "  Generar PDF tambien? (S/n) " gen_pdf
-    local pdf_flag=""
-    if [[ ! "$gen_pdf" =~ ^[nN] ]]; then
-        pdf_flag="--pdf"
-    fi
+    echo ""
+    echo -e "  ${YELLOW}Generando plantilla de informe (.txt)...${NC}"
+    echo ""
 
-    read -rp "  Abrir HTML en navegador al terminar? (S/n) " open_b
-    local open_flag=""
-    if [[ ! "$open_b" =~ ^[nN] ]]; then
-        open_flag="--open"
-    fi
-
-    local ticket_flag=""
-    if [[ -n "$pdf_flag" ]]; then
-        read -rp "  ID de ticket MantisBT para adjuntar (ENTER = no adjuntar): " ticket_id
-        if [[ "$ticket_id" =~ ^[0-9]+$ ]]; then
-            ticket_flag="--ticket $ticket_id"
-        fi
+    if [[ -n "$json_path" ]]; then
+        python3 "$gen_script" --json "$json_path" \
+            || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
+    else
+        python3 "$gen_script" \
+            || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
     fi
 
     echo ""
-    echo -e "  ${YELLOW}Generando informe...${NC}"
-    echo ""
-
-    # shellcheck disable=SC2086
-    python3 "$gen_script" --json "$json_path" $pdf_flag $open_flag $ticket_flag \
-        || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
-
-    echo ""
+    echo -e "  ${CYAN}[i] Rellena los apartados a mano y sube tu el informe a MantisBT.${NC}"
     echo -e "  ${GREEN}[OK] Proceso completado${NC}"
     read -p "  Presiona ENTER para continuar..."
 }
@@ -432,27 +417,14 @@ run_factura() {
         return
     fi
 
-    read -rp "  Generar PDF? (S/n) " gp
-    local pdf_flag=""; [[ ! "$gp" =~ ^[nN] ]] && pdf_flag="--pdf"
-
-    read -rp "  Subir factura al ticket MantisBT? (S/n) " up
-    local up_flag=""; [[ ! "$up" =~ ^[nN] ]] && up_flag="--upload"
-
-    read -rp "  Enviar factura por email al cliente al finalizar? (S/n) " em
-    local em_flag=""; [[ ! "$em" =~ ^[nN] ]] && em_flag="--send-email"
-
-    read -rp "  Abrir HTML en navegador al terminar? (S/n) " ob
-    local op_flag=""; [[ ! "$ob" =~ ^[nN] ]] && op_flag="--open"
-
-    echo ""
-    echo -e "  ${YELLOW}Lanzando asistente interactivo de factura...${NC}"
+    echo -e "  ${YELLOW}Generando plantilla de factura (.txt)...${NC}"
     echo ""
 
-    # shellcheck disable=SC2086
-    python3 "$fac_script" $pdf_flag $up_flag $em_flag $op_flag \
+    python3 "$fac_script" \
         || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
 
     echo ""
+    echo -e "  ${CYAN}[i] Rellena los campos a mano y entrega la factura al cliente.${NC}"
     echo -e "  ${GREEN}[OK] Proceso de factura terminado${NC}"
     read -p "  Presiona ENTER para continuar..."
 }
@@ -663,9 +635,7 @@ run_optimizacion() {
     read -p "  Selecciona opcion (1-4): " nivel
 
     case $nivel in
-        1) nivel_opt="ligero" ;;
-        2) nivel_opt="estandar" ;;
-        3) nivel_opt="rendimiento" ;;
+        1|2|3) : ;;   # continuar (hoy optimizacion.sh aplica una unica limpieza)
         4) return ;;
         *) echo -e "  ${RED}Opcion no valida${NC}"; return ;;
     esac
@@ -675,7 +645,8 @@ run_optimizacion() {
     echo ""
 
     cd "$SCRIPT_DIR" || exit 1
-    bash "$SCRIPT_DIR/optimizacion.sh" "$nivel_opt"
+    # optimizacion.sh exige --confirm (evita ejecuciones accidentales por SSH).
+    bash "$SCRIPT_DIR/optimizacion.sh" --confirm
 
     echo ""
     echo -e "  ${GREEN}[OK] Optimizacion completada${NC}"
