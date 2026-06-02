@@ -42,7 +42,53 @@ class ResolveCoreBranding extends MantisPlugin {
 	 * pero las repintamos.
 	 */
 	function resources( $p_event ) {
-		return $this->css_block();
+		return $this->favicon_link()
+		     . $this->css_block()
+		     . $this->enhance_script();
+	}
+
+	/**
+	 * Favicon cuadrado (corrige el favicon deformado: el core apuntaba al logo
+	 * apaisado). El icono se copia a images/ con mantis-branding.sh.
+	 */
+	private function favicon_link() {
+		$icon = 'images/rc-favicon.png';
+		return '<link rel="icon" type="image/png" href="' . htmlspecialchars( $icon ) . '">' . "\n";
+	}
+
+	/**
+	 * Script de mejora cargado como MÓDULO ES (type="module").
+	 *
+	 * Corrige dos avisos de consola de MantisBT:
+	 *   - «Cannot use import statement outside a module»: cualquier JS con
+	 *     sintaxis ESM debe servirse con type="module"; este bloque lo es, así
+	 *     que es el sitio correcto para importar/añadir lógica moderna.
+	 *   - «A form field element has neither an id nor a name attribute»: el core
+	 *     imprime algunos input/select/textarea sin id ni name, lo que rompe el
+	 *     autocompletado del navegador. Aquí se les asigna un name/id único y
+	 *     estable derivado de su posición en el formulario.
+	 */
+	private function enhance_script() {
+		return <<<'JS'
+<script type="module">
+const fixAnonymousFields = () => {
+	document.querySelectorAll('form').forEach((form, fi) => {
+		form.querySelectorAll('input, select, textarea').forEach((el, i) => {
+			if (el.type === 'submit' || el.type === 'button') return;
+			if (!el.name && !el.id) {
+				const key = `rc-field-${fi}-${i}`;
+				el.name = key;
+				el.id = key;
+			} else if (!el.id && el.name) {
+				el.id = el.name;
+			}
+		});
+	});
+};
+if (document.readyState !== 'loading') fixAnonymousFields();
+else document.addEventListener('DOMContentLoaded', fixAnonymousFields);
+</script>
+JS;
 	}
 
 	private function css_block() {

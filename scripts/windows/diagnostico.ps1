@@ -24,7 +24,16 @@
 #>
 
 param(
-    [string]$OutputDir = "$PSScriptRoot\..\diagnosticos"
+    [string]$OutputDir = "$PSScriptRoot\..\diagnosticos",
+
+    # ── Subida automática del JSON a WordPress (Fase 5) ──────────────────────
+    # Si se indican -ClientEmail y un token (parámetro o variable de entorno
+    # RC_FLEET_TOKEN), el script publica el diagnóstico en el endpoint REST de
+    # la flota tras generarlo, sin que el técnico lo copie a mano.
+    [string]$ClientEmail = $env:RC_CLIENT_EMAIL,
+    [string]$ApiUrl      = $(if ($env:RC_FLEET_URL) { $env:RC_FLEET_URL } else { 'https://resolvecore.website/wp-json/rc/v1/fleet' }),
+    [string]$Token       = $env:RC_FLEET_TOKEN,
+    [int]$TicketId       = 0
 )
 
 # ── Recogida vía CIM ────────────────────────────────────────────────────────
@@ -48,6 +57,12 @@ Write-Host "Recogiendo métricas de $env:COMPUTERNAME..."
 # en el aleatorio de un hashtable normal.
 
 $resultado = [ordered]@{
+    # _meta lo exige el endpoint /wp-json/rc/v1/fleet para identificar el agente.
+    _meta = [ordered]@{
+        plataforma = 'windows'
+        hostname   = $env:COMPUTERNAME
+        version    = '2.0'
+    }
     timestamp = (Get-Date -Format 'o')
     hostname  = $env:COMPUTERNAME
     os        = "$($osInfo.Caption) $($osInfo.Version)"
@@ -98,3 +113,31 @@ $resultado | ConvertTo-Json -Depth 5 | Set-Content -Path $ruta -Encoding UTF8
 
 Write-Host "Listo. Diagnóstico guardado en:"
 Write-Host "  $ruta"
+
+# ── Subida automática a WordPress (Fase 5) ──────────────────────────────────
+# Solo se intenta si hay email de cliente y token. Cualquier fallo de red se
+# avisa pero NO aborta el script: el JSON local ya está a salvo en disco.
+
+if ($ClientEmail -and $Token) {
+    Write-Host "Subiendo diagnóstico a $ApiUrl ..."
+
+    $payload = [ordered]@{
+        client_email = $ClientEmail
+        diagnostico  = $resultado
+    }
+    if ($TicketId -gt 0) { $payload.ticket_id = $TicketId }
+
+    try {
+        $resp = Invoke-RestMethod -Method Post -Uri $ApiUrl `
+            -Headers @{ Authorization = "Bearer $Token" } `
+            -ContentType 'application/json; charset=utf-8' `
+            -Body ($payload | ConvertTo-Json -Depth 6) `
+            -TimeoutSec 15
+        Write-Host "  Subida OK (accion=$($resp.action), score=$($resp.score), host_id=$($resp.host_id))."
+    } catch {
+        Write-Warning "No se pudo subir el diagnóstico: $($_.Exception.Message)"
+        Write-Warning "El JSON local sigue disponible en: $ruta"
+    }
+} else {
+    Write-Host "(Subida automática omitida: define -ClientEmail y RC_FLEET_TOKEN para activarla.)"
+}

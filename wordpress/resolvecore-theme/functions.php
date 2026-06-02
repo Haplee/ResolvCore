@@ -1070,7 +1070,132 @@ function rc_tech_upload_informe(): void {
 add_action( 'wp_ajax_rc_tech_upload_informe', 'rc_tech_upload_informe' );
 
 /**
- * Genera factura HTML imprimible inline para un ticket.
+ * Tabla de facturas (numeración contable secuencial persistida).
+ */
+function rc_invoices_table(): string {
+	global $wpdb;
+	return $wpdb->prefix . 'rc_invoices';
+}
+
+const RC_INVOICES_DB_VER = '1';
+
+/**
+ * Crea/actualiza el esquema de la tabla de facturas.
+ */
+function rc_invoices_install(): void {
+	global $wpdb;
+	$table   = rc_invoices_table();
+	$charset = $wpdb->get_charset_collate();
+
+	$sql = "CREATE TABLE {$table} (
+		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+		year SMALLINT(6) NOT NULL,
+		seq INT(11) NOT NULL,
+		numero VARCHAR(20) NOT NULL,
+		ticket_id INT(11) NOT NULL,
+		cliente VARCHAR(190) NOT NULL DEFAULT '',
+		tecnico VARCHAR(190) NOT NULL DEFAULT '',
+		horas DECIMAL(8,2) NOT NULL DEFAULT 0,
+		tarifa DECIMAL(8,2) NOT NULL DEFAULT 0,
+		base DECIMAL(10,2) NOT NULL DEFAULT 0,
+		iva DECIMAL(10,2) NOT NULL DEFAULT 0,
+		total DECIMAL(10,2) NOT NULL DEFAULT 0,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY  (id),
+		UNIQUE KEY uniq_year_seq (year, seq),
+		UNIQUE KEY uniq_numero (numero),
+		KEY idx_ticket (ticket_id)
+	) {$charset};";
+
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta( $sql );
+	update_option( 'rc_invoices_db_ver', RC_INVOICES_DB_VER );
+}
+
+add_action( 'after_setup_theme', function () {
+	if ( (string) get_option( 'rc_invoices_db_ver', '0' ) !== RC_INVOICES_DB_VER ) {
+		rc_invoices_install();
+	}
+} );
+
+/**
+ * Devuelve la factura del ticket; si no existe, asigna el siguiente número
+ * secuencial del año y la persiste. La factura es INMUTABLE: una vez emitida
+ * no se renumera ni recalcula (los importes se congelan en el momento de emitir).
+ *
+ * @return array{numero:string,cliente:string,tecnico:string,horas:float,tarifa:float,base:float,iva:float,total:float,fecha:string}
+ */
+function rc_invoice_get_or_create( int $ticket_id, string $cliente, string $tecnico, float $horas, float $tarifa ): array {
+	global $wpdb;
+	$table = rc_invoices_table();
+
+	$row = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM {$table} WHERE ticket_id = %d ORDER BY id ASC LIMIT 1",
+		$ticket_id
+	), ARRAY_A );
+
+	if ( $row ) {
+		return array(
+			'numero'  => $row['numero'],
+			'cliente' => $row['cliente'],
+			'tecnico' => $row['tecnico'],
+			'horas'   => (float) $row['horas'],
+			'tarifa'  => (float) $row['tarifa'],
+			'base'    => (float) $row['base'],
+			'iva'     => (float) $row['iva'],
+			'total'   => (float) $row['total'],
+			'fecha'   => substr( (string) $row['created_at'], 0, 10 ),
+		);
+	}
+
+	$year = (int) wp_date( 'Y' );
+	$base = round( $horas * $tarifa, 2 );
+	$iva  = round( $base * 0.21, 2 );
+
+	// Reintenta ante colisión de seq (UNIQUE year+seq) por emisiones concurrentes.
+	for ( $attempt = 0; $attempt < 5; $attempt++ ) {
+		$seq    = 1 + (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COALESCE(MAX(seq),0) FROM {$table} WHERE year = %d",
+			$year
+		) );
+		$numero = sprintf( 'F-%d-%04d', $year, $seq );
+
+		$ok = $wpdb->insert( $table, array(
+			'year'      => $year,
+			'seq'       => $seq,
+			'numero'    => $numero,
+			'ticket_id' => $ticket_id,
+			'cliente'   => $cliente,
+			'tecnico'   => $tecnico,
+			'horas'     => $horas,
+			'tarifa'    => $tarifa,
+			'base'      => $base,
+			'iva'       => $iva,
+			'total'     => round( $base + $iva, 2 ),
+		) );
+
+		if ( false !== $ok ) {
+			break;
+		}
+	}
+
+	return array(
+		'numero'  => $numero,
+		'cliente' => $cliente,
+		'tecnico' => $tecnico,
+		'horas'   => $horas,
+		'tarifa'  => $tarifa,
+		'base'    => $base,
+		'iva'     => $iva,
+		'total'   => round( $base + $iva, 2 ),
+		'fecha'   => wp_date( 'Y-m-d' ),
+	);
+}
+
+/**
+ * Genera factura HTML imprimible inline para un ticket. La numeración es
+ * secuencial contable y se persiste en BD (tabla rc_invoices); las horas/tarifa
+ * solo se usan la primera vez (al emitir), después la factura es inmutable.
  * Acceso: /tecnicos/?rc_factura=<ID>&cliente=<nombre>&horas=<n>
  */
 function rc_tech_factura_inline(): void {
@@ -1087,11 +1212,19 @@ function rc_tech_factura_inline(): void {
 	$horas   = min( 1000.0, max( 0.25, (float) sanitize_text_field( wp_unslash( $_GET['horas'] ?? '1' ) ) ) );
 	$tarifa  = min( 1000.0, max( 0.0, (float) sanitize_text_field( wp_unslash( $_GET['tarifa'] ?? '35.0' ) ) ) );
 	$tecnico = wp_get_current_user()->display_name;
-	$fecha   = wp_date( 'Y-m-d' );
-	$num     = sprintf( 'F-%s-%04d', gmdate( 'Ym' ), $id );
-	$base    = round( $horas * $tarifa, 2 );
-	$iva     = round( $base * 0.21, 2 );
-	$total   = round( $base + $iva, 2 );
+
+	// Persistir con numeración secuencial contable real. Si el ticket ya tiene
+	// factura, se reutiliza (inmutable): no se renumera ni recalcula importes.
+	$factura = rc_invoice_get_or_create( $id, $cliente, $tecnico, $horas, $tarifa );
+	$num     = $factura['numero'];
+	$cliente = $factura['cliente'];
+	$tecnico = $factura['tecnico'];
+	$horas   = (float) $factura['horas'];
+	$tarifa  = (float) $factura['tarifa'];
+	$base    = (float) $factura['base'];
+	$iva     = (float) $factura['iva'];
+	$total   = (float) $factura['total'];
+	$fecha   = $factura['fecha'];
 
 	header( 'Content-Type: text/html; charset=UTF-8' );
 	?>

@@ -65,6 +65,11 @@ FILE="$OUTPUT_DIR/diagnostico_android_${DEVICE_SAFE}_${TS}.json"
 
 cat > "$FILE" <<EOF
 {
+  "_meta": {
+    "plataforma": "android",
+    "hostname": "$DEVICE",
+    "version": "2.0"
+  },
   "timestamp": "$(date -Iseconds)",
   "dispositivo": "$DEVICE",
   "android": "$ANDROID",
@@ -79,3 +84,39 @@ EOF
 
 echo "[+] Diagnóstico Android guardado en:"
 echo "    $FILE"
+
+# ── Subida automática a WordPress (Fase 5) ──────────────────────────────────
+# Igual que el agente Linux: exporta RC_CLIENT_EMAIL y RC_FLEET_TOKEN para
+# publicar en el endpoint de flota. RC_FLEET_URL y RC_TICKET_ID son opcionales.
+
+RC_CLIENT_EMAIL="${RC_CLIENT_EMAIL:-}"
+RC_FLEET_TOKEN="${RC_FLEET_TOKEN:-}"
+RC_FLEET_URL="${RC_FLEET_URL:-https://resolvecore.website/wp-json/rc/v1/fleet}"
+RC_TICKET_ID="${RC_TICKET_ID:-}"
+
+if [ -n "$RC_CLIENT_EMAIL" ] && [ -n "$RC_FLEET_TOKEN" ]; then
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "[!] curl no disponible: no se sube el diagnóstico (JSON local en $FILE)." >&2
+    else
+        echo "[+] Subiendo diagnóstico a $RC_FLEET_URL ..."
+        ticket_field=""
+        [ -n "$RC_TICKET_ID" ] && ticket_field="\"ticket_id\": ${RC_TICKET_ID},"
+        payload="{\"client_email\": \"${RC_CLIENT_EMAIL}\", ${ticket_field} \"diagnostico\": $(cat "$FILE")}"
+
+        http_code=$(curl -sS -o /tmp/rc_fleet_resp.$$ -w '%{http_code}' \
+            -X POST "$RC_FLEET_URL" \
+            -H "Authorization: Bearer ${RC_FLEET_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "$payload" --max-time 15 || echo "000")
+
+        if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            echo "[+] Subida OK: $(cat /tmp/rc_fleet_resp.$$)"
+        else
+            echo "[!] Fallo al subir (HTTP $http_code): $(cat /tmp/rc_fleet_resp.$$ 2>/dev/null)" >&2
+            echo "[!] El JSON local sigue disponible en: $FILE" >&2
+        fi
+        rm -f /tmp/rc_fleet_resp.$$
+    fi
+else
+    echo "[+] (Subida automática omitida: exporta RC_CLIENT_EMAIL y RC_FLEET_TOKEN para activarla.)"
+fi

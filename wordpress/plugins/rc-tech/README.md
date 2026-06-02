@@ -29,7 +29,7 @@ Namespace: `wp-json/rc-tech/v1/`
 | `/action/assign_me` | POST | Asigna ticket al técnico actual |
 | `/action/resolve` | POST | Marca status=resolved + nota opcional |
 | `/action/diag_note` | POST | Nota privada "inicio diagnóstico" |
-| `/action/pdf` | POST | Genera informe vía `reports/generate-report.php` y autoadjunta |
+| `/action/pdf` | POST | Genera informe con `RC_Tech_Report::generate()` (HTML→PDF wkhtmltopdf, fallback HTML) y autoadjunta a Mantis |
 
 Auth: cookie WP + `X-WP-Nonce`. Capacidad requerida: `rc_tech` (añadida automáticamente al rol `administrator` en activación).
 
