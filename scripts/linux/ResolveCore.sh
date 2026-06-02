@@ -61,15 +61,16 @@ FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
     --undo                  Restaura sysctl y servicios.
 
 MENU
-    1. DIAGNOSTICO     Lanza diagnostico.sh.
+    1. DIAGNOSTICO     Lanza diagnostico.sh (genera JSON + resumen en pantalla).
     2. OPTIMIZACION    Lanza optimizacion.sh.
     3. VULNERABILIDADES Lanza buscar_vulnerabilidades.py (Python).
-    4. INFORME         Genera HTML/PDF desde el ultimo JSON y opcionalmente
-                       lo adjunta a un ticket MantisBT.
-    5. FACTURA         Genera factura PDF + sube a Mantis + email al cliente.
-    6. SERVICIOS       Congelacion / Clonacion de sistemas.
-    7. AYUDA           Guia rapida embebida.
-    8. SALIR           Cierra el programa.
+    4. INFORME         Genera una plantilla .txt (apartados en blanco) desde el
+                       ultimo JSON; el tecnico la rellena y la sube a MantisBT.
+    5. SERVICIOS       Congelacion / Clonacion de sistemas.
+    6. AYUDA           Guia rapida embebida.
+    7. SALIR           Cierra el programa.
+
+    (La facturacion se gestiona desde MantisBT, no desde este menu.)
 
 REQUISITOS
     - Terminal interactiva para el menu (no pipes).
@@ -138,6 +139,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICIOS_DIR="$(dirname "$SCRIPT_DIR")/servicios"
 source "$SCRIPT_DIR/../.env" 2>/dev/null
 
+# Ticket de MantisBT de la sesion. Se pide una vez al inicio y se reutiliza para
+# que diagnostico e informe se guarden juntos en reparaciones/<ticket>/.
+TICKET_SESION=""
+read_ticket_sesion() {
+    echo ""
+    read -rp "  Numero de ticket MantisBT para esta reparacion (ENTER = sin ticket): " t
+    if [[ "$t" =~ ^[0-9]+$ ]]; then
+        TICKET_SESION="$t"
+        printf "  [i] Sesion asociada al ticket #%s. Salidas en reparaciones/%05d/\n" "$t" "$t"
+    else
+        TICKET_SESION=""
+        if [[ -n "$t" ]]; then
+            echo "  [!] '$t' no es un numero de ticket valido; sesion sin ticket."
+        else
+            echo "  [i] Sesion sin ticket (salidas en reparaciones/sin-ticket/)."
+        fi
+    fi
+    sleep 1
+}
+
 # Colores
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; MAGENTA='\033[0;35m'; NC='\033[0m'
@@ -177,16 +198,14 @@ show_menu() {
     echo -e "                       - Apartados predefinidos del informe tecnico"
     echo -e "                       - El tecnico lo sube a MantisBT manualmente"
     echo ""
-    echo -e "    ${CYAN}5.${NC}  [FACTURA]       - Plantilla .txt para rellenar a mano"
-    echo -e "                       - Campos predefinidos: tecnico, cliente, items"
-    echo -e "                       - Se entrega al cliente junto con el informe"
-    echo ""
-    echo -e "    ${WHITE}6.${NC}  [SERVICIOS]     - Congelacion / Clonacion de sistemas"
+    echo -e "    ${WHITE}5.${NC}  [SERVICIOS]     - Congelacion / Clonacion de sistemas"
     echo -e "                       - Snapper/BTRFS, registro de imagenes"
     echo ""
-    echo -e "    ${CYAN}7.${NC}  [AYUDA]         - Ver guia rapida de uso"
+    echo -e "    ${CYAN}6.${NC}  [AYUDA]         - Ver guia rapida de uso"
     echo ""
-    echo -e "    ${RED}8.${NC}  [SALIR]         - Salir del programa"
+    echo -e "    ${RED}7.${NC}  [SALIR]         - Salir del programa"
+    echo ""
+    echo -e "    ${GRAY}    (La facturacion se gestiona desde MantisBT, no desde este menu.)${NC}"
     echo ""
     echo -e "  +---------------------------------------------------------------+"
     echo ""
@@ -300,6 +319,83 @@ ensure_python() {
     command -v python3 &>/dev/null
 }
 
+# Menu de desinstalacion a partir del JSON del escaner. cups (impresion) y los
+# componentes criticos del sistema se excluyen SIEMPRE. Nada se desinstala sin
+# seleccion explicita + confirmacion.
+desinstalar_vulns() {
+    local json="$1"
+    [ -f "$json" ] || return 0
+    if ! command -v jq >/dev/null 2>&1; then
+        echo -e "  ${YELLOW}[!] jq no disponible: menu de desinstalacion omitido (instala jq).${NC}"
+        return 0
+    fi
+
+    local excl='cups|linux-image|linux-headers|systemd|libc6?|grub|coreutils|bash'
+    local pkgs=()
+    mapfile -t pkgs < <(jq -r '
+        [.avisos[] | select(.kev==true or (.cvss!=null and .cvss>=7.0))]
+        | group_by(.paquete)
+        | map({paquete: .[0].paquete,
+               kev:    (any(.[]; .kev==true)),
+               cvss:   (map(.cvss // 0) | max),
+               n:      length})
+        | sort_by([(.kev | not), (- .cvss)])
+        | .[] | "\(.paquete)\t\(.kev)\t\(.cvss)\t\(.n)"' "$json" 2>/dev/null \
+        | grep -Ev "^($excl)\b" || true)
+
+    if [ "${#pkgs[@]}" -eq 0 ]; then
+        echo -e "  ${GREEN}[OK] Sin software peligroso desinstalable (KEV o CVSS>=7.0).${NC}"
+        return 0
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}+---------------------------------------------------------------+${NC}"
+    echo -e "  ${YELLOW}|  SOFTWARE VULNERABLE DETECTADO                                |${NC}"
+    echo -e "  ${YELLOW}+---------------------------------------------------------------+${NC}"
+    echo ""
+    local i=1 line p kev cvss n tag
+    for line in "${pkgs[@]}"; do
+        IFS=$'\t' read -r p kev cvss n <<<"$line"
+        tag="   "; [ "$kev" = "true" ] && tag="KEV"
+        printf "    %d. [%s] %-35s CVSS %s (%s CVE)\n" "$i" "$tag" "$p" "$cvss" "$n"
+        i=$((i + 1))
+    done
+    echo ""
+    echo -e "  ${RED}[!] La desinstalacion es IRREVERSIBLE. Nada se toca sin que lo confirmes.${NC}"
+    read -rp "  Numeros a desinstalar separados por coma (ENTER = cancelar): " sel
+    [ -z "$sel" ] && { echo -e "  ${GRAY}Cancelado. No se desinstalo nada.${NC}"; return 0; }
+
+    local sel_pkgs=() idx
+    for idx in ${sel//,/ }; do
+        [[ "$idx" =~ ^[0-9]+$ ]] || continue
+        if [ "$idx" -ge 1 ] && [ "$idx" -le "${#pkgs[@]}" ]; then
+            IFS=$'\t' read -r p _ _ _ <<<"${pkgs[$((idx - 1))]}"
+            sel_pkgs+=("$p")
+        fi
+    done
+    [ "${#sel_pkgs[@]}" -eq 0 ] && { echo -e "  ${GRAY}Seleccion vacia o invalida.${NC}"; return 0; }
+
+    echo ""
+    echo -e "  ${YELLOW}Vas a desinstalar:${NC}"
+    printf '    - %s\n' "${sel_pkgs[@]}"
+    read -rp "  Escribe 'SI' para confirmar: " conf
+    [ "$conf" = "SI" ] || { echo -e "  ${GRAY}Cancelado. No se desinstalo nada.${NC}"; return 0; }
+
+    local PM=""
+    if command -v apt-get >/dev/null 2>&1; then PM="apt-get remove -y"
+    elif command -v dnf >/dev/null 2>&1; then PM="dnf remove -y"
+    elif command -v pacman >/dev/null 2>&1; then PM="pacman -R --noconfirm"
+    fi
+    if [ -z "$PM" ]; then
+        echo -e "  ${RED}[X] Gestor de paquetes no detectado. Desinstala manualmente.${NC}"
+        return 0
+    fi
+    for p in "${sel_pkgs[@]}"; do
+        echo -e "  ${CYAN}Desinstalando $p...${NC}"
+        sudo $PM "$p" || echo -e "  ${YELLOW}[!] Fallo al desinstalar $p${NC}"
+    done
+}
+
 run_vulnerabilidades() {
     VULN="$(dirname "$SCRIPT_DIR")/common/buscar_vulnerabilidades.py"
     if ! ensure_python; then
@@ -311,9 +407,12 @@ run_vulnerabilidades() {
         echo ""
         echo -e "  ${YELLOW}Ejecutando escaneo de vulnerabilidades...${NC}"
         echo ""
-        python3 "$VULN" --plataforma linux 2>&1 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
+        # stdout (JSON completo) al fichero; el progreso va por stderr y se ve.
+        python3 "$VULN" --plataforma linux --salida-json /tmp/rc-vuln.json >/dev/null \
+            || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         echo ""
         echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
+        desinstalar_vulns /tmp/rc-vuln.json
     else
         echo -e "  ${RED}[X] No encontrado: $VULN${NC}"
     fi
@@ -341,9 +440,16 @@ run_informe() {
         return
     fi
 
-    # Buscar JSON mas reciente en diagnosticos/
-    local diag_dir
-    diag_dir="$(dirname "$SCRIPT_DIR")/diagnosticos"
+    # Buscar JSON mas reciente. Con ticket de sesion se prioriza
+    # reparaciones/<ticket>/; si no, la carpeta legacy scripts/diagnosticos.
+    local repo_root base_rep diag_dir
+    repo_root="$(cd "$(dirname "$SCRIPT_DIR")/.." && pwd)"
+    base_rep="${RC_REPARACIONES_DIR:-$repo_root/reparaciones}"
+    if [[ -n "$TICKET_SESION" ]] && compgen -G "$base_rep/$(printf '%05d' "$TICKET_SESION")/*.json" >/dev/null 2>&1; then
+        diag_dir="$base_rep/$(printf '%05d' "$TICKET_SESION")"
+    else
+        diag_dir="$(dirname "$SCRIPT_DIR")/diagnosticos"
+    fi
     if [[ ! -d "$diag_dir" ]]; then
         echo -e "  ${RED}[X] No hay diagnosticos en $diag_dir${NC}"
         echo -e "  ${YELLOW}    Ejecuta antes la opcion 1 (DIAGNOSTICO)${NC}"
@@ -382,8 +488,11 @@ run_informe() {
     echo -e "  ${YELLOW}Generando plantilla de informe (.txt)...${NC}"
     echo ""
 
-    if [[ -n "$json_path" ]]; then
-        python3 "$gen_script" --json "$json_path" \
+    local gen_args=()
+    [[ -n "$json_path" ]] && gen_args+=(--json "$json_path")
+    [[ -n "$TICKET_SESION" ]] && gen_args+=(--ticket "$TICKET_SESION")
+    if [[ ${#gen_args[@]} -gt 0 ]]; then
+        python3 "$gen_script" "${gen_args[@]}" \
             || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
     else
         python3 "$gen_script" \
@@ -393,39 +502,6 @@ run_informe() {
     echo ""
     echo -e "  ${CYAN}[i] Rellena los apartados a mano y sube tu el informe a MantisBT.${NC}"
     echo -e "  ${GREEN}[OK] Proceso completado${NC}"
-    read -p "  Presiona ENTER para continuar..."
-}
-
-run_factura() {
-    echo ""
-    echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |  ${WHITE}GENERAR FACTURA AL CLIENTE${NC}                                    |"
-    echo -e "  +---------------------------------------------------------------+"
-    echo ""
-
-    if ! ensure_python; then
-        echo -e "  ${RED}[X] Python3 no disponible${NC}"
-        read -p "  Presiona ENTER..."
-        return
-    fi
-
-    local fac_script
-    fac_script="$(dirname "$SCRIPT_DIR")/common/generar_factura.py"
-    if [[ ! -f "$fac_script" ]]; then
-        echo -e "  ${RED}[X] No encontrado: $fac_script${NC}"
-        read -p "  Presiona ENTER..."
-        return
-    fi
-
-    echo -e "  ${YELLOW}Generando plantilla de factura (.txt)...${NC}"
-    echo ""
-
-    python3 "$fac_script" \
-        || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"
-
-    echo ""
-    echo -e "  ${CYAN}[i] Rellena los campos a mano y entrega la factura al cliente.${NC}"
-    echo -e "  ${GREEN}[OK] Proceso de factura terminado${NC}"
     read -p "  Presiona ENTER para continuar..."
 }
 
@@ -597,7 +673,11 @@ run_diagnostico() {
     echo ""
 
     cd "$SCRIPT_DIR" || exit 1
-    bash "$SCRIPT_DIR/diagnostico.sh"
+    if [[ -n "$TICKET_SESION" ]]; then
+        bash "$SCRIPT_DIR/diagnostico.sh" --ticket "$TICKET_SESION"
+    else
+        bash "$SCRIPT_DIR/diagnostico.sh"
+    fi
 
     echo ""
     echo -e "  ${GREEN}[OK] Diagnostico completado${NC}"
@@ -660,11 +740,13 @@ run_optimizacion() {
 }
 
 # Programa principal
+show_banner
+read_ticket_sesion
 while true; do
     show_banner
     show_menu
 
-    read -rp "  Selecciona una opcion (1-8): " opcion
+    read -rp "  Selecciona una opcion (1-7): " opcion
     [[ -z "$opcion" ]] && { echo ""; exit 0; }
 
     case $opcion in
@@ -672,10 +754,9 @@ while true; do
         2) run_optimizacion ;;
         3) run_vulnerabilidades ;;
         4) run_informe ;;
-        5) run_factura ;;
-        6) run_servicios ;;
-        7) show_help ;;
-        8)
+        5) run_servicios ;;
+        6) show_help ;;
+        7)
             echo ""
             echo -e "  ${GREEN}Hasta luego!${NC}"
             echo ""

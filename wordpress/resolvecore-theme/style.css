@@ -428,17 +428,30 @@ a:hover { text-decoration: underline; }
 .rc-footer {
   border-top: 1px solid var(--rc-border);
   padding: 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   max-width: 1200px;
   margin: 0 auto;
   font-size: .85rem;
   color: var(--rc-muted);
 }
-.rc-footer-links { list-style: none; display: flex; gap: 1.5rem; }
+/* El contenido real vive en .rc-footer-inner (footer.php). Es el flex que
+   reparte texto y enlaces; sin esto el bloque desbordaba a la derecha en movil. */
+.rc-footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.rc-footer-links { list-style: none; display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 0; padding: 0; }
 .rc-footer-links li::marker { display: none; }
 .rc-footer-links a { color: var(--rc-accent); font-size: .85rem; }
+
+@media (max-width: 600px) {
+  .rc-footer { padding: 1.5rem 1rem; }
+  .rc-footer-inner { flex-direction: column; text-align: center; gap: .9rem; }
+  .rc-footer-links { justify-content: center; gap: 1rem .9rem; }
+}
 
 /* ── Centrar contenido front-page ───── */
 .rc-hero {
@@ -519,6 +532,15 @@ section[style] > div,
                        border-color: rgba(0,229,160,.3); }
 .rc-cliente-msg--err { background: rgba(255,107,53,.08); color: #ff8a5c;
                        border-color: rgba(255,107,53,.3); }
+.rc-cliente-msg--feedback { background: rgba(255,196,0,.08); color: #ffce4d;
+                            border-color: rgba(255,196,0,.32); }
+
+/* Cerrar sesión al pie del dashboard (el usuario no siempre sube al hero). */
+.rc-dash-foot-logout { margin: 2.5rem 0 1rem; text-align: center; }
+.rc-btn--logout { display: inline-flex; align-items: center; color: var(--rc-muted);
+                  border-color: var(--rc-border); }
+.rc-btn--logout:hover { color: #ff8a5c; border-color: rgba(255,107,53,.4);
+                        background: rgba(255,107,53,.06); }
 
 /* Stats arriba — píldoras con color semántico (rediseño 01-06-2026)
    verde = cerrado/éxito · ámbar = en curso · neutro = total. */

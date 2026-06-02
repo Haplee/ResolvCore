@@ -12,6 +12,12 @@
 	<?php wp_head(); ?>
 </head>
 <body <?php body_class(); ?>>
+<?php
+// Rol del usuario para adaptar el nav (técnico vs cliente vs público).
+$rc_is_tech    = is_user_logged_in() && ( current_user_can( 'editor' ) || current_user_can( 'administrator' ) );
+$rc_user_roles = is_user_logged_in() ? (array) wp_get_current_user()->roles : array();
+$rc_is_cliente = ! $rc_is_tech && in_array( 'rc_cliente', $rc_user_roles, true );
+?>
 <a class="rc-skip-link" href="#main-content">Saltar al contenido principal</a>
 <header class="rc-header">
 	<nav class="rc-nav" aria-label="Navegación principal">
@@ -23,6 +29,8 @@
 		<li><a href="<?php echo esc_url( home_url( '/#como-funciona' ) ); ?>">Proceso</a></li>
 		<li><a href="<?php echo esc_url( home_url( '/#precios' ) ); ?>">Precios</a></li>
 		<li><a href="<?php echo esc_url( home_url( '/#faq' ) ); ?>">FAQ</a></li>
+		<?php // Recursos internos (Docs/Changelog/Flota): ocultos al cliente. ?>
+		<?php if ( ! $rc_is_cliente ) : ?>
 		<li class="rc-nav__dd">
 		<button type="button" class="rc-nav__dd-btn" id="rc-hdr-dd-btn"
 				aria-expanded="false" aria-haspopup="true" aria-controls="rc-hdr-dd">
@@ -34,10 +42,20 @@
 			<li><a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a></li>
 		</ul>
 		</li>
+		<?php endif; // cierra if !$rc_is_cliente (dropdown Recursos) ?>
+		<?php if ( $rc_is_tech ) : ?>
+		<li><a href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>">Area de tecnicos</a></li>
+		<?php endif; ?>
 	</ul>
+	<?php if ( $rc_is_tech ) : ?>
+	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>">Panel tecnico</a>
+	<?php elseif ( $rc_is_cliente ) : ?>
+	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>">Mi panel</a>
+	<?php else : ?>
 	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>">
 		Contacta con nosotros →
 	</a>
+	<?php endif; // cierra el bloque de CTA por rol ?>
 	</nav>
 </header>
 

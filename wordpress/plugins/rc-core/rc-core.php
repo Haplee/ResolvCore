@@ -266,6 +266,31 @@ function rc_mantis_filtrar_por_cliente( $issues, $user_email ) {
 	return $mios;
 }
 
+/**
+ * Un ticket es editable por el cliente solo mientras está «nuevo» (status < 30).
+ * A partir de 30 (acknowledged) ya está en manos del técnico y no debe poder
+ * modificarse ni borrarse desde el dashboard. Enum Mantis:
+ * 10 new · 20 feedback · 30 acknowledged · 40 confirmed · 50 assigned · 80 resolved · 90 closed.
+ */
+function rc_cliente_ticket_editable( $status_id ) {
+	return (int) $status_id < 30;
+}
+
+/**
+ * Devuelve el ID del primer ticket en estado «feedback» (20 = esperando respuesta
+ * del cliente), o 0 si no hay ninguno. Sirve para avisar al cliente de que tiene
+ * un ticket pendiente de su respuesta antes de que abra uno nuevo.
+ */
+function rc_cliente_ticket_en_feedback( $tickets ) {
+	foreach ( (array) $tickets as $t ) {
+		$sid = isset( $t['status']['id'] ) ? (int) $t['status']['id'] : 0;
+		if ( 20 === $sid ) {
+			return isset( $t['id'] ) ? (int) $t['id'] : 0;
+		}
+	}
+	return 0;
+}
+
 
 // ── Render del shortcode ────────────────────────────────────────────────────
 
@@ -293,7 +318,7 @@ function rc_cliente_dashboard_render() {
 		<?php endif; ?>
 
 		<?php echo rc_cliente_render_stats( $stats ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — HTML controlado ?>
-		<?php echo rc_cliente_render_form(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo rc_cliente_render_form( $tickets ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		<?php echo rc_cliente_render_tickets( $tickets ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 
 	</div>
@@ -364,9 +389,16 @@ function rc_cliente_render_stats( $stats ) {
 	return ob_get_clean();
 }
 
-function rc_cliente_render_form() {
+function rc_cliente_render_form( $tickets = array() ) {
+	$feedback_id = rc_cliente_ticket_en_feedback( $tickets );
 	ob_start();
 	?>
+	<?php if ( $feedback_id ) : ?>
+		<div class="rc-cliente-msg rc-cliente-msg--feedback">
+			Tienes un ticket esperando tu respuesta. Revisa el ticket
+			#<?php echo (int) $feedback_id; ?> antes de crear uno nuevo.
+		</div>
+	<?php endif; ?>
 	<?php
 	// Abierto por defecto. Solo lo colapsamos si se acaba de enviar ESTE
 	// formulario (no cualquier POST del sitio). El nonce ya lo validó
@@ -529,6 +561,18 @@ function rc_cliente_procesar_form( $user ) {
 
 	// Comprobación de nonce — si falla wp_die ya corta.
 	check_admin_referer( 'rc_solicitar_informe' );
+
+	// Guard defensivo: este formulario solo CREA tickets. Si en el futuro se
+	// añade edición, no debe permitirse modificar un ticket que ya gestiona el
+	// técnico (status >= 30). Hoy el alta nunca envía rc_ticket_id, así que
+	// cualquier valor es ilegítimo y se rechaza.
+	$edit_id = isset( $_POST['rc_ticket_id'] ) ? absint( wp_unslash( $_POST['rc_ticket_id'] ) ) : 0;
+	if ( $edit_id > 0 ) {
+		return array(
+			'tipo' => 'err',
+			'msg'  => 'No es posible modificar un ticket en curso desde el panel. Crea una solicitud nueva o responde desde el ticket.',
+		);
+	}
 
 	$summary = isset( $_POST['rc_summary'] ) ? sanitize_text_field( wp_unslash( $_POST['rc_summary'] ) ) : '';
 	$desc    = isset( $_POST['rc_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['rc_description'] ) ) : '';

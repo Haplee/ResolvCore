@@ -363,3 +363,18 @@ El dashboard **ya tiene** enlace de cerrar sesion en el hero (linea 37 de `page-
 - `wordpress/resolvecore-theme/page-dashboard.php` → mejorar boton logout
 - `wordpress/plugins/rc-core/rc-core.php` → bloqueo edicion tickets en progreso, banner feedback
 
+---
+
+## Tarea 8 — Correcciones visuales y responsive en móviles
+
+### Qué hacer
+
+1. **Footer global (`style.css`)**: El footer se ve desplazado hacia la derecha en teléfonos (overflow). Ajustar el contenedor `.rc-footer` o `.rc-footer-inner` para que el texto y los enlaces se apilen correctamente en pantallas pequeñas y no rompan el formato.
+2. **Página de técnicos (`page-tecnicos.php`)**: La estructura no está bien adaptada para teléfonos (elementos montados o salidos de pantalla). Reestructurar los flexbox y grid para que se ajusten a pantallas de móvil.
+3. **MantisBT**: Mejorar la vista en teléfonos, en general pero especificamente arreglar el menú de hamburguesa que actualmente no se abre como debería.
+
+### Archivos
+
+- `wordpress/resolvecore-theme/style.css`
+- `wordpress/resolvecore-theme/page-tecnicos.php`
+- Directorio de MantisBT (CSS / Javascript)
