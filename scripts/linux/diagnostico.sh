@@ -18,6 +18,12 @@
 
 set -uo pipefail
 
+# Forzamos locale C para todo el script: en un sistema en español (es_ES) el
+# printf de awk emite la coma como separador decimal ("120,5") y eso rompe el
+# JSON ("uptime_horas": 120,5 -> 'Expecting property name'). Con LC_ALL=C el
+# separador es siempre el punto y el JSON queda valido.
+export LC_ALL=C
+
 OUTPUT_DIR="${1:-$(dirname "$0")/../diagnosticos}"
 mkdir -p "$OUTPUT_DIR"
 
@@ -73,7 +79,16 @@ if command -v apt-get >/dev/null 2>&1; then
 fi
 
 # ── Volcado JSON ────────────────────────────────────────────────────────────
-# Se escribe manual para no depender de jq.
+# Se escribe manual para no depender de jq. Blindamos los campos numericos:
+# si algun comando fallo y dejo la variable vacia, ponemos 0 para no romper el
+# JSON con un valor ausente ("campo": ,).
+cpu_cores=${cpu_cores:-0}
+cpu_load=${cpu_load:-0}
+mem_total=${mem_total:-0}
+mem_libre=${mem_libre:-0}
+uptime_horas=${uptime_horas:-0}
+disk_porcentaje=${disk_porcentaje:-0}
+actualizaciones=${actualizaciones:-0}
 
 cat > "$FILE" <<EOF
 {
@@ -106,6 +121,12 @@ cat > "$FILE" <<EOF
   }
 }
 EOF
+
+# Validacion: si el JSON salio malformado avisamos (no abortamos: el fichero
+# local ya esta escrito y el tecnico puede revisarlo).
+if command -v python3 >/dev/null 2>&1; then
+    python3 -m json.tool "$FILE" >/dev/null 2>&1 || warn "El JSON generado parece invalido: $FILE"
+fi
 
 info "Diagnóstico guardado en:"
 echo "    $FILE"

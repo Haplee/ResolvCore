@@ -11,11 +11,14 @@
 
 ResolveCore es un sistema de soporte técnico remoto estructurado en 7 fases:
 solicitud del usuario → ticket (MantisBT) → conexión remota (AnyDesk) → diagnóstico
-(PowerShell / Bash) → resolución → informe PDF → facturación.
+(PowerShell / Bash) → resolución → informe (.txt rellenado a mano por el técnico)
+→ facturación.
 
 El proyecto se implementa sobre WordPress (frontend de soporte) + MantisBT (gestión
-de incidencias) + scripts de diagnóstico multiplataforma + generación automática
-de informes PDF.
+de incidencias) + scripts de diagnóstico multiplataforma + generación de plantillas
+de informe y factura en texto plano (.txt). El informe y la factura los rellena el
+técnico a mano y los entrega/sube él mismo; el sistema no genera PDF (decisión del
+autor, 2026-06-02).
 
 ---
 
@@ -26,7 +29,7 @@ de informes PDF.
 - **Acceso remoto:** AnyDesk
 - **Scripts diagnóstico:** PowerShell (Windows), Bash (Linux / macOS / Android)
 - **Scripts de reconocimiento:** Python 3 — Nmap, CVE (capas dominio/ports/adapters, sin clases)
-- **Generación de informes:** HTML → PDF (wkhtmltopdf / DomPDF)
+- **Generación de informes/facturas:** plantillas en texto plano (.txt) que el técnico rellena a mano (sin PDF)
 - **Base de datos de vulnerabilidades:** MySQL / MariaDB
 - **Android (futuro):** Kotlin + Jetpack Compose + Material 3
 
@@ -58,9 +61,14 @@ bash ./scripts/linux/diagnostico.sh
 # Buscar vulnerabilidades
 python scripts/common/buscar_vulnerabilidades.py
 
+# Generar plantilla de informe (.txt para rellenar a mano; --json opcional pre-rellena cabecera)
+python scripts/common/generar_informe.py [--json diagnostico.json]
+
+# Generar plantilla de factura (.txt para rellenar a mano)
+python scripts/common/generar_factura.py
+
 # (ARCHIVADO — en _archivo/common/, no en el árbol activo. Restaurar con git mv si se necesita.)
 # python scripts/common/escaner_nmap.py --ip 192.168.1.0/24       # escaneo Nmap
-# python scripts/common/generar_informe.py --json ... [--pdf --ticket 42]   # informe HTML/PDF
 
 # Setup servidor VPS (Linux)
 bash ./scripts/server/linux/post-install.sh
@@ -69,10 +77,11 @@ bash ./scripts/server/linux/post-install.sh
 # recuperable de histórico. Ver auditoría A11/D5.)
 # pwsh ./scripts/setup/setup-tecnico-windows.ps1
 
-# Generar informe PDF: NO hay comando CLI. El informe lo genera WordPress vía
-# RC_Tech_Report::generate( $issue_id, $client_email ) (plugin rc-tech), que
-# renderiza HTML → PDF (wkhtmltopdf, fallback HTML) y lo adjunta al ticket.
-# Se dispara desde el panel técnico (endpoint REST /action/pdf).
+# NOTA (legacy): el plugin web rc-tech aún expone RC_Tech_Report::generate(
+# $issue_id, $client_email ) (HTML → PDF wkhtmltopdf, adjunto al ticket vía
+# endpoint REST /action/pdf). NO forma parte del flujo actual: el informe que
+# recibe el cliente es la plantilla .txt rellenada a mano por el técnico, que él
+# mismo sube a MantisBT. Mantener este código web no implica reactivar el PDF.
 ```
 
 ---
@@ -213,18 +222,24 @@ ResolveCore
 │   ├── common
 │   │   ├── adapters
 │   │   │   ├── __init__.py
+│   │   │   ├── inventario_local.py
+│   │   │   ├── kev_rest.py
 │   │   │   ├── nmap_local.py
-│   │   │   └── nvd_rest.py
+│   │   │   ├── nvd_rest.py
+│   │   │   └── osv_rest.py
 │   │   ├── domain
 │   │   │   ├── __init__.py
 │   │   │   └── models.py
 │   │   ├── ports
 │   │   │   ├── __init__.py
 │   │   │   ├── host_intel_source.py
+│   │   │   ├── inventory_source.py
 │   │   │   ├── mantis_attachment_sink.py
 │   │   │   └── vuln_source.py
 │   │   ├── __init__.py
-│   │   └── buscar_vulnerabilidades.py
+│   │   ├── buscar_vulnerabilidades.py
+│   │   ├── generar_factura.py
+│   │   └── generar_informe.py
 │   ├── linux
 │   │   ├── ResolveCore.sh
 │   │   ├── diagnostico.sh
@@ -385,14 +400,18 @@ ResolveCore
 - Script de sincronización con NVD/NIST (cron semanal).
 - Los scripts de diagnóstico consultan esta tabla para alertar al técnico.
 
-### 3. Informe técnico PDF
-- Plantilla HTML → PDF via wkhtmltopdf o DomPDF.
-- Secciones fijas: resumen ejecutivo, incidencias detectadas, problemas solucionados,
-  estado actual del sistema, recomendaciones, proyección de vida útil del equipo.
-- Se adjunta automáticamente al ticket en MantisBT al cerrar la incidencia.
+### 3. Informe técnico (.txt rellenado a mano)
+- `scripts/common/generar_informe.py` genera una plantilla `.txt` con apartados
+  predefinidos en blanco; el técnico la rellena a mano. Sin PDF ni HTML.
+- Secciones fijas (obligatorias por diseño, no se acortan): resumen ejecutivo,
+  incidencias detectadas, problemas solucionados, estado actual del sistema,
+  recomendaciones, proyección de vida útil del equipo.
+- El técnico sube el informe a MantisBT **manualmente** (no hay adjunto automático).
 
 ### 4. Modelo de facturación
-- **Pago por servicio:** genera factura por intervención al cerrar ticket.
+- `scripts/common/generar_factura.py` genera una plantilla de factura `.txt` con
+  campos predefinidos que el técnico rellena a mano y entrega al cliente (sin PDF).
+- **Pago por servicio:** factura por intervención al cerrar ticket.
 - **Suscripción:** revisiones programadas vía cron + notificación automática al usuario.
 
 ---
@@ -404,7 +423,7 @@ ResolveCore
 - Los scripts destructivos (limpiar disco, desinstalar, eliminar) requieren flag `--confirm` explícito.
 - No generes datos de prueba con IPs, MACs o emails reales. Usa fixtures ficticios.
 - Al añadir una nueva fase al flujo del sistema, actualiza el diagrama en `docs/flujo-sistema.md`.
-- YOU MUST seguir el patrón de informe existente al generar nuevas secciones PDF.
+- YOU MUST seguir el patrón de informe existente al añadir apartados a la plantilla .txt (mismas secciones obligatorias).
 
 ---
 
@@ -423,7 +442,7 @@ ResolveCore
 - No hacer commits directamente a `main`. Usa ramas con prefijo `feat/`, `fix/`, `docs/`.
 - No modificar `wp-config.php` con credenciales reales.
 - No generar código que asuma privilegios root sin comprobarlo antes.
-- No acortar el informe PDF: las secciones son obligatorias por diseño del servicio.
+- No acortar la plantilla de informe .txt: las secciones son obligatorias por diseño del servicio.
 
 ---
 

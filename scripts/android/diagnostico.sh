@@ -62,6 +62,11 @@ DEVICE_SAFE="${DEVICE// /_}"
 FILE="$OUTPUT_DIR/diagnostico_android_${DEVICE_SAFE}_${TS}.json"
 
 # ── Volcado JSON ────────────────────────────────────────────────────────────
+# Blindamos los campos numericos: si el getprop/dumpsys no devolvio nada, un
+# valor vacio dejaria el JSON invalido ("nivel": ,). Ponemos 0 por defecto.
+SDK=${SDK:-0}
+bat_level=${bat_level:-0}
+bat_temp=${bat_temp:-0}
 
 cat > "$FILE" <<EOF
 {
@@ -81,6 +86,10 @@ cat > "$FILE" <<EOF
   "almacenamiento_data": "$storage"
 }
 EOF
+
+if command -v python3 >/dev/null 2>&1; then
+    python3 -m json.tool "$FILE" >/dev/null 2>&1 || echo "[!] El JSON generado parece invalido: $FILE" >&2
+fi
 
 echo "[+] Diagnóstico Android guardado en:"
 echo "    $FILE"

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     ResolveCore — Menú del técnico para Windows.
@@ -366,8 +366,8 @@ function Show-Menu {
     Write-Host "    1.  [DIAGNOSTICO]      - Analisis completo del sistema" -ForegroundColor Green
     Write-Host "    2.  [OPTIMIZACION]     - Optimizar rendimiento" -ForegroundColor Yellow
     Write-Host "    3.  [VULNERABILIDADES] - Buscar y corregir CVEs" -ForegroundColor Magenta
-    Write-Host "    4.  [INFORME]          - Generar HTML/PDF + adjuntar a Mantis" -ForegroundColor Cyan
-    Write-Host "    5.  [FACTURA]          - Factura PDF + email al cliente" -ForegroundColor Cyan
+    Write-Host "    4.  [INFORME]          - Plantilla .txt para rellenar a mano" -ForegroundColor Cyan
+    Write-Host "    5.  [FACTURA]          - Plantilla .txt para rellenar a mano" -ForegroundColor Cyan
     Write-Host "    6.  [SERVICIOS]        - Congelacion / Clonacion / Kit cliente" -ForegroundColor White
     Write-Host "    7.  [AYUDA]            - Ver guia rapida" -ForegroundColor Gray
     Write-Host "    8.  [SALIR]            - Salir" -ForegroundColor Red
@@ -385,8 +385,8 @@ function Show-Help {
     Write-Host "  DIAGNOSTICO:     Analiza todo el sistema y genera JSON"
     Write-Host "  OPTIMIZACION:    Aplica mejoras segun nivel seleccionado"
     Write-Host "  VULNERABILIDADES: Escaneo CVE multi-feed (NVD/KEV/OSV/EPSS)"
-    Write-Host "  INFORME:         Genera HTML/PDF desde el JSON + adjunta a Mantis"
-    Write-Host "  FACTURA:         Genera factura PDF + sube a Mantis + email cliente"
+    Write-Host "  INFORME:         Plantilla .txt con apartados; el tecnico la rellena y sube a Mantis"
+    Write-Host "  FACTURA:         Plantilla .txt con campos; el tecnico la rellena y entrega al cliente"
     Write-Host "  SERVICIOS:       Congelacion / Clonacion / Kit de cliente"
     Write-Host ""
     Read-Host "  Presiona ENTER"
@@ -484,7 +484,7 @@ function Invoke-Vulnerabilidades {
     }
 
     try {
-        & $py.Source $script @args
+        & $py.Source $script --plataforma windows @args
         Write-Host ""
         Write-Host "  [OK] Escaneo completado" -ForegroundColor Green
     } catch {
@@ -537,44 +537,33 @@ function Invoke-Informe {
     Write-Host "    fecha: $($latest.LastWriteTime)" -ForegroundColor Gray
     Write-Host ""
 
-    $useLatest = Read-Host "  Usar este JSON? (S/n)"
+    $useLatest = Read-Host "  Usar este JSON para pre-rellenar la cabecera? (S/n)"
+    $jsonPath = $latest.FullName
     if ($useLatest -match '^[nN]') {
-        $custom = Read-Host "  Ruta al JSON"
-        if (-not (Test-Path $custom)) {
+        $custom = Read-Host "  Ruta al JSON (ENTER = ninguno)"
+        if ([string]::IsNullOrWhiteSpace($custom)) {
+            $jsonPath = ''
+        } elseif (-not (Test-Path $custom)) {
             Write-Host "  [X] Fichero no existe" -ForegroundColor Red
             Read-Host "  Presiona ENTER"
             return
+        } else {
+            $jsonPath = $custom
         }
-        $jsonPath = $custom
-    } else {
-        $jsonPath = $latest.FullName
-    }
-
-    $genPdf = Read-Host "  Generar PDF tambien? (S/n)"
-    $pdfFlag = -not ($genPdf -match '^[nN]')
-
-    $openBrowser = Read-Host "  Abrir HTML en navegador al terminar? (S/n)"
-    $openFlag = -not ($openBrowser -match '^[nN]')
-
-    $ticketId = $null
-    if ($pdfFlag) {
-        $tk = Read-Host "  ID de ticket MantisBT para adjuntar (ENTER = no adjuntar)"
-        if ($tk -match '^\d+$') { $ticketId = [int]$tk }
     }
 
     Write-Host ""
-    Write-Host "  Generando informe..." -ForegroundColor Yellow
+    Write-Host "  Generando plantilla de informe (.txt)..." -ForegroundColor Yellow
     Write-Host ""
 
-    $cliArgs = @($genScript, '--json', $jsonPath)
-    if ($pdfFlag)   { $cliArgs += '--pdf' }
-    if ($openFlag)  { $cliArgs += '--open' }
-    if ($ticketId)  { $cliArgs += @('--ticket', $ticketId.ToString()) }
+    $cliArgs = @($genScript)
+    if (-not [string]::IsNullOrWhiteSpace($jsonPath)) { $cliArgs += @('--json', $jsonPath) }
 
     try {
         & $py.Source @cliArgs
         Write-Host ""
-        Write-Host "  [OK] Informe generado" -ForegroundColor Green
+        Write-Host "  [i] Rellena los apartados a mano y sube tu el informe a MantisBT." -ForegroundColor Cyan
+        Write-Host "  [OK] Plantilla generada" -ForegroundColor Green
     } catch {
         Write-Host "  [!] Error: $_" -ForegroundColor Yellow
     }
@@ -599,31 +588,13 @@ function Invoke-Factura {
         return
     }
 
-    $genPdf  = Read-Host "  Generar PDF? (S/n)"
-    $pdfFlag = -not ($genPdf -match '^[nN]')
-
-    $upload  = Read-Host "  Subir factura al ticket MantisBT? (S/n)"
-    $upFlag  = -not ($upload -match '^[nN]')
-
-    $sendEmail = Read-Host "  Enviar factura por email al cliente al finalizar? (S/n)"
-    $emFlag    = -not ($sendEmail -match '^[nN]')
-
-    $openB     = Read-Host "  Abrir HTML en navegador al terminar? (S/n)"
-    $opFlag    = -not ($openB -match '^[nN]')
-
-    $cliArgs = @($facScript)
-    if ($pdfFlag) { $cliArgs += '--pdf' }
-    if ($upFlag)  { $cliArgs += '--upload' }
-    if ($emFlag)  { $cliArgs += '--send-email' }
-    if ($opFlag)  { $cliArgs += '--open' }
-
-    Write-Host ""
-    Write-Host "  Lanzando asistente interactivo de factura..." -ForegroundColor Yellow
+    Write-Host "  Generando plantilla de factura (.txt)..." -ForegroundColor Yellow
     Write-Host ""
 
     try {
-        & $py.Source @cliArgs
+        & $py.Source $facScript
         Write-Host ""
+        Write-Host "  [i] Rellena los campos a mano y entrega la factura al cliente." -ForegroundColor Cyan
         Write-Host "  [OK] Proceso de factura terminado" -ForegroundColor Green
     } catch {
         Write-Host "  [!] Error: $_" -ForegroundColor Yellow
@@ -668,7 +639,9 @@ function Invoke-Optimizacion {
 
     $script = Join-Path $SCRIPT_DIR "optimizacion.ps1"
     if (Test-Path $script) {
-        & $script -Nivel $nivelOpt
+        # optimizacion.ps1 exige -Confirm para iniciar la limpieza (evita
+        # ejecuciones accidentales). El tecnico ya eligio nivel arriba.
+        & $script -Nivel $nivelOpt -Confirm
         Write-Host ""
         Write-Host "  [OK] Completado" -ForegroundColor Green
     }

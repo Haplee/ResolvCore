@@ -1,61 +1,61 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ResolveCore — Escaneo básico de puertos abiertos.
+ResolveCore - Escaner de vulnerabilidades (CVE) multi-fuente, sin clases.
 
-Mira los puertos TCP "habituales" en una IP/host dado, marca los que están
-abiertos y avisa de los que se consideran peligrosos en una red de cliente
-(FTP, Telnet, SMB, RDP, etc.).
+Recoge el software instalado en el equipo (segun la plataforma) y consulta sus
+vulnerabilidades conocidas cruzando varias fuentes:
 
-No usa nmap ni ninguna lib externa — solo `socket` de la stdlib, así
-funciona en cualquier máquina con Python 3 instalado.
+  - OSV.dev   -> rapido y sin API key; fuente por defecto para paquetes Linux.
+  - NVD/NIST  -> busqueda por palabra clave; se usa en Windows/Android. Tiene
+                 rate limit (6s/peticion sin API key, 0.6s con NVD_API_KEY).
+  - CISA KEV  -> marca los CVE que se sabe que estan siendo EXPLOTADOS de verdad.
+
+Arquitectura hexagonal (sin clases, sin type hints): este modulo es el
+orquestador; el inventario y las consultas viven en common/adapters/, los
+contratos en common/ports/ y las entidades (dicts) en common/domain/.
 
 Uso:
-    python3 buscar_vulnerabilidades.py                 # localhost
-    python3 buscar_vulnerabilidades.py 192.168.1.10
-    python3 buscar_vulnerabilidades.py resolvecore.website
+    python3 buscar_vulnerabilidades.py --plataforma linux
+    python3 buscar_vulnerabilidades.py --plataforma windows --max 10
+    python3 buscar_vulnerabilidades.py --plataforma android --serial ABC123
+    python3 buscar_vulnerabilidades.py --puertos              # modo port-scan legacy
+    python3 buscar_vulnerabilidades.py --puertos 192.168.1.10
 
 Autor:   Francisco Vidal Mateo (GitHub: Haplee)
-Versión: 2.0
+Version: 3.0
 """
 
-import socket
+import os
 import sys
 import json
+import socket
+import argparse
 from datetime import datetime
 
+# Para poder importar el paquete 'common' tanto si se ejecuta como script suelto
+# como si se importa: metemos la carpeta scripts/ en el path.
+_AQUI = os.path.dirname(os.path.abspath(__file__))
+_SCRIPTS = os.path.dirname(_AQUI)
+if _SCRIPTS not in sys.path:
+    sys.path.insert(0, _SCRIPTS)
 
-# Puertos que escaneamos siempre. Lista corta a propósito: si añadimos
-# todos los /etc/services el script tarda eternidades sin aportar nada.
+from common.adapters import inventario_local, kev_rest, nvd_rest, osv_rest  # noqa: E402
+from common.domain import es_alta, es_critica  # noqa: E402
+
+
+# ── Puertos (modo legacy --puertos) ──────────────────────────────────────────
 PUERTOS = {
-    21:   "FTP",
-    22:   "SSH",
-    23:   "Telnet",
-    25:   "SMTP",
-    53:   "DNS",
-    80:   "HTTP",
-    110:  "POP3",
-    143:  "IMAP",
-    443:  "HTTPS",
-    445:  "SMB",
-    3306: "MySQL",
-    3389: "RDP",
-    5432: "PostgreSQL",
-    6379: "Redis",
-    8080: "HTTP-Alt",
-    8443: "HTTPS-Alt",
-    27017: "MongoDB",
+    21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS", 80: "HTTP",
+    110: "POP3", 143: "IMAP", 443: "HTTPS", 445: "SMB", 3306: "MySQL",
+    3389: "RDP", 5432: "PostgreSQL", 6379: "Redis", 8080: "HTTP-Alt",
+    8443: "HTTPS-Alt", 27017: "MongoDB",
 }
-
-# Puertos que en una red de cliente NO deberían estar abiertos hacia
-# Internet. El informe destaca estos como aviso al técnico.
 PELIGROSOS = {21, 23, 445, 3389, 6379, 27017}
 
 
-def escanear(host, timeout=1.0):
-    """Devuelve la lista de puertos abiertos en `host`."""
+def escanear_puertos(host, timeout=1.0):
     abiertos = []
-
     for puerto, servicio in PUERTOS.items():
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,40 +68,160 @@ def escanear(host, timeout=1.0):
                 })
             s.close()
         except OSError:
-            # Si falla el socket (sin red, host caído, etc) seguimos.
             pass
-
     return abiertos
 
 
-def main():
-    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-
-    # Resolvemos primero — así si el DNS falla damos un error claro.
+def modo_puertos(host):
     try:
         ip = socket.gethostbyname(host)
     except socket.gaierror as e:
-        print(f"Error resolviendo {host}: {e}", file=sys.stderr)
+        print("Error resolviendo {0}: {1}".format(host, e), file=sys.stderr)
         sys.exit(1)
-
-    print(f"Escaneando {host} ({ip})...", file=sys.stderr)
-    abiertos = escanear(ip)
-
+    print("Escaneando {0} ({1})...".format(host, ip), file=sys.stderr)
+    abiertos = escanear_puertos(ip)
     resultado = {
+        "modo": "puertos",
         "host": host,
         "ip": ip,
         "timestamp": datetime.now().isoformat(),
         "puertos_abiertos": abiertos,
         "avisos": [p for p in abiertos if p["peligroso"]],
     }
-
     print(json.dumps(resultado, indent=2, ensure_ascii=False))
 
-    if resultado["avisos"]:
-        print("", file=sys.stderr)
-        print(f"[!] {len(resultado['avisos'])} puerto(s) de riesgo:", file=sys.stderr)
-        for p in resultado["avisos"]:
-            print(f"    {p['puerto']}/{p['servicio']}", file=sys.stderr)
+
+# ── Modo CVE ─────────────────────────────────────────────────────────────────
+
+def _ecosistema_linux():
+    # Deriva el ecosistema OSV de /etc/os-release (Debian:12, Ubuntu, etc.).
+    datos = {}
+    try:
+        with open("/etc/os-release", encoding="utf-8") as f:
+            for linea in f:
+                if "=" in linea:
+                    clave, valor = linea.strip().split("=", 1)
+                    datos[clave] = valor.strip().strip('"')
+    except OSError:
+        return ""
+    idd = datos.get("ID", "").lower()
+    version_id = datos.get("VERSION_ID", "")
+    if idd == "debian":
+        # OSV usa el numero mayor de version: "Debian:12".
+        mayor = version_id.split(".")[0] if version_id else ""
+        return "Debian:" + mayor if mayor else "Debian"
+    if idd == "ubuntu":
+        return "Ubuntu"
+    return ""
+
+
+def _vulns_de_paquete(paquete, plataforma, ecosistema, api_key):
+    # En Linux usamos OSV (rapido, sin rate limit). En Windows/Android usamos la
+    # NVD por palabra clave (mas lento, de ahi el --max).
+    nombre = paquete.get("nombre", "")
+    version = paquete.get("version", "")
+    if plataforma == "linux":
+        return osv_rest.get_vulns(nombre, version, ecosistema)
+    return nvd_rest.get_vulns(nombre, version, api_key)
+
+
+def modo_cve(plataforma, serial, maximo, api_key):
+    print("Recogiendo inventario de software ({0})...".format(plataforma), file=sys.stderr)
+    inventario = inventario_local.get_software(plataforma, serial, maximo)
+    if not inventario:
+        print("[!] No se obtuvo inventario de software (¿faltan dpkg/adb/permisos?).", file=sys.stderr)
+
+    print("Descargando catalogo CISA KEV...", file=sys.stderr)
+    kev = kev_rest.cargar_kev()
+
+    ecosistema = _ecosistema_linux() if plataforma == "linux" else ""
+
+    software = []
+    todas = []
+    total = len(inventario)
+    for i, paquete in enumerate(inventario, start=1):
+        print("  [{0}/{1}] {2} {3}".format(i, total, paquete.get("nombre", ""),
+                                            paquete.get("version", "")), file=sys.stderr)
+        vulns = _vulns_de_paquete(paquete, plataforma, ecosistema, api_key)
+        lista_pkg = []
+        for v in vulns:
+            registro = {
+                "cve": v.get("cve", ""),
+                "cvss": v.get("cvss"),
+                "summary": v.get("summary", ""),
+                "kev": kev_rest.es_kev(v.get("cve", ""), kev),
+                "paquete": paquete.get("nombre", ""),
+                "version": paquete.get("version", ""),
+            }
+            lista_pkg.append(registro)
+            todas.append(registro)
+        software.append({
+            "nombre": paquete.get("nombre", ""),
+            "version": paquete.get("version", ""),
+            "origen": paquete.get("origen", ""),
+            "n_vulnerabilidades": len(lista_pkg),
+        })
+
+    # Avisos = criticas, altas o explotadas activamente (KEV).
+    avisos = [v for v in todas if v["kev"] or es_critica(v) or es_alta(v)]
+    # Orden: primero KEV, luego por CVSS descendente.
+    avisos.sort(key=lambda v: (not v["kev"], -(v["cvss"] or 0)))
+
+    resultado = {
+        "modo": "cve",
+        "plataforma": plataforma,
+        "timestamp": datetime.now().isoformat(),
+        "n_software": len(software),
+        "n_vulnerabilidades": len(todas),
+        "software": software,
+        "vulnerabilidades": todas,
+        "avisos": avisos,
+    }
+    print(json.dumps(resultado, indent=2, ensure_ascii=False))
+
+    # Resumen legible por stderr para el tecnico.
+    n_kev = sum(1 for v in todas if v["kev"])
+    n_crit = sum(1 for v in todas if es_critica(v))
+    print("", file=sys.stderr)
+    print("[i] {0} software analizado, {1} vulnerabilidades, {2} criticas, {3} en KEV.".format(
+        len(software), len(todas), n_crit, n_kev), file=sys.stderr)
+
+
+def _forzar_utf8():
+    # En consolas Windows (cp1252) imprimir nombres de software con acentos
+    # reventaria con UnicodeEncodeError. Forzamos UTF-8 con reemplazo.
+    for flujo in (sys.stdout, sys.stderr):
+        try:
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
+def main():
+    _forzar_utf8()
+    parser = argparse.ArgumentParser(
+        description="Escaner de vulnerabilidades CVE (OSV + NVD + CISA KEV)."
+    )
+    parser.add_argument("--plataforma", choices=["linux", "windows", "android"],
+                        help="Plataforma del equipo a analizar (modo CVE).")
+    parser.add_argument("--serial", default=None, help="Serial ADB del dispositivo Android.")
+    parser.add_argument("--max", type=int, default=20, dest="maximo",
+                        help="Maximo de paquetes a consultar (0 = sin limite). Importante en "
+                             "Windows/Android por el rate limit de la NVD.")
+    parser.add_argument("--api-key", default=None, help="API key de la NVD (o variable NVD_API_KEY).")
+    parser.add_argument("--puertos", nargs="?", const="127.0.0.1", default=None,
+                        help="Modo legacy: escaneo de puertos del host indicado (def: 127.0.0.1).")
+    args = parser.parse_args()
+
+    if args.puertos is not None:
+        modo_puertos(args.puertos)
+        return
+
+    if not args.plataforma:
+        parser.error("indica --plataforma {linux,windows,android} o usa --puertos.")
+
+    api_key = args.api_key if args.api_key is not None else os.getenv("NVD_API_KEY", "")
+    modo_cve(args.plataforma, args.serial, args.maximo, api_key)
 
 
 if __name__ == "__main__":

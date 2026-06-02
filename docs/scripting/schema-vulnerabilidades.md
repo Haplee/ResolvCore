@@ -107,8 +107,42 @@ ORDER BY cvss_score DESC, fecha_sync DESC;
 
 ---
 
+## Salida JSON del escáner en vivo (`buscar_vulnerabilidades.py`)
+
+> Distinta de la tabla persistida `rc_vulnerabilities`: es lo que el escáner imprime por **stdout** en cada ejecución del técnico. El orquestador recoge el inventario de software del equipo (`common/adapters/inventario_local.py`) y cruza CVEs con **OSV.dev** (primario en Linux), **NVD** (Windows/Android, por palabra clave) y **CISA KEV** (flag de explotación activa). Arquitectura hexagonal sin clases (`common/{domain,ports,adapters}`).
+
+Modo CVE — `python3 buscar_vulnerabilidades.py --plataforma {linux|windows|android} [--serial S] [--max N] [--api-key K]`:
+
+```json
+{
+  "modo": "cve",
+  "plataforma": "linux",
+  "timestamp": "2026-06-02T12:00:00",
+  "n_software": 20,
+  "n_vulnerabilidades": 3,
+  "software": [
+    { "nombre": "openssl", "version": "3.0.2", "origen": "dpkg", "n_vulnerabilidades": 2 }
+  ],
+  "vulnerabilidades": [
+    { "cve": "CVE-2024-XXXX", "cvss": 9.1, "summary": "…", "kev": true, "paquete": "openssl", "version": "3.0.2" }
+  ],
+  "avisos": [ "… subconjunto: KEV o CVSS alto/crítico, ordenado KEV-first y por CVSS desc …" ]
+}
+```
+
+- `--max N` limita los paquetes consultados (clave en Windows/Android por el rate-limit de la NVD: 6 s/petición sin `NVD_API_KEY`, 0.6 s con ella).
+- `--plataforma android` añade dos pseudo-paquetes: `Android` (release) y `Android security patch` (`ro.build.version.security_patch`).
+- Cada vulnerabilidad lleva `kev` (bool) cruzado con el catálogo CISA KEV cacheado 24 h.
+
+Modo legacy — `--puertos [host]` (def `127.0.0.1`): conserva el port-scan stdlib previo y emite `{ "modo": "puertos", "host", "ip", "puertos_abiertos", "avisos" }`.
+
+> Los `cve`/`cvss`/`kev` de esta salida son los que alimentan la tabla `rc_vulnerabilities` cuando se persiste (mapeo `cve→cve_id`, `cvss→cvss_score`, `kev→kev_listed`).
+
+---
+
 ## Changelog del documento
 
 | Fecha | Cambio |
 |---|---|
 | 2026-05-09 | Versión inicial — migración 0001 + tabla auxiliar de sync. |
+| 2026-06-02 | Documentada la **salida JSON del escáner en vivo** (modo `cve` multi-fuente OSV+NVD+KEV y modo legacy `--puertos`) tras reescribir `buscar_vulnerabilidades.py` como orquestador hexagonal. |

@@ -9,6 +9,13 @@ Uso:
     cves = nvd_rest.get_vulns("OpenSSH", "8.2")
 """
 
-from . import mantis_rest, nmap_local, nvd_rest
+from . import inventario_local, kev_rest, mantis_rest, nmap_local, nvd_rest, osv_rest
 
-__all__ = ["mantis_rest", "nmap_local", "nvd_rest"]
+__all__ = [
+    "inventario_local",
+    "kev_rest",
+    "mantis_rest",
+    "nmap_local",
+    "nvd_rest",
+    "osv_rest",
+]
