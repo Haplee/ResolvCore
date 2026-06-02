@@ -452,7 +452,15 @@ a:hover { text-decoration: underline; }
   justify-content: center !important;
 }
 .rc-hero-stats {
+  /* Centrado a prueba de cascada: el bloque (margin auto) + cada celda del grid
+     (justify-items) + el texto. Vence al CSS inline de .rc-hero--split sin depender
+     del orden de carga. Antes solo había justify-content, que con columnas 1fr no
+     centra nada — de ahí que el bloque siguiera saliendo descuadrado. */
   justify-content: center !important;
+  justify-items: center !important;
+  text-align: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 section[style] > div,
 .rc-plat-inner,
@@ -626,6 +634,33 @@ section[style] > div,
 .rc-ticket-attachments a { color: var(--rc-accent); }
 .rc-ticket-link { display: inline-block; font-size: .85rem; color: var(--rc-accent);
                   margin-top: .3rem; }
+
+/* Progreso de la incidencia (cliente) — sustituye al antiguo enlace a MantisBT.
+   4 fases: Recibido · En diagnóstico · En resolución · Resuelto. El cliente ve
+   el avance sin acceder nunca a la herramienta interna de tickets. */
+.rc-ticket-progress { display: grid; grid-template-columns: repeat(4, 1fr);
+                      gap: .25rem; margin-top: .9rem; }
+.rc-prog-step { display: flex; flex-direction: column; align-items: center;
+                gap: .4rem; position: relative; text-align: center; }
+.rc-prog-step::before { content: ''; position: absolute; top: 6px; left: -50%;
+                        width: 100%; height: 2px; background: var(--rc-border2); z-index: 0; }
+.rc-prog-step:first-child::before { display: none; }
+.rc-prog-dot { width: 13px; height: 13px; border-radius: 50%; z-index: 1;
+               background: var(--rc-surface2); border: 2px solid var(--rc-border2); }
+.rc-prog-label { font-family: var(--rc-mono); font-size: 10px; letter-spacing: .02em;
+                 color: var(--rc-muted); line-height: 1.2; }
+/* Fases ya completadas */
+.rc-prog-step.is-done .rc-prog-dot { background: var(--rc-accent); border-color: var(--rc-accent); }
+.rc-prog-step.is-done::before { background: var(--rc-accent); }
+.rc-prog-step.is-done .rc-prog-label { color: var(--rc-text); }
+/* Fase actual */
+.rc-prog-step.is-active .rc-prog-dot { background: var(--rc-accent2); border-color: var(--rc-accent2);
+                                       box-shadow: 0 0 0 4px rgba(0,153,255,.18); }
+.rc-prog-step.is-active::before { background: var(--rc-accent); }
+.rc-prog-step.is-active .rc-prog-label { color: var(--rc-accent2); font-weight: 700; }
+@media (max-width: 460px) {
+  .rc-prog-label { font-size: 9px; }
+}
 
 /* Login wall — cuando entra sin sesión */
 .rc-cliente-login { background: var(--rc-surface); border: 1px solid var(--rc-border);
