@@ -30,7 +30,8 @@ MANTIS_IMAGES="${MANTIS_DIR}/images"
 REMOTE_LOGO="${MANTIS_IMAGES}/rc-logo-dark.png"
 REMOTE_FAVICON="${MANTIS_IMAGES}/rc-favicon.ico"
 REMOTE_FOOTER="${MANTIS_DIR}/config/rc_footer.php"
-MARKER="# RC_BRANDING_BLOCK"   # centinela de idempotencia en config_inc.php
+# El centinela de idempotencia (MARKER = '# RC_BRANDING_BLOCK') se define dentro
+# del bloque remoto (su espacio rompe el paso como env por ssh).
 
 # Logo de origen dentro del repo (carpeta del tema WordPress).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -74,9 +75,14 @@ ssh "${VPS_USER}@${VPS_HOST}" \
 	REMOTE_LOGO="$REMOTE_LOGO" \
 	REMOTE_FAVICON="$REMOTE_FAVICON" \
 	REMOTE_FOOTER="$REMOTE_FOOTER" \
-	MARKER="$MARKER" \
 	'bash -s' <<'REMOTE'
 set -euo pipefail
+
+# MARKER se define aqui (no via ssh env): su valor lleva un espacio ('# RC_...')
+# y como prefijo "VAR=val" en la linea de ssh el shell remoto lo parte y trata
+# 'RC_BRANDING_BLOCK' como comando ("command not found"). Definirlo dentro del
+# bloque remoto literal evita ese troceo.
+MARKER='# RC_BRANDING_BLOCK'
 
 # 2.1 — Logo + favicon: instalar con permisos del servidor web.
 install -o www-data -g www-data -m 0644 /tmp/rc-logo-dark.png "$REMOTE_LOGO"
