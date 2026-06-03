@@ -64,6 +64,20 @@
 
 ---
 
+## workbench/ — Consultas a la BD (evidencias)
+
+Capturas de MySQL Workbench conectado (vía túnel SSH) a la BD `mantisbt` del VPS.
+
+| Fichero | Contenido |
+|---------|-----------|
+| [01_recuento-usuarios.png](workbench/01_recuento-usuarios.png) | Conteo de filas sobre `mantis_user_table` |
+| [02_show-tables.png](workbench/02_show-tables.png) | `SHOW TABLES` — esquema completo de MantisBT |
+| [03_conteo-registros.png](workbench/03_conteo-registros.png) | Conteo de registros por tabla |
+| [04_tickets-por-estado.png](workbench/04_tickets-por-estado.png) | Tickets agrupados por estado (`GROUP BY status`) |
+| [05_usuarios-nivel-acceso.png](workbench/05_usuarios-nivel-acceso.png) | Usuarios y su nivel de acceso (cliente/técnico/admin) |
+
+---
+
 ## tareas/ — Trabajo planificado
 
 | Fichero | Descripción |
