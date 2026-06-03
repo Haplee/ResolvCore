@@ -40,6 +40,16 @@ TICKET=""
 
 show_help() { sed -n '2,34p' "$0" | sed 's/^# \?//'; exit 0; }
 
+# Normaliza --flag=valor a --flag valor (acepta ambas formas)
+NORMALIZED=()
+for ARG in "$@"; do
+    case "$ARG" in
+        --*=*) NORMALIZED+=("${ARG%%=*}" "${ARG#*=}") ;;
+        *)     NORMALIZED+=("$ARG") ;;
+    esac
+done
+set -- "${NORMALIZED[@]+"${NORMALIZED[@]}"}"
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --action)   ACTION="${2:-}";   shift 2 ;;
