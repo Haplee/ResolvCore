@@ -204,7 +204,10 @@
       "Bash(python scripts/contrast_checker.py --fg \"#0099ff\" --bg \"#0a0c10\")",
       "Bash(python scripts/a11y_scanner.py \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\" --format table)",
       "Bash(python scripts/a11y_scanner.py \"C:/Users/franc/proyecto/ResolvCore/wordpress/resolvecore-theme/front-page.php\" --format text)",
-      "Bash(python \"C:\\\\Users\\\\franc\\\\.claude\\\\skills\\\\resume\\\\scripts\\\\setup_experiment.py\" --list)"
+      "Bash(python \"C:\\\\Users\\\\franc\\\\.claude\\\\skills\\\\resume\\\\scripts\\\\setup_experiment.py\" --list)",
+      "Bash(mkdir -p /tmp/phpcs-tools)",
+      "Bash(composer require *)",
+      "Bash(echo \"exit:$?\")"
     ]
   }
 }

@@ -170,6 +170,7 @@ ResolveCore/
     ├── defensa/                    Docs para tribunal y tutor (defensa-tfg, informe-tutor...)
     ├── tecnica/                    Docs técnicas del sistema (stack, entornos, servicios...)
     ├── scripting/                  Arquitectura scripts, schemas JSON, regex
+    ├── ER/                         Diagrama entidad-relación de la BD de MantisBT (PDF/PNG/SVG)
     └── capturas/                   Evidencias del sprint (lun19, mar20)
 ```
 
@@ -461,6 +462,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | [`docs/scripting/schema-diagnostico.md`](docs/scripting/schema-diagnostico.md) | Esquema JSON unificado de diagnóstico |
 | [`docs/scripting/schema-servicios-adicionales.md`](docs/scripting/schema-servicios-adicionales.md) | Esquemas JSON de congelación, clonación y kit |
 | [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Justificación técnica servicios adicionales |
+| [`docs/ER/diagrama-er-mantisbt.pdf`](docs/ER/diagrama-er-mantisbt.pdf) | Diagrama entidad-relación de la BD de MantisBT (ingeniería inversa del esquema) — también en PNG y SVG |
 
 ---
 

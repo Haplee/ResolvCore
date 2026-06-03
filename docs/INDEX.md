@@ -1,7 +1,7 @@
 # ResolveCore — Índice de Documentación
 
 **TFG ASIR 2024/25 · Francisco Vidal Mateo**  
-Última actualización: 22 de mayo de 2026
+Última actualización: 3 de junio de 2026
 
 ---
 
@@ -51,6 +51,16 @@
 | [schema-vulnerabilidades.md](scripting/schema-vulnerabilidades.md) | Esquema de la base de datos de vulnerabilidades |
 | [schema-servicios-adicionales.md](scripting/schema-servicios-adicionales.md) | Esquemas JSON propios de los scripts de servicios adicionales (clonación, congelación) |
 | [regex-y-json-diagnostico.md](scripting/regex-y-json-diagnostico.md) | Patrones regex y técnicas de parsing JSON en los scripts |
+
+---
+
+## ER/ — Modelo de datos
+
+| Fichero | Descripción |
+|---------|-------------|
+| [diagrama-er-mantisbt.pdf](ER/diagrama-er-mantisbt.pdf) | Diagrama entidad-relación de la BD de MantisBT (`mantisbt`) — ingeniería inversa del esquema real. Formato PDF para la memoria. |
+| [diagrama-er-mantisbt.png](ER/diagrama-er-mantisbt.png) | Mismo diagrama en PNG (vista rápida / inserción inline). |
+| [diagrama-er-mantisbt.svg](ER/diagrama-er-mantisbt.svg) | Mismo diagrama en SVG (vectorial, escalable). |
 
 ---
 
