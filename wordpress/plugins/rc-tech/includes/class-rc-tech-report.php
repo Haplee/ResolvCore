@@ -4,6 +4,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /**
  * Generador del informe técnico (Fase 6).
  *
+ * ⚠️ LEGACY / INACTIVO (2026-06-02). Esta clase NO forma parte del flujo actual.
+ * El informe que recibe el cliente es la plantilla `.txt` que el técnico rellena
+ * a mano y sube a MantisBT él mismo (sin PDF, decisión del autor). Se conserva por
+ * referencia; mantener este código no implica reactivar el PDF. Ver README del plugin.
+ *
  * Antes esto era un wrapper que llamaba por shell a un `reports/generate-report.php`
  * que NUNCA existió en el repo (3 generadores fantasma documentados, incompatibles
  * entre sí). Unificado en UN solo camino, autocontenido en PHP:
