@@ -68,7 +68,7 @@ $g_default_new_account_access_level = REPORTER;
 // soporte integrados. El logo se copia a la web-root de Mantis con el script
 // scripts/server/ops/mantis-branding.sh (cp del logo oscuro del repo WP).
 $g_window_title  = 'ResolveCore · Soporte';
-$g_logo_image    = 'images/rc-logo-dark.png';   // copiado por mantis-branding.sh
+$g_logo_image    = 'images/rc-logo-light.png';  // copiado por mantis-branding.sh (claro: login con fondo oscuro)
 $g_logo_url      = 'https://resolvecore.website';
 // Favicon: variante simplificada multi-tamano (.ico 16/32/48), nitida en la
 // pestana (el logo completo se empastaba al reducirse a 16px).

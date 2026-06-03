@@ -2,7 +2,8 @@
 #
 # mantis-branding.sh — Aplica el branding White-Label de ResolveCore a una
 # instancia de MantisBT en el VPS vía SSH:
-#   1) Copia el logo oscuro del repo a la web-root de Mantis (images/).
+#   1) Copia el logo claro del repo a la web-root de Mantis (images/) — se usa en
+#      la pagina de login, de fondo oscuro (el logo oscuro era invisible alli).
 #   2) Escribe rc_footer.php con CSS que oculta «Powered by MantisBT» y los
 #      enlaces de soporte integrados.
 #   3) Inyecta (idempotente) el bloque de branding en config_inc.php.
@@ -27,7 +28,7 @@ VPS_HOST="${VPS_HOST:-resolvecore.website}"
 MANTIS_DIR="${MANTIS_DIR:-/var/www/mantis}"
 MANTIS_CONFIG="${MANTIS_DIR}/config/config_inc.php"
 MANTIS_IMAGES="${MANTIS_DIR}/images"
-REMOTE_LOGO="${MANTIS_IMAGES}/rc-logo-dark.png"
+REMOTE_LOGO="${MANTIS_IMAGES}/rc-logo-light.png"
 REMOTE_FAVICON="${MANTIS_IMAGES}/rc-favicon.ico"
 REMOTE_FOOTER="${MANTIS_DIR}/config/rc_footer.php"
 # El centinela de idempotencia (MARKER = '# RC_BRANDING_BLOCK') se define dentro
@@ -36,7 +37,7 @@ REMOTE_FOOTER="${MANTIS_DIR}/config/rc_footer.php"
 # Logo de origen dentro del repo (carpeta del tema WordPress).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-SRC_LOGO="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/resolvcore-logo-dark.png"
+SRC_LOGO="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/resolvcore-logo-light.png"
 # Favicon de origen: variante simplificada multi-tamano (.ico), nitida a 16/32px.
 SRC_FAVICON="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/favicon.ico"
 
@@ -63,7 +64,7 @@ fi
 
 # ── 1) Subir el logo y el favicon a /tmp del VPS ─────────────────────────────
 echo "==> Subiendo logo y favicon a /tmp del VPS…"
-scp "$SRC_LOGO"    "${VPS_USER}@${VPS_HOST}:/tmp/rc-logo-dark.png"
+scp "$SRC_LOGO"    "${VPS_USER}@${VPS_HOST}:/tmp/rc-logo-light.png"
 scp "$SRC_FAVICON" "${VPS_USER}@${VPS_HOST}:/tmp/rc-favicon.ico"
 
 # ── 2) Ejecutar el resto en remoto (instalar logo + footer + parchear config) ─
@@ -85,9 +86,9 @@ set -euo pipefail
 MARKER='# RC_BRANDING_BLOCK'
 
 # 2.1 — Logo + favicon: instalar con permisos del servidor web.
-install -o www-data -g www-data -m 0644 /tmp/rc-logo-dark.png "$REMOTE_LOGO"
+install -o www-data -g www-data -m 0644 /tmp/rc-logo-light.png "$REMOTE_LOGO"
 install -o www-data -g www-data -m 0644 /tmp/rc-favicon.ico   "$REMOTE_FAVICON"
-rm -f /tmp/rc-logo-dark.png /tmp/rc-favicon.ico
+rm -f /tmp/rc-logo-light.png /tmp/rc-favicon.ico
 echo "    [ok] logo    -> $REMOTE_LOGO"
 echo "    [ok] favicon -> $REMOTE_FAVICON"
 
@@ -106,25 +107,25 @@ chown www-data:www-data "$REMOTE_FOOTER"
 chmod 0644 "$REMOTE_FOOTER"
 echo "    [ok] footer -> $REMOTE_FOOTER"
 
-# 2.3 — config_inc.php: inyectar bloque de branding solo si no existe ya.
-if grep -q "$MARKER" "$MANTIS_CONFIG"; then
-	echo "    [skip] config_inc.php ya tiene el bloque de branding ($MARKER)"
-else
-	cp -a "$MANTIS_CONFIG" "${MANTIS_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
-	cat >> "$MANTIS_CONFIG" <<PHP
+# 2.3 — config_inc.php: (re)sincronizar el bloque de branding. Idempotente por
+# ACTUALIZACION: si ya existe un bloque previo se elimina y se reescribe, para
+# que los cambios (p.ej. favicon .png -> .ico) se reflejen al re-ejecutar; antes
+# se "saltaba" si el bloque existia y la config quedaba desactualizada.
+cp -a "$MANTIS_CONFIG" "${MANTIS_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
+sed -i '/# RC_BRANDING_BLOCK/,/# RC_BRANDING_BLOCK_END/d' "$MANTIS_CONFIG"
+cat >> "$MANTIS_CONFIG" <<PHP
 
 $MARKER  (ResolveCore White-Label — mantis-branding.sh)
 \$g_window_title        = 'ResolveCore · Soporte';
-\$g_logo_image          = 'images/rc-logo-dark.png';
+\$g_logo_image          = 'images/rc-logo-light.png';
 \$g_logo_url            = 'https://resolvecore.website';
-\$g_favicon_image       = 'images/rc-favicon.png';
+\$g_favicon_image       = 'images/rc-favicon.ico';
 \$g_copyright_statement = '';
 \$g_show_version        = OFF;
 \$g_bottom_include_page = '$REMOTE_FOOTER';
 # RC_BRANDING_BLOCK_END
 PHP
-	echo "    [ok] config_inc.php parcheado (backup creado)"
-fi
+echo "    [ok] config_inc.php (bloque de branding sincronizado, backup creado)"
 
 echo "==> Branding aplicado. Limpia la caché de Mantis si procede:"
 echo "    rm -f ${MANTIS_DIR}/core/.htaccess 2>/dev/null || true"
