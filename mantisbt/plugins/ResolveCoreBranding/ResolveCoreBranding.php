@@ -48,15 +48,18 @@ class ResolveCoreBranding extends MantisPlugin {
 	}
 
 	/**
-	 * Favicon cuadrado. El core apuntaba a un icono apaisado/deformado; usamos
-	 * el icono cuadrado servido desde la web principal (mismo asset que el tema),
-	 * con SVG + PNG de respaldo y tamano explicito.
+	 * Favicon dedicado a tamanos pequenos. El logo completo (resolvcore-icon)
+	 * tiene trazos finos y contorno que se empastan al reducirse a 16/32px en la
+	 * pestana; aqui se usa la variante simplificada (resolvcore-favicon), nitida
+	 * a tamano pequeno. SVG primario en navegadores modernos; .ico + PNG 16/32
+	 * de respaldo, y apple-touch 180 para marcadores en movil.
 	 */
 	private function favicon_link() {
 		$base = 'https://resolvecore.website/wp-content/themes/resolvecore-theme/assets/logo';
-		return '<link rel="icon" type="image/svg+xml" href="' . htmlspecialchars( $base . '/resolvcore-icon.svg' ) . '">' . "\n"
-		     . '<link rel="icon" type="image/png" sizes="32x32" href="' . htmlspecialchars( $base . '/resolvcore-icon.png' ) . '">' . "\n"
-		     . '<link rel="apple-touch-icon" href="' . htmlspecialchars( $base . '/resolvcore-icon.png' ) . '">' . "\n";
+		return '<link rel="icon" type="image/svg+xml" href="' . htmlspecialchars( $base . '/favicon.svg' ) . '">' . "\n"
+		     . '<link rel="icon" type="image/png" sizes="96x96" href="' . htmlspecialchars( $base . '/favicon-96x96.png' ) . '">' . "\n"
+		     . '<link rel="icon" type="image/x-icon" href="' . htmlspecialchars( $base . '/favicon.ico' ) . '">' . "\n"
+		     . '<link rel="apple-touch-icon" sizes="180x180" href="' . htmlspecialchars( $base . '/apple-touch-icon.png' ) . '">' . "\n";
 	}
 
 	/**

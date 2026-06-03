@@ -28,7 +28,7 @@ MANTIS_DIR="${MANTIS_DIR:-/var/www/mantis}"
 MANTIS_CONFIG="${MANTIS_DIR}/config/config_inc.php"
 MANTIS_IMAGES="${MANTIS_DIR}/images"
 REMOTE_LOGO="${MANTIS_IMAGES}/rc-logo-dark.png"
-REMOTE_FAVICON="${MANTIS_IMAGES}/rc-favicon.png"
+REMOTE_FAVICON="${MANTIS_IMAGES}/rc-favicon.ico"
 REMOTE_FOOTER="${MANTIS_DIR}/config/rc_footer.php"
 MARKER="# RC_BRANDING_BLOCK"   # centinela de idempotencia en config_inc.php
 
@@ -36,8 +36,8 @@ MARKER="# RC_BRANDING_BLOCK"   # centinela de idempotencia en config_inc.php
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 SRC_LOGO="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/resolvcore-logo-dark.png"
-# Favicon de origen: icono CUADRADO (no el logo apaisado).
-SRC_FAVICON="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/resolvcore-icon.png"
+# Favicon de origen: variante simplificada multi-tamano (.ico), nitida a 16/32px.
+SRC_FAVICON="${REPO_ROOT}/wordpress/resolvecore-theme/assets/logo/favicon.ico"
 
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
@@ -63,7 +63,7 @@ fi
 # ── 1) Subir el logo y el favicon a /tmp del VPS ─────────────────────────────
 echo "==> Subiendo logo y favicon a /tmp del VPS…"
 scp "$SRC_LOGO"    "${VPS_USER}@${VPS_HOST}:/tmp/rc-logo-dark.png"
-scp "$SRC_FAVICON" "${VPS_USER}@${VPS_HOST}:/tmp/rc-favicon.png"
+scp "$SRC_FAVICON" "${VPS_USER}@${VPS_HOST}:/tmp/rc-favicon.ico"
 
 # ── 2) Ejecutar el resto en remoto (instalar logo + footer + parchear config) ─
 echo "==> Aplicando branding en remoto…"
@@ -80,8 +80,8 @@ set -euo pipefail
 
 # 2.1 — Logo + favicon: instalar con permisos del servidor web.
 install -o www-data -g www-data -m 0644 /tmp/rc-logo-dark.png "$REMOTE_LOGO"
-install -o www-data -g www-data -m 0644 /tmp/rc-favicon.png   "$REMOTE_FAVICON"
-rm -f /tmp/rc-logo-dark.png /tmp/rc-favicon.png
+install -o www-data -g www-data -m 0644 /tmp/rc-favicon.ico   "$REMOTE_FAVICON"
+rm -f /tmp/rc-logo-dark.png /tmp/rc-favicon.ico
 echo "    [ok] logo    -> $REMOTE_LOGO"
 echo "    [ok] favicon -> $REMOTE_FAVICON"
 

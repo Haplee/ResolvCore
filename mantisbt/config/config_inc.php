@@ -70,9 +70,10 @@ $g_default_new_account_access_level = REPORTER;
 $g_window_title  = 'ResolveCore · Soporte';
 $g_logo_image    = 'images/rc-logo-dark.png';   // copiado por mantis-branding.sh
 $g_logo_url      = 'https://resolvecore.website';
-// Favicon: icono CUADRADO (no el logo apaisado, que se renderizaba deformado).
-// Copiado por mantis-branding.sh desde resolvcore-icon.png.
-$g_favicon_image = 'images/rc-favicon.png';
+// Favicon: variante simplificada multi-tamano (.ico 16/32/48), nitida en la
+// pestana (el logo completo se empastaba al reducirse a 16px).
+// Copiado por mantis-branding.sh desde favicon.ico.
+$g_favicon_image = 'images/rc-favicon.ico';
 
 // Footer: vaciar el copyright propio de Mantis y, vía página de inclusión
 // inferior, inyectar CSS que oculta la firma «Powered by» y los enlaces de
