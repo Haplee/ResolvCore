@@ -125,6 +125,51 @@ def _vulns_de_paquete(paquete, plataforma, ecosistema, api_key):
     return nvd_rest.get_vulns(nombre, version, api_key)
 
 
+def evaluar_riesgo(vulns):
+    # Probabilidad agregada de compromiso del equipo: P = 1 - prod(1 - p_i).
+    # Cada CVE aporta una probabilidad individual de ser explotado segun su
+    # severidad y explotacion real conocida. Asi un solo CVE en KEV (explotado
+    # de verdad) ya dispara el riesgo, y muchos altos tambien saturan hacia 100%.
+    # Es el indicador de exposicion que pide el registro del TFG.
+    p_no = 1.0
+    n_kev = n_crit = n_alta = n_otras = 0
+    for v in vulns:
+        if v.get("kev"):
+            p = 0.85
+            n_kev += 1
+        elif es_critica(v):
+            p = 0.30
+            n_crit += 1
+        elif es_alta(v):
+            p = 0.12
+            n_alta += 1
+        else:
+            p = 0.02
+            n_otras += 1
+        p_no *= (1.0 - p)
+    prob = round((1.0 - p_no) * 100, 1)
+    if prob >= 80:
+        nivel = "CRITICO"
+    elif prob >= 50:
+        nivel = "ALTO"
+    elif prob >= 25:
+        nivel = "MEDIO"
+    elif prob >= 5:
+        nivel = "BAJO"
+    else:
+        nivel = "MINIMO"
+    return {
+        "probabilidad_compromiso_pct": prob,
+        "nivel": nivel,
+        "factores": {
+            "kev": n_kev,
+            "criticas": n_crit,
+            "altas": n_alta,
+            "otras": n_otras,
+        },
+    }
+
+
 def modo_cve(plataforma, serial, maximo, api_key, salida_json=""):
     print("Recogiendo inventario de software ({0})...".format(plataforma), file=sys.stderr)
     inventario = inventario_local.get_software(plataforma, serial, maximo)
@@ -167,12 +212,15 @@ def modo_cve(plataforma, serial, maximo, api_key, salida_json=""):
     # Orden: primero KEV, luego por CVSS descendente.
     avisos.sort(key=lambda v: (not v["kev"], -(v["cvss"] or 0)))
 
+    riesgo = evaluar_riesgo(todas)
+
     resultado = {
         "modo": "cve",
         "plataforma": plataforma,
         "timestamp": datetime.now().isoformat(),
         "n_software": len(software),
         "n_vulnerabilidades": len(todas),
+        "riesgo": riesgo,
         "software": software,
         "vulnerabilidades": todas,
         "avisos": avisos,
@@ -196,6 +244,12 @@ def modo_cve(plataforma, serial, maximo, api_key, salida_json=""):
     print("", file=sys.stderr)
     print("[i] {0} software analizado, {1} vulnerabilidades, {2} criticas, {3} en KEV.".format(
         len(software), len(todas), n_crit, n_kev), file=sys.stderr)
+    print("[i] Probabilidad estimada de compromiso: {0}% [{1}]  "
+          "(KEV={2} criticas={3} altas={4} otras={5})".format(
+              riesgo["probabilidad_compromiso_pct"], riesgo["nivel"],
+              riesgo["factores"]["kev"], riesgo["factores"]["criticas"],
+              riesgo["factores"]["altas"], riesgo["factores"]["otras"]),
+          file=sys.stderr)
 
 
 def _forzar_utf8():
