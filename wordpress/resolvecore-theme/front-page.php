@@ -1428,8 +1428,8 @@
 	}
 	</style>
 	<!-- Banner full-width: canaliza el flujo de soporte al alta de cliente.
-	     El formulario abierto «Escríbenos» se eliminó de raíz para mitigar
-	     intentos de saturación/DDoS contra admin-ajax (auditoría 01-06-2026). -->
+		 El formulario abierto «Escríbenos» se eliminó de raíz para mitigar
+		 intentos de saturación/DDoS contra admin-ajax (auditoría 01-06-2026). -->
 	<div class="rc-contact-banner rc-reveal">
 		<div class="rc-contact-banner-text">
 		<h3>¿Listo para resolver tu incidencia?</h3>

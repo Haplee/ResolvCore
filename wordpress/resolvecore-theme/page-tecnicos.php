@@ -34,19 +34,19 @@ if ( ! current_user_can( 'editor' ) && ! current_user_can( 'administrator' ) ) {
 	</main>
 	<style>
 		.rc-403 { display: flex; align-items: center; justify-content: center;
-		          min-height: 60vh; padding: 4rem 1.5rem; }
+				  min-height: 60vh; padding: 4rem 1.5rem; }
 		.rc-403-box { max-width: 480px; text-align: center;
-		              background: var(--rc-grad-surface, #13151c); border: 1px solid var(--rc-border2, #1e2130);
-		              border-radius: 16px; padding: 3rem 2.5rem;
-		              box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+					  background: var(--rc-grad-surface, #13151c); border: 1px solid var(--rc-border2, #1e2130);
+					  border-radius: 16px; padding: 3rem 2.5rem;
+					  box-shadow: 0 24px 60px rgba(0,0,0,.45); }
 		.rc-403-code { font-family: var(--rc-mono, monospace); font-size: 4rem; font-weight: 700;
-		               line-height: 1; color: var(--rc-accent, #00e5a0); margin-bottom: .5rem;
-		               letter-spacing: .05em; }
+					   line-height: 1; color: var(--rc-accent, #00e5a0); margin-bottom: .5rem;
+					   letter-spacing: .05em; }
 		.rc-403-title { font-family: var(--rc-mono, monospace); font-size: 1.5rem; font-weight: 700;
-		                margin: 0 0 .75rem; color: var(--rc-text, #e8eaf0); }
+						margin: 0 0 .75rem; color: var(--rc-text, #e8eaf0); }
 		.rc-403-text { color: var(--rc-muted, #9da2b0); line-height: 1.6; margin: 0 0 1.75rem; }
 		.rc-403-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap;
-		                  margin-bottom: 1.5rem; }
+						  margin-bottom: 1.5rem; }
 		.rc-403-foot { font-size: .85rem; color: var(--rc-muted, #9da2b0); margin: 0; }
 		.rc-403-foot a { color: var(--rc-accent, #00e5a0); }
 		@media (max-width: 460px) { .rc-403-box { padding: 2rem 1.5rem; } }
