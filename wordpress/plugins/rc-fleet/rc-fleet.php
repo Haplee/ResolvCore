@@ -148,6 +148,13 @@ function rc_fleet_rest_post( WP_REST_Request $req ) {
         return new WP_Error( 'rc_fleet_invalid_email', 'client_email requerido', [ 'status' => 400 ] );
     }
 
+    // Payload de OPTIMIZACION: el agente sube el acta tras optimizar. No es un
+    // diagnostico, asi que solo sellamos optim_at en la fila del host (no se
+    // recalcula el score). Se distingue por la clave "optimizacion".
+    if ( isset( $body['optimizacion'] ) && is_array( $body['optimizacion'] ) ) {
+        return rc_fleet_rest_post_optim( $client_email, $body );
+    }
+
     $diag = $body['diagnostico'] ?? [];
     if ( ! is_array( $diag ) || empty( $diag['_meta'] ) ) {
         return new WP_Error( 'rc_fleet_invalid_diag', 'falta diagnostico._meta', [ 'status' => 400 ] );
@@ -204,6 +211,65 @@ function rc_fleet_rest_post( WP_REST_Request $req ) {
         'id'      => $id,
         'host_id' => $host_id,
         'score'   => $score,
+    ] );
+}
+
+/**
+ * Registra el acta de optimización de un host: sella optim_at.
+ *
+ * No recalcula last_score (la optimización no es un diagnóstico). Si el host aún
+ * no existe en la flota, crea una fila mínima para no perder el registro.
+ *
+ * @param string $client_email Email ya validado del cliente.
+ * @param array  $body         Cuerpo JSON con la clave 'optimizacion'.
+ * @return WP_REST_Response
+ */
+function rc_fleet_rest_post_optim( string $client_email, array $body ) {
+    $optim    = $body['optimizacion'];
+    $meta     = is_array( $optim['_meta'] ?? null ) ? $optim['_meta'] : [];
+    $hostname = sanitize_text_field( (string) ( $meta['hostname'] ?? 'desconocido' ) );
+    $os       = rc_fleet_normalize_os( (string) ( $meta['plataforma'] ?? '' ) );
+    $host_id  = substr( hash( 'sha256', $client_email . '|' . $hostname ), 0, 64 );
+    $now      = current_time( 'mysql' );
+    $ticket   = isset( $body['ticket_id'] ) ? (int) $body['ticket_id'] : null;
+
+    global $wpdb;
+    $table = $wpdb->prefix . RC_FLEET_TABLE;
+
+    $existing = $wpdb->get_var( $wpdb->prepare(
+        "SELECT id FROM {$table} WHERE client_email=%s AND host_id=%s",
+        $client_email, $host_id
+    ) );
+
+    if ( $existing ) {
+        $data = [ 'optim_at' => $now, 'last_seen' => $now ];
+        if ( $ticket ) { $data['ticket_id'] = $ticket; }
+        $wpdb->update( $table, $data, [ 'id' => (int) $existing ] );
+        $id = (int) $existing;
+        $action = 'optim_updated';
+    } else {
+        // Host aún sin diagnóstico: fila mínima para conservar el acta.
+        $wpdb->insert( $table, [
+            'host_id'      => $host_id,
+            'client_email' => $client_email,
+            'hostname'     => $hostname,
+            'os'           => $os,
+            'last_seen'    => $now,
+            'optim_at'     => $now,
+            'ticket_id'    => $ticket,
+        ] );
+        $id = (int) $wpdb->insert_id;
+        $action = 'optim_created';
+    }
+
+    delete_transient( RC_FLEET_STATS_CACHE );
+
+    return rest_ensure_response( [
+        'ok'       => true,
+        'action'   => $action,
+        'id'       => $id,
+        'host_id'  => $host_id,
+        'optim_at' => $now,
     ] );
 }
 
