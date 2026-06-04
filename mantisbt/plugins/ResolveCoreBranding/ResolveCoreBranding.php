@@ -112,14 +112,15 @@ const initMenuToggle = () => {
 	});
 };
 
-// Arregla el enlace de la marca del navbar. $g_logo_url='https://resolvecore.website'
-// es absoluto, pero el helper de URL de Mantis le antepone el short_path ('/') al
-// renderizar, dejando href="/https://resolvecore.website" -> nginx lo trata como
-// ruta relativa a mantis.* y devuelve 404. Una barra delante de un esquema http(s)
-// siempre es erronea: la quitamos. Cubre .navbar-brand y cualquier otro link igual.
+// Arregla el enlace de la marca del navbar.
+// A veces Mantis prepend el path completo y otras el short_path, resultando en:
+// "/https://resolvecore.website" o "https://mantis.resolvecore.website/https://resolvecore.website"
 const fixBrandLink = () => {
-	document.querySelectorAll('a[href^="/http://"], a[href^="/https://"]').forEach((a) => {
-		a.setAttribute('href', a.getAttribute('href').slice(1));
+	document.querySelectorAll('a').forEach((a) => {
+		const href = a.getAttribute('href') || '';
+		if (href.includes('https://resolvecore.website') && href !== 'https://resolvecore.website') {
+			a.setAttribute('href', 'https://resolvecore.website');
+		}
 	});
 };
 
