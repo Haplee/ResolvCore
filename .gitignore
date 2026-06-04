@@ -53,6 +53,12 @@ reparaciones/
 wordpress/*.zip
 builds/*.zip
 
+# Kit del cliente construido localmente (construir-kit.ps1). Incluye binarios de
+# terceros (anydesk-portable.exe) — nunca se versiona; se distribuye por Releases/VPS.
+scripts/windows/dist/
+**/resolvecore-kit/
+**/resolvecore-kit.zip
+
 # Vendor MantisBT (instalar con: bash scripts/server/bootstrap-mantis.sh)
 mantisbt-2.28.1/
 

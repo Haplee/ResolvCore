@@ -13,6 +13,34 @@ Estas tareas vienen de una **prueba real del tecnico en Windows**. Son continuac
 
 ---
 
+## Estado de cierre (2026-06-04)
+
+Repaso contra el código committeado: la sesión anterior ya implementó ~90 %; este pending
+no se había marcado. Resumen por tarea y por criterio de validación:
+
+| Tarea | Estado | Nota |
+|---|---|---|
+| T1 Diagnóstico + JSON ampliado | ✅ hecho | Campos y resumen en `diagnostico.ps1/.sh`; schema documentado. |
+| T2 Menú desinstalación CVE | ✅ hecho | 3 SO, doble confirmación, exclusión Spooler/cups. |
+| T3 Informe .txt ASCII + pre-relleno | ✅ hecho | `generar_informe.py` ASCII puro, `--json`/`--vuln-json`/`--ticket`. |
+| T4 Quitar Factura del launcher | ✅ **cerrado 06-04** | Menús ya sin factura; `generar_factura.py` movido a `_archivo/common/` (faltaba el `git mv`). |
+| T5 Bug WSL parse error | ✅ hecho | `Invoke-BashScript` usa `$Matches`, sin scriptblock. |
+| T6 `reparaciones/<ticket>/` | ✅ hecho | `--ticket` + fallback `sin-ticket/` + `RC_REPARACIONES_DIR`. |
+| T7 Web rol/nav/logout/bloqueo | ✅ hecho | `login_redirect`, nav condicional, guard `status≥30`, logout. |
+| T8 Responsive móvil + Mantis | ⚠️ **reforzado 06-04** | Guard `overflow-x`, regla `100vw` confinada a desktop, toggle Mantis por delegación. **Pendiente validación visual del autor en móvil real.** |
+
+| Criterio | Estado |
+|---|---|
+| 9 (sintaxis Bash/Python/PHP) | ✅ verificado en Linux (`bash -n`, `py_compile`, `php -l`). |
+| 9 (sintaxis PowerShell) | ⏳ a verificar por el autor en Windows (sin `pwsh` en este entorno). |
+| 2, 11, 12 (JSON / ticket / fallback) | ⏳ a verificar por el autor en Windows (`diagnostico.ps1 --ticket`). |
+| 5, 6 (informe ASCII + pre-relleno) | ✅ verificado (plantilla 0 bytes no-ASCII). |
+| 7 (menú sin factura) | ✅ launchers sin opción Factura. |
+| 13–16 (web) | ⏳ a verificar por el autor en producción (login/roles/logout). |
+| 8 (responsive) | ⏳ a validar por el autor en móvil real tras el push. |
+
+---
+
 ## Restricciones globales
 
 - **Spooler:** siempre se reporta, nunca se toca ni se desinstala.
