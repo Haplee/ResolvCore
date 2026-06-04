@@ -260,7 +260,7 @@ function resolvecore_scripts() {
 		array(),
 		null
 	);
-	wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), array(), '3.2.1' );
+	wp_enqueue_style( 'resolvecore-style', get_stylesheet_uri(), array(), '3.2.2' );
 }
 add_action( 'wp_enqueue_scripts', 'resolvecore_scripts' );
 

@@ -43,9 +43,6 @@ $rc_is_cliente = ! $rc_is_tech && in_array( 'rc_cliente', $rc_user_roles, true )
 		</ul>
 		</li>
 		<?php endif; // cierra if !$rc_is_cliente (dropdown Recursos) ?>
-		<?php if ( $rc_is_tech ) : ?>
-		<li><a href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>">Area de tecnicos</a></li>
-		<?php endif; ?>
 	</ul>
 	<?php if ( $rc_is_tech ) : ?>
 	<a class="rc-header-cta" href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>">Panel tecnico</a>
