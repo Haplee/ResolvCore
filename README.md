@@ -75,6 +75,16 @@
 <table>
 <tr>
 <td width="50%" align="center">
+<img src="docs/capturas/mar20-mantisbt-web/11_web-demo-interactiva-diagnostico.png" alt="Demo interactiva de diagnóstico" width="100%"><br>
+<sub><b>Demo interactiva</b> — simula el diagnóstico (terminal, score 0-100, CVEs) con datos de ejemplo</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/capturas/mar20-mantisbt-web/10_web-seccion-modulos.png" alt="Sección de módulos de la web" width="100%"><br>
+<sub><b>Módulos del servicio</b> — diagnóstico, optimización, CVE, panel multiplataforma, actualizaciones</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
 <img src="docs/capturas/mar20-mantisbt-web/01_web-resolvecore-homepage-hero.png" alt="Web pública ResolveCore" width="100%"><br>
 <sub><b>Web pública</b> — landing del servicio (tema dark custom, sin frameworks CSS)</sub>
 </td>
