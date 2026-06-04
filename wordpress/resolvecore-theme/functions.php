@@ -616,16 +616,16 @@ function rc_provision_pages() {
 
 	// slug => [ título, plantilla, contenido (shortcode o vacío) ].
 	$pages = array(
-		'registro'      => array( 'Crear cuenta',        'page-registro.php',     '[rc_registro_cliente]' ),
-		'dashboard'     => array( 'Mi panel',            'page-dashboard.php',    '[rc_cliente_dashboard]' ),
-		'docs'          => array( 'Documentación',       'page-docs.php',         '' ),
-		'changelog'     => array( 'Changelog',           'page-changelog.php',    '' ),
-		'fleet-status'  => array( 'Estado de la flota',  'page-fleet-status.php', '' ),
-		'tecnicos'      => array( 'Área de técnicos',    'page-tecnicos.php',     '' ),
-		'contacto'      => array( 'Contacto',            'page-contacto.php',     '' ),
-		'aviso-legal'   => array( 'Aviso legal',         'page-aviso-legal.php',  '' ),
-		'privacidad'    => array( 'Política de privacidad', 'page-privacidad.php', '' ),
-		'cookies'       => array( 'Política de cookies', 'page-cookies.php',      '' ),
+		'registro'     => array( 'Crear cuenta', 'page-registro.php', '[rc_registro_cliente]' ),
+		'dashboard'    => array( 'Mi panel', 'page-dashboard.php', '[rc_cliente_dashboard]' ),
+		'docs'         => array( 'Documentación', 'page-docs.php', '' ),
+		'changelog'    => array( 'Changelog', 'page-changelog.php', '' ),
+		'fleet-status' => array( 'Estado de la flota', 'page-fleet-status.php', '' ),
+		'tecnicos'     => array( 'Área de técnicos', 'page-tecnicos.php', '' ),
+		'contacto'     => array( 'Contacto', 'page-contacto.php', '' ),
+		'aviso-legal'  => array( 'Aviso legal', 'page-aviso-legal.php', '' ),
+		'privacidad'   => array( 'Política de privacidad', 'page-privacidad.php', '' ),
+		'cookies'      => array( 'Política de cookies', 'page-cookies.php', '' ),
 	);
 
 	foreach ( $pages as $slug => $cfg ) {
@@ -1143,11 +1143,14 @@ function rc_invoices_install(): void {
 	update_option( 'rc_invoices_db_ver', RC_INVOICES_DB_VER );
 }
 
-add_action( 'after_setup_theme', function () {
-	if ( (string) get_option( 'rc_invoices_db_ver', '0' ) !== RC_INVOICES_DB_VER ) {
-		rc_invoices_install();
+add_action(
+	'after_setup_theme',
+	function () {
+		if ( (string) get_option( 'rc_invoices_db_ver', '0' ) !== RC_INVOICES_DB_VER ) {
+			rc_invoices_install();
+		}
 	}
-} );
+);
 
 /**
  * Devuelve la factura del ticket; si no existe, asigna el siguiente número
@@ -1160,10 +1163,14 @@ function rc_invoice_get_or_create( int $ticket_id, string $cliente, string $tecn
 	global $wpdb;
 	$table = rc_invoices_table();
 
-	$row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT * FROM {$table} WHERE ticket_id = %d ORDER BY id ASC LIMIT 1",
-		$ticket_id
-	), ARRAY_A );
+	$row = $wpdb->get_row(
+		$wpdb->prepare(
+			'SELECT * FROM %i WHERE ticket_id = %d ORDER BY id ASC LIMIT 1',
+			$table,
+			$ticket_id
+		),
+		ARRAY_A
+	);
 
 	if ( $row ) {
 		return array(
@@ -1185,25 +1192,31 @@ function rc_invoice_get_or_create( int $ticket_id, string $cliente, string $tecn
 
 	// Reintenta ante colisión de seq (UNIQUE year+seq) por emisiones concurrentes.
 	for ( $attempt = 0; $attempt < 5; $attempt++ ) {
-		$seq    = 1 + (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COALESCE(MAX(seq),0) FROM {$table} WHERE year = %d",
-			$year
-		) );
+		$seq    = 1 + (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COALESCE(MAX(seq),0) FROM %i WHERE year = %d',
+				$table,
+				$year
+			)
+		);
 		$numero = sprintf( 'F-%d-%04d', $year, $seq );
 
-		$ok = $wpdb->insert( $table, array(
-			'year'      => $year,
-			'seq'       => $seq,
-			'numero'    => $numero,
-			'ticket_id' => $ticket_id,
-			'cliente'   => $cliente,
-			'tecnico'   => $tecnico,
-			'horas'     => $horas,
-			'tarifa'    => $tarifa,
-			'base'      => $base,
-			'iva'       => $iva,
-			'total'     => round( $base + $iva, 2 ),
-		) );
+		$ok = $wpdb->insert(
+			$table,
+			array(
+				'year'      => $year,
+				'seq'       => $seq,
+				'numero'    => $numero,
+				'ticket_id' => $ticket_id,
+				'cliente'   => $cliente,
+				'tecnico'   => $tecnico,
+				'horas'     => $horas,
+				'tarifa'    => $tarifa,
+				'base'      => $base,
+				'iva'       => $iva,
+				'total'     => round( $base + $iva, 2 ),
+			)
+		);
 
 		if ( false !== $ok ) {
 			break;
