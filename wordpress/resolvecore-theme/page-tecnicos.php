@@ -1005,6 +1005,12 @@ get_header();
 	/* Tabla de "que instala" sin desbordar (scroll horizontal si hace falta). */
 	.rc-dl-includes { overflow-x: auto; }
 	.rc-tec-wrap { padding: 0 1rem; }
+
+	/* Refuerzo defensivo: ningun contenedor debe exceder el viewport y las grids/
+	   flex deben poder encoger (min-width:0 evita que un hijo con texto largo
+	   fuerce ancho mayor que la pantalla). */
+	.rc-tec-wrap, .rc-dl-card, .rc-terminal, .rc-terminal-body { max-width: 100%; }
+	.rc-tec-status-grid, .rc-dash-grid, .rc-tec-bar-nav, .rc-dl-meta > div { min-width: 0; }
 }
 </style>
 

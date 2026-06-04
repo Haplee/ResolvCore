@@ -55,7 +55,7 @@
 
 ## Resumen ejecutivo
 
-**ResolveCore** es una plataforma de soporte técnico remoto estructurada en 7 fases: solicitud → ticket (MantisBT) → conexión remota (AnyDesk) → diagnóstico (PowerShell/Bash/Python) → resolución → informe PDF → facturación.
+**ResolveCore** es una plataforma de soporte técnico remoto estructurada en 7 fases: solicitud → ticket (MantisBT) → conexión remota (AnyDesk) → diagnóstico (PowerShell/Bash/Python) → resolución → informe `.txt` (plantilla rellenada a mano por el técnico) → facturación (MantisBT).
 
 **Propuesta de valor**
 
@@ -76,8 +76,8 @@ flowchart LR
     C -->|3. Asigna| D[Técnico]
     D -->|4. Conecta| E[AnyDesk]
     E -->|5. Ejecuta script| F[Diagnóstico\ncross-platform]
-    F -->|JSON + CVEs| G[Informe HTML/PDF]
-    G -->|6. Adjunto al ticket| C
+    F -->|JSON + CVEs| G[Informe .txt\nrellenado a mano]
+    G -->|6. Subido al ticket| C
     C -->|7. Facturación| A
 ```
 
@@ -88,14 +88,14 @@ flowchart LR
 | Componente | Tecnología | Versión | Rol |
 |---|---|---|---|
 | Frontend / CMS | WordPress (PHP) | 6.x / 8.2+ | Web pública, formulario de contacto |
-| Tema | resolvecore-theme | 3.0.0 | Dark theme custom, sin frameworks CSS |
-| Plugin integración | rc-mantisbt | 1.0.0 | Crea tickets MantisBT desde el formulario |
-| Gestión tickets | MantisBT | 2.27 LTS | REST API, campos personalizados, plugins |
+| Tema | resolvecore-theme | 3.2.2 | Dark theme custom, sin frameworks CSS |
+| Plugins WP | rc-core · rc-mantisbt · rc-fleet · rc-tech | — | Clientes, tickets MantisBT, panel flota, panel técnico |
+| Gestión tickets | MantisBT | 2.28 | REST API, campos personalizados, plugins |
 | Scripts Windows | PowerShell | 5.1+ | Diagnóstico, optimización, informes |
-| Scripts Linux/macOS | Bash | 4+ | Diagnóstico, optimización |
+| Scripts Linux | Bash | 4+ | Diagnóstico, optimización |
 | Scripts Android | Bash (ADB) | — | Diagnóstico remoto vía ADB |
 | Escáner vulns/red | Python | 3.8+ stdlib | NVD, CISA KEV, OSV, EPSS, Nmap |
-| Informe técnico | HTML → PDF | — | wkhtmltopdf / DomPDF (en desarrollo) |
+| Informe técnico | Texto plano (`.txt`) | — | Plantilla rellenada a mano por el técnico (sin PDF) |
 | Base de datos | MariaDB / MySQL | 10.4+ / 8.0+ | MantisBT + vulnerabilidades |
 | Acceso remoto | AnyDesk | — | Conexión al equipo del cliente |
 | Entorno dev | LocalWP | — | PHP 8.2, nginx, MySQL local |
@@ -110,69 +110,64 @@ ResolveCore/
 ├── wordpress/
 │   ├── resolvecore-theme/          Tema dark custom (PHP + CSS + JS vanilla)
 │   │   ├── front-page.php          Landing page con hero, servicios, precios, contacto
-│   │   ├── page-docs.php           Página de documentación pública
-│   │   ├── page-changelog.php      Historial de versiones
-│   │   ├── page-contacto.php       Formulario de soporte
-│   │   ├── page-tecnicos.php       Portal técnicos (requiere rol Editor, descarga kit)
-│   │   ├── header.php / footer.php Layout global
-│   │   ├── functions.php           Hooks, AJAX, integración MantisBT, handler descargas técnicos
+│   │   ├── page-dashboard.php      Panel del cliente (tickets, solicitar informe)
+│   │   ├── page-tecnicos.php       Portal técnicos (rol Editor/Admin, descarga kit)
+│   │   ├── page-docs / page-changelog / page-contacto / page-registro ...
+│   │   ├── header.php / footer.php Layout global (nav condicional por rol)
+│   │   ├── functions.php           Hooks, AJAX, login_redirect, handler descargas técnicos
 │   │   ├── style.css               Variables CSS, layout, responsive
-│   │   └── assets/
-│   │       ├── js/main.js          JS vanilla (formulario AJAX, nav)
-│   │       └── logo/               SVG + PNG (dark / light / icon)
-│   └── plugins/rc-mantisbt/        Plugin integración MantisBT vía REST
-│       ├── rc-mantisbt.php         Plugin principal + panel de ajustes
-│       └── includes/
-│           └── class-mantis-api.php  Cliente REST (create_issue, get_issue...)
+│   │   └── assets/{js,logo}/       JS vanilla + logos (dark / light / icon / favicons)
+│   └── plugins/
+│       ├── rc-core/                Alta de clientes rc_cliente + dashboard + registro
+│       ├── rc-mantisbt/            Integración MantisBT vía REST (RC_Mantis_API)
+│       ├── rc-fleet/               Panel de flota (REST agregado, sin datos sensibles)
+│       └── rc-tech/                Panel técnico (cola, SLA, alertas, timeline)
 ├── mantisbt/
-│   ├── docker-compose.yml          Stack local: MantisBT 2.27 + MySQL 5.7
-│   ├── config/
-│   │   ├── config_inc.php          Config real (local, no commiteada)
-│   │   └── config_inc.php.template Plantilla para producción
-│   ├── sql/
-│   │   ├── mantisbt-db.sql         Dump local (no commiteado)
-│   │   └── resolvecore-setup.sql   Categorías + campos personalizados ResolveCore
-│   └── plugins/                    EventLog, Kanban, SetDuedate, Reminder, mailtemplate, source-integration
+│   ├── docker-compose.yml          Stack local: vimagick/mantisbt + MySQL (localhost:8989)
+│   ├── config/config_inc.php       Branding white-label + ajustes (local)
+│   ├── sql/resolvecore-setup.sql   Categorías + campos personalizados ResolveCore
+│   └── plugins/ResolveCoreBranding/  Plugin de marca (logo, footer, favicon, fixes JS)
 ├── scripts/
 │   ├── windows/
 │   │   ├── ResolveCore.ps1         TUI launcher (menú interactivo)
-│   │   ├── diagnostico.ps1         Diagnóstico completo v4.1.0
-│   │   └── optimizacion.ps1        Optimización con --dry-run y --undo
+│   │   ├── diagnostico.ps1         Diagnóstico completo v2.1 (JSON + resumen en pantalla)
+│   │   └── optimizacion.ps1        Optimización v2.0 (--dry-run / --undo)
 │   ├── linux/
 │   │   ├── ResolveCore.sh          TUI launcher Linux
-│   │   ├── diagnostico.sh          Diagnóstico completo v3.2.0
-│   │   └── optimizacion.sh         Optimización con --dry-run v3.2.0
-│   ├── macos/                      Equivalente Linux para macOS
-│   ├── android/                    Diagnóstico + optimización vía ADB
-│   ├── common/                     Python — Hexagonal Architecture
-│   │   ├── domain/                 Modelos: Host, Vulnerability, Service, AttachmentResult
-│   │   ├── ports/                  Interfaces: HostIntelSource, MantisAttachmentSink
-│   │   ├── adapters/               Implementaciones: mantis_rest.py
-│   │   ├── buscar_vulnerabilidades.py  Motor CVE multi-feed (NVD/KEV/OSV/EPSS)
-│   │   ├── escaner_nmap.py         Escáner de puertos (Nmap wrapper)
-│   │   └── adjuntar_informe_mantis.py  CLI fase 2 — sube PDF a ticket vía API REST
+│   │   ├── diagnostico.sh          Diagnóstico completo v3.1 (JSON + resumen)
+│   │   └── optimizacion.sh         Optimización v2.0 (--dry-run)
+│   ├── android/                    Diagnóstico v2.2 + optimización vía ADB
+│   ├── common/                     Python — arquitectura hexagonal (sin clases)
+│   │   ├── domain/models.py        Entidades como dicts: host, vulnerabilidad, servicio
+│   │   ├── ports/                  Contratos (docstrings): vuln_source, inventory_source...
+│   │   ├── adapters/               nvd_rest, kev_rest, osv_rest, nmap_local, inventario_local
+│   │   ├── buscar_vulnerabilidades.py  Motor CVE multi-feed v3.0 (NVD/KEV/OSV) + --salida-json
+│   │   ├── generar_informe.py      Plantilla informe .txt (pre-rellena desde el diagnóstico)
+│   │   └── adjuntar_informe_mantis.py  CLI legacy de subida vía API REST
 │   ├── servicios/                  Servicios adicionales (congelación + clonación + kit)
 │   │   ├── congelacion/            congelacion-windows.ps1 + congelacion-linux.sh
 │   │   ├── clonacion/              registrar-imagen.sh + verificar-imagen.sh
 │   │   ├── kit/                    construir-kit.ps1 (genera resolvecore-kit.zip)
-│   │   ├── install.ps1             Bootstrap servicios Windows (Chocolatey + WSL + AnyDesk)
-│   │   └── install.sh              Bootstrap servicios Linux (jq + btrfs-progs + snapper)
-│   ├── setup/                      Setup entorno técnico (Linux + Windows)
-│   ├── server/                     Bootstrap VPS (post-install.sh, bootstrap-mantis.sh, setup-downloads-dir.sh)
-│   └── diagnosticos/               Salidas JSON + HTML generadas (gitignored)
-├── reports/
-│   └── informe.html                Plantilla HTML del informe técnico
+│   │   ├── install.ps1             Bootstrap Windows (Chocolatey + WSL + AnyDesk)
+│   │   └── install.sh              Bootstrap Linux (jq + btrfs-progs + snapper)
+│   └── server/                     Bootstrap + ops VPS (post-install, deploy, backup, mantis-branding...)
 ├── vulnerabilities/
 │   └── migrations/                 SQL idempotentes (0001_init.sql)
-├── assets/logo/                    Logos SVG + PNG (dark / light / icon)
+├── assets/logo/                    Logos SVG + PNG canónicos (dark / light / icon)
+├── _archivo/                       Código y mockups archivados (preview/, factura, escaner_nmap...)
 └── docs/
     ├── INDEX.md                    Índice navegable de toda la documentación
     ├── defensa/                    Docs para tribunal y tutor (defensa-tfg, informe-tutor...)
     ├── tecnica/                    Docs técnicas del sistema (stack, entornos, servicios...)
     ├── scripting/                  Arquitectura scripts, schemas JSON, regex
     ├── ER/                         Diagrama entidad-relación de la BD de MantisBT (PDF/PNG/SVG)
-    └── capturas/                   Evidencias del sprint (lun19, mar20)
+    └── capturas/                   Evidencias (entornos, mantisbt-web, workbench)
 ```
+
+> El informe `reports/informe.html` (HTML→PDF) y los scripts `macos/` y `setup/`
+> se retiraron del árbol activo. El informe es hoy una plantilla `.txt` que el
+> técnico rellena a mano; macOS queda como ROADMAP. Código retirado conservado en
+> `_archivo/` (restaurable con `git mv`).
 
 ---
 
@@ -188,7 +183,7 @@ ResolveCore/
 | PowerShell (Windows) | 5.1 (incluido en Win 10/11) |
 | Bash (Linux / macOS) | 4.0 |
 | Python (scanner CVE) | 3.8 |
-| MantisBT | 2.27 LTS |
+| MantisBT | 2.28 |
 | Docker + Compose | 20.x+ |
 
 ### 1. Entorno de desarrollo (LocalWP)
@@ -244,9 +239,8 @@ pwsh ./scripts/windows/ResolveCore.ps1
 ```
 
 ```bash
-# Linux / macOS — menú interactivo
+# Linux — menú interactivo
 bash ./scripts/linux/ResolveCore.sh
-bash ./scripts/macos/ResolveCore.sh
 ```
 
 ### Diagnóstico directo
@@ -283,11 +277,11 @@ bash ./scripts/linux/optimizacion.sh --undo
 ### Escáner de vulnerabilidades y red
 
 ```bash
-# CVE multi-feed (NVD + CISA KEV + OSV + EPSS)
-python3 scripts/common/buscar_vulnerabilidades.py --output json
+# CVE multi-feed por plataforma (NVD + CISA KEV + OSV). Exporta JSON limpio.
+python3 scripts/common/buscar_vulnerabilidades.py --plataforma linux --salida-json /tmp/vuln.json
 
-# Escáner de puertos (requiere nmap instalado)
-python3 scripts/common/escaner_nmap.py
+# Generar la plantilla de informe .txt (pre-rellena desde el diagnóstico)
+python3 scripts/common/generar_informe.py --json diagnostico.json --ticket 42
 ```
 
 ---
@@ -298,12 +292,12 @@ python3 scripts/common/escaner_nmap.py
 
 | SO | Versión | Métricas recogidas |
 |---|---|---|
-| Windows | v4.1.0 | CPU/RAM/disco, servicios, Event Log, Windows Update, software instalado (con conteo real), red, firewall |
-| Linux | v3.2.0 | CPU/RAM/disco, systemd, journalctl, puertos, sensores (lm-sensors), S.M.A.R.T., paquetes |
-| macOS | — | system_profiler, pmset, vm_stat, brew, puertos |
-| Android | v2.2.0 | Batería, almacenamiento, apps, conectividad (vía ADB) |
+| Windows | v2.1 | CPU/RAM/disco, servicios críticos, top procesos, red (IP/GW/DNS/puertos), S.M.A.R.T., uptime/build, Defender/Firewall/UAC, actualizaciones |
+| Linux | v3.1 | CPU/RAM/disco, systemd, top procesos, puertos, S.M.A.R.T., firewall (ufw/iptables), paquetes pendientes |
+| Android | v2.2 | Dispositivo, batería, almacenamiento, apps, conectividad (vía ADB) |
+| macOS | ROADMAP | No incluido en el árbol activo (ver `_archivo/` y CLAUDE.md A11/D5) |
 
-Todos generan JSON estructurado + HTML visual con inyección segura (`<script type="application/json">`).
+Cada script guarda el JSON estructurado e **imprime un resumen legible en terminal**. Con `--ticket <N>` organiza la salida en `reparaciones/<NNNNN>/`.
 
 ### 2. Optimización
 
@@ -319,10 +313,9 @@ Todos generan JSON estructurado + HTML visual con inyección segura (`<script ty
 
 | Módulo | Feed / Herramienta | Salida |
 |---|---|---|
-| `buscar_vulnerabilidades.py` | NVD (NIST), CISA KEV, OSV, EPSS-FIRST | JSON, HTML, texto |
-| `escaner_nmap.py` | Nmap (wrapper) | Puertos, servicios, OS |
+| `buscar_vulnerabilidades.py` v3.0 | NVD (NIST), CISA KEV, OSV | JSON (`--salida-json`), avisos filtrados KEV/CVSS≥7.0 |
 
-Sin dependencias `pip` — solo Python 3.8+ stdlib.
+Tras el escaneo, los launchers leen el JSON y ofrecen un **menú de desinstalación** del software vulnerable (selección + confirmación explícita; Spooler/cups y componentes del sistema siempre excluidos). El escáner de puertos Nmap (`escaner_nmap.py`) queda archivado en `_archivo/common/`. Sin dependencias `pip` — solo Python 3.8+ stdlib.
 
 ### 4. Plugin WordPress: rc-mantisbt
 
@@ -386,7 +379,7 @@ curl -fsSL https://resolvecore.website/install.sh | sudo bash
 - Troubleshooting expandible (UAC, BOM, BTRFS, ExecutionPolicy)
 - Checklist post-instalación persistido en `localStorage`
 - Widget tickets MantisBT del técnico (filtrados por handler/reporter)
-- **Dashboard ticket activo (pinned, sticky)**: cronómetro intervención, añadir nota a Mantis, subir informe PDF/HTML al ticket, generar factura HTML imprimible (`?rc_factura=ID&cliente=X&horas=N&tarifa=€` con IVA 21%), AnyDesk launcher (`anydesk:ID` + historial 5 sesiones)
+- **Dashboard ticket activo (pinned, sticky)**: cronómetro intervención, añadir nota a Mantis, subir el informe `.txt` al ticket, AnyDesk launcher (`anydesk:ID` + historial 5 sesiones). La factura la gestiona MantisBT, no el panel.
 - **Command palette (`Ctrl`+`K`)**: búsqueda fuzzy de tabs, acciones, links y tickets
 - **Tail logs en vivo**: últimas 20 entradas `wp_rc_download_log`, refresh 10 s
 - Atajos teclado: `1` `2` `3` tabs · `C` copia oneliner · `Ctrl`+`K` palette · `Esc` cierra
@@ -401,27 +394,19 @@ curl -fsSL https://resolvecore.website/install.sh | sudo bash
 | `rc_tech_my_tickets` | Tickets Mantis del user | Cache 2 min |
 | `rc_tech_logs_tail` | Últimas 20 descargas | — |
 | `rc_tech_add_note` | Nota al ticket pinned | `MantisApi::add_note()` |
-| `rc_tech_upload_informe` | Adjunta PDF/HTML | `MantisApi::attach_file()` |
+| `rc_tech_upload_informe` | Adjunta el informe `.txt` | `MantisApi::attach_file()` |
 | `rc_tech_factura_inline` | Factura HTML imprimible | `template_redirect` |
 | `rc_tech_build_readme` | README cliente personalizado | `admin-post.php` |
 
 **Tabla DB nueva:** `wp_rc_download_log` (id, file_key, user_login, ip, ua, downloaded_at) — creada vía `dbDelta` en `after_setup_theme`. Auditoría completa de descargas técnicos.
 
-**Despliegue VPS:** symlink permanente `/var/www/wp/wp-content/themes/resolvecore-theme` → `/opt/resolvecore-git/wordpress/resolvecore-theme`. `git pull` actualiza al instante.
+**Despliegue VPS:** symlink permanente `/var/www/wp/wp-content/themes/resolvecore-theme` → `/opt/resolvecore-repo/wordpress/resolvecore-theme`. `git pull` actualiza al instante.
 
 URL en producción: `https://resolvecore.website/tecnicos/`
 
-### 4d. Adjuntador de informes MantisBT (fase 2)
+### 4d. Adjuntador de informes MantisBT (legacy)
 
-CLI Python hexagonal que sube el PDF generado al ticket correspondiente vía `POST /api/rest/issues/{id}/files`. Stdlib-only (sin `requests`), credenciales por entorno:
-
-```bash
-export MANTIS_URL=https://mantis.tu-dominio.tld
-export MANTIS_TOKEN=xxxxxxxxxxxxxxxx
-python3 scripts/common/adjuntar_informe_mantis.py --ticket 42 --pdf informe_42.pdf
-```
-
-Ver [`docs/defensa/mantisbt-api-integracion.md`](docs/defensa/mantisbt-api-integracion.md).
+CLI Python hexagonal (stdlib-only) que sube un fichero al ticket vía `POST /api/rest/issues/{id}/files`. Se conserva como utilidad, pero **no forma parte del flujo actual**: el informe `.txt` lo sube el técnico **a mano** a MantisBT. Ver [`docs/defensa/mantisbt-api-integracion.md`](docs/defensa/mantisbt-api-integracion.md).
 
 ### 4c. Plugin Fleet Panel (rc-fleet)
 
@@ -438,7 +423,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 - **`--dry-run`** respetado en todas las fases de optimización (cache, logs, sysctl, servicios).
 - **Backup automático** de sysctl / registro antes de cualquier optimización.
 - **`--undo`** revierte al estado guardado anteriormente.
-- **Inyección JSON segura** en informes HTML: JSON en `<script type="application/json">`, parseado con `JSON.parse()`. Evita XSS si un valor contiene `</script>`.
+- **Informe `.txt` 100% ASCII**: sin HTML ni ejecución; evita mojibake (`Nº`→`Nro.`) y cualquier vector de inyección. En la web, salidas escapadas con `esc_html()`/`esc_attr()` (WPCS).
 - **Spooler excluido por política**: la cola de impresión nunca se toca.
 - **Credenciales fuera del repo**: `wp-config.php`, `config_inc.php` y tokens vía variables de entorno. Los archivos de configuración con valores reales están en `.gitignore`.
 - **Reglas udev ADB** con lista de vendor IDs oficiales de Google (sin `ATTR{idVendor}=="*"` que es sintaxis inválida).
@@ -458,7 +443,7 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | [`docs/tecnica/flujo-sistema.md`](docs/tecnica/flujo-sistema.md) | Diagrama del flujo completo del sistema |
 | [`docs/tecnica/mantis-integration.md`](docs/tecnica/mantis-integration.md) | Integración WordPress ↔ MantisBT (endpoints, payloads) |
 | [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Clonación, congelación, acceso remoto, cifrado |
-| [`docs/scripting/arquitectura-scripting.md`](docs/scripting/arquitectura-scripting.md) | Arquitectura de módulos: diagnóstico → JSON → informe → PDF |
+| [`docs/scripting/arquitectura-scripting.md`](docs/scripting/arquitectura-scripting.md) | Arquitectura de módulos: diagnóstico → JSON → plantilla informe `.txt` |
 | [`docs/scripting/schema-diagnostico.md`](docs/scripting/schema-diagnostico.md) | Esquema JSON unificado de diagnóstico |
 | [`docs/scripting/schema-servicios-adicionales.md`](docs/scripting/schema-servicios-adicionales.md) | Esquemas JSON de congelación, clonación y kit |
 | [`docs/tecnica/servicios-adicionales.md`](docs/tecnica/servicios-adicionales.md) | Justificación técnica servicios adicionales |
@@ -470,10 +455,10 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 
 | Versión | Objetivo |
 |---|---|
-| **v1.2** ✅ | Generación PDF automática (wkhtmltopdf) + adjuntador MantisBT API REST + Fleet Panel + despliegue VPS (deploy-ionos.sh, Let's Encrypt, hardening) |
+| **v1.2** ✅ | Informe `.txt` rellenado a mano + menú desinstalación CVE + Fleet Panel + servicios (congelación/clonación/kit) + despliegue VPS (deploy-ionos.sh, Let's Encrypt, hardening) |
 | **v1.3** | Sincronización NVD → tabla `rc_vulnerabilities` (cron semanal) |
-| **v1.4** | Migración wkhtmltopdf → DomPDF (wkhtmltopdf deprecado upstream) |
-| **v2.0** | Facturación: pago por servicio + suscripción (cron) |
+| **v1.4** | Diagnóstico macOS (`scripts/macos/`) con paridad Linux |
+| **v2.0** | Facturación avanzada en MantisBT: pago por servicio + suscripción (cron) |
 | **v3.0** | App nativa Android (Kotlin + Jetpack Compose + Material 3) |
 
 ---
@@ -484,18 +469,17 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 |---|---|
 | Versión | **1.2.0-beta** |
 | Entrega TFG | **5 de junio de 2026** |
-| Plataformas | Windows · Linux · macOS · Android |
 | Web | Desplegada en VPS Ionos (nginx + PHP-FPM 8.3 + MariaDB + Let's Encrypt) |
 | MantisBT | Docker local ✅ · VPS productivo ✅ |
-| Flujo end-to-end | Formulario WP → ticket MantisBT ✅ |
-| Informe HTML | Generado por scripts ✅ |
-| Informe PDF | Generado (wkhtmltopdf) + adjuntado al ticket vía API REST ✅ |
+| Flujo end-to-end | Formulario WP → cuenta cliente → ticket MantisBT ✅ |
+| Informe técnico | Plantilla `.txt` rellenada a mano, subida al ticket por el técnico ✅ |
+| Plataformas | Windows · Linux · Android (macOS = ROADMAP) |
 | Fleet Panel | Endpoint REST + página pública agregada ✅ |
 | Servicios adicionales | Congelación (Win+Linux) · Clonación · Kit implantación ✅ |
 | Portal técnicos | `/tecnicos/` WP + `/downloads/` nginx con htpasswd ✅ |
-| Escáner CVE | NVD · CISA KEV · OSV · EPSS ✅ |
+| Escáner CVE | NVD · CISA KEV · OSV + menú desinstalación en los launchers ✅ |
 | CI lint | shellcheck · PSScriptAnalyzer · PHPCS WPCS · ruff (4/4 verde, bloqueante) |
-| Última actualización | 26 de mayo de 2026 |
+| Última actualización | 4 de junio de 2026 |
 
 ### Versiones por componente
 
@@ -504,18 +488,18 @@ Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. P�
 | Componente | Path | Versión | Política |
 |---|---|---|---|
 | Producto (release tag) | repo root | `1.2.0-beta` | SemVer; bump al cerrar hito de roadmap |
-| Tema WordPress | `wordpress/resolvecore-theme/` | `3.2.0` | SemVer; bump al cambiar layout o paleta |
+| Tema WordPress | `wordpress/resolvecore-theme/` | `3.2.2` | SemVer; bump al cambiar layout o paleta |
+| Plugin WP (rc-core) | `wordpress/plugins/rc-core/` | `1.5.2` | SemVer; alta de clientes `rc_cliente`, dashboard + registro, integración Mantis |
 | Plugin WP (rc-mantisbt) | `wordpress/plugins/rc-mantisbt/` | `1.0.0` | SemVer; bump al cambiar payload Mantis o API REST consumida |
-| Plugin WP (rc-core) | `wordpress/plugins/rc-core/` | `1.5.1` | SemVer; alta de clientes `rc_cliente`, dashboard + registro, integración Mantis |
-| Diagnóstico Windows | `scripts/windows/diagnostico.ps1` | `4.1.0` | SemVer; **major** rompe schema JSON |
-| Optimización Windows | `scripts/windows/optimizacion.ps1` | `3.2.0` | SemVer; **major** cambia comportamiento `--undo` |
-| Diagnóstico Linux | `scripts/linux/diagnostico.sh` | `3.2.0` | SemVer; **major** rompe schema JSON |
-| Optimización Linux | `scripts/linux/optimizacion.sh` | `3.2.0` | SemVer |
-| Diagnóstico macOS | `scripts/macos/diagnostico.sh` | `0.1.0-demo` | **stub** — sin SemVer hasta dejar de ser stub |
-| Optimización macOS | `scripts/macos/optimizacion.sh` | `0.1.0-demo` | **stub** |
-| Diagnóstico Android | `scripts/android/diagnostico.sh` | `2.2.0` | SemVer; **major** rompe schema JSON |
-| Optimización Android | `scripts/android/optimizacion.sh` | `3.1.0` | SemVer |
-| Escáner CVE (Python) | `scripts/common/buscar_vulnerabilidades.py` | `1.0.0` | SemVer; **major** cambia feeds o salida JSON |
+| Plugin WP (rc-fleet) | `wordpress/plugins/rc-fleet/` | `0.2.2` | SemVer; panel de flota (REST agregado) |
+| Plugin WP (rc-tech) | `wordpress/plugins/rc-tech/` | `0.2.0` | SemVer; panel técnico (cola, SLA, alertas) |
+| Diagnóstico Windows | `scripts/windows/diagnostico.ps1` | `2.1` | SemVer; **major** rompe schema JSON |
+| Optimización Windows | `scripts/windows/optimizacion.ps1` | `2.0` | SemVer; **major** cambia comportamiento `--undo` |
+| Diagnóstico Linux | `scripts/linux/diagnostico.sh` | `3.1` | SemVer; **major** rompe schema JSON |
+| Optimización Linux | `scripts/linux/optimizacion.sh` | `2.0` | SemVer |
+| Diagnóstico Android | `scripts/android/diagnostico.sh` | `2.2` | SemVer; **major** rompe schema JSON |
+| Optimización Android | `scripts/android/optimizacion.sh` | `2.0` | SemVer |
+| Escáner CVE (Python) | `scripts/common/buscar_vulnerabilidades.py` | `3.0` | SemVer; **major** cambia feeds o salida JSON |
 | Schema JSON diagnóstico | `docs/scripting/schema-diagnostico.md` | trackea SO con menor versión | Bump al añadir/quitar campos obligatorios |
 
 **Regla de paridad**: el `_meta.version` del JSON emitido por cada script de diagnóstico **debe coincidir** con la versión declarada en cabecera. Si modificas el schema, bump major y actualiza `docs/scripting/schema-diagnostico.md` (CLAUDE.md lo exige).

@@ -13,6 +13,7 @@ restaurables con un `git mv` de vuelta a `scripts/`.
 | `common/generar_factura.py` | `scripts/common/` | Generador de factura de la intervención. |
 | `common/adjuntar_informe_mantis.py` | `scripts/common/` | Adjunta el informe PDF al ticket vía REST de MantisBT. |
 | `common/adapters/mantis_rest.py` | `scripts/common/adapters/` | Adapter `MantisRestSink` (multipart sobre `urllib`, stdlib). |
+| `preview/` (8 ficheros) | `preview/` (raíz) | Mockups HTML estáticos (home, dashboard, tech, mantis, registro) previos al tema WordPress vivo. Referencia de diseño; no los sirve nada en producción. |
 
 ## Restaurar uno
 

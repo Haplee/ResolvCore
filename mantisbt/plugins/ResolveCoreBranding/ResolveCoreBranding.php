@@ -13,7 +13,7 @@
  *   3. Instalar y activar.
  *
  * Autor:   Francisco Vidal Mateo (GitHub: Haplee)
- * Versión: 1.1
+ * Versión: 1.2
  */
 
 class ResolveCoreBranding extends MantisPlugin {
@@ -21,7 +21,7 @@ class ResolveCoreBranding extends MantisPlugin {
 	function register() {
 		$this->name        = 'ResolveCore Branding';
 		$this->description = 'Logo, título y CSS corporativo de ResolveCore.';
-		$this->version     = '1.1';
+		$this->version     = '1.2';
 		$this->author      = 'Francisco Vidal Mateo';
 		$this->url         = 'https://resolvecore.website';
 	}
@@ -94,19 +94,32 @@ const fixAnonymousFields = () => {
 
 // Menu hamburguesa: en movil no se abria. El core de Mantis pinta un toggle con
 // el icono FontAwesome 'fa-bars'; el override !important del CSS de marca podia
-// estar tapando el comportamiento nativo. Enganchamos el click para alternar una
-// clase propia (rc-menu-open) que el CSS responsive de abajo hace visible.
-// Si la version de Mantis usa otro selector, ampliar la lista de candidatos.
+// estar tapando el comportamiento nativo. Alternamos una clase propia
+// (rc-menu-open) que el CSS responsive de abajo hace visible.
+// Usamos DELEGACION en document: el listener no depende de que el nodo exista
+// al cargar, asi funciona aunque Mantis repinte la cabecera tras DOMContentLoaded.
+// Si la version de Mantis usa otro selector, ampliar las listas de candidatos.
+const RC_TOGGLE_SEL = '.fa-bars, .fa-navicon, i.menu-toggle, #menu-toggle, .menu-collapse, a.bars';
+const RC_MENU_SEL = '#sidebar, .responsive-menu, #navbar, nav.menu, ul.menu, #nav-container';
 const initMenuToggle = () => {
-	const icon = document.querySelector('.fa-bars, .fa-navicon, i.menu-toggle');
-	const toggle = icon ? (icon.closest('a, button') || icon)
-		: document.querySelector('#menu-toggle, .menu-collapse, a.bars');
-	const menu = document.querySelector(
-		'#sidebar, .responsive-menu, #navbar, nav.menu, ul.menu, #nav-container');
-	if (!toggle || !menu) return;
-	toggle.addEventListener('click', (e) => {
+	document.addEventListener('click', (e) => {
+		const hit = e.target.closest(RC_TOGGLE_SEL);
+		if (!hit) return;
+		const menu = document.querySelector(RC_MENU_SEL);
+		if (!menu) return;
 		e.preventDefault();
 		menu.classList.toggle('rc-menu-open');
+	});
+};
+
+// Arregla el enlace de la marca del navbar. $g_logo_url='https://resolvecore.website'
+// es absoluto, pero el helper de URL de Mantis le antepone el short_path ('/') al
+// renderizar, dejando href="/https://resolvecore.website" -> nginx lo trata como
+// ruta relativa a mantis.* y devuelve 404. Una barra delante de un esquema http(s)
+// siempre es erronea: la quitamos. Cubre .navbar-brand y cualquier otro link igual.
+const fixBrandLink = () => {
+	document.querySelectorAll('a[href^="/http://"], a[href^="/https://"]').forEach((a) => {
+		a.setAttribute('href', a.getAttribute('href').slice(1));
 	});
 };
 
@@ -144,7 +157,7 @@ const cleanFooter = () => {
 	});
 };
 
-const rcInit = () => { fixAnonymousFields(); initMenuToggle(); cleanFooter(); };
+const rcInit = () => { fixAnonymousFields(); initMenuToggle(); fixBrandLink(); cleanFooter(); };
 if (document.readyState !== 'loading') rcInit();
 else document.addEventListener('DOMContentLoaded', rcInit);
 </script>
@@ -272,6 +285,175 @@ input[type=submit]:hover, input[type=button]:hover, button:hover, .btn:hover {
 footer a[href*="mantisbt.org"],
 #footer img[src*="mantis"] {
 	display: none !important;
+}
+
+/* ── Tema Ace / Bootstrap 3.4 (Mantis 2.x) ────────────────────────────────
+   El core moderno pinta con clases de Ace (ace-mantis.css) y Bootstrap, no
+   con las clases legacy de arriba. Sin estos overrides quedan paneles, navbar,
+   sidebar, modales y tablas en BLANCO sobre el fondo oscuro. Repintamos todo
+   con los mismos tokens de marca. */
+
+/* Contenedores raiz Ace. */
+.main-container, .main-content, .page-content, #main-container,
+.ace-settings-container, .body, .container-fluid {
+	background: transparent !important;
+	color: var(--rc-text) !important;
+}
+
+/* Navbar superior Ace (.navbar / .navbar-default / .ace-nav). */
+.navbar, .navbar-default, .navbar-inner, .ace-nav, .navbar .navbar-container {
+	background: var(--rc-surface) !important;
+	background-image: none !important;
+	border-color: var(--rc-border) !important;
+	box-shadow: none !important;
+}
+.navbar .nav > li > a, .ace-nav > li > a, .navbar-text {
+	color: var(--rc-text) !important;
+}
+.navbar .nav > li > a:hover, .ace-nav > li > a:hover {
+	background: var(--rc-surface2) !important;
+}
+
+/* Sidebar y menu lateral (.sidebar / .nav-list). */
+.sidebar, .nav-list, .sidebar .nav-list {
+	background: var(--rc-surface) !important;
+	border-color: var(--rc-border) !important;
+}
+.nav-list > li > a, .nav-list li a {
+	color: var(--rc-text) !important;
+	border-color: var(--rc-border) !important;
+}
+.nav-list > li:hover > a, .nav-list > li.active > a,
+.nav-list > li.open > a {
+	background: var(--rc-surface2) !important;
+	color: var(--rc-accent) !important;
+}
+.nav-list > li.active > a::before {
+	background: var(--rc-accent) !important;
+}
+
+/* Widgets Ace (la caja blanca de cada panel/seccion). */
+.widget-box, .widget-main, .widget-body, .widget-body .table {
+	background: var(--rc-surface) !important;
+	border-color: var(--rc-border) !important;
+	color: var(--rc-text) !important;
+	box-shadow: none !important;
+}
+.widget-header {
+	background: var(--rc-surface2) !important;
+	color: var(--rc-text) !important;
+	border-color: var(--rc-border) !important;
+}
+.widget-header > .widget-title, .widget-header h1,
+.widget-header h2, .widget-header h3, .widget-header h4, .widget-header h5 {
+	color: var(--rc-text) !important;
+}
+.widget-toolbar { border-color: var(--rc-border) !important; }
+
+/* Paneles / wells / cajas Bootstrap. */
+.panel, .panel-default, .well, .thumbnail, .jumbotron, .popover {
+	background: var(--rc-surface) !important;
+	border-color: var(--rc-border) !important;
+	color: var(--rc-text) !important;
+	box-shadow: none !important;
+}
+.panel-heading, .panel-footer {
+	background: var(--rc-surface2) !important;
+	border-color: var(--rc-border) !important;
+	color: var(--rc-text) !important;
+}
+
+/* Tablas Bootstrap (.table) — la lista de incidencias. */
+.table, .table > thead > tr > th, .table > tbody > tr > td,
+.table > tbody > tr > th, .table-bordered, .table-bordered > tbody > tr > td,
+.table-bordered > thead > tr > th {
+	background-color: transparent !important;
+	border-color: var(--rc-border) !important;
+	color: var(--rc-text) !important;
+}
+.table > thead > tr > th, .table thead th {
+	background: var(--rc-surface2) !important;
+}
+.table-striped > tbody > tr:nth-child(odd) > td,
+.table-striped > tbody > tr:nth-child(odd) > th {
+	background: rgba(255,255,255,.02) !important;
+}
+.table-hover > tbody > tr:hover > td,
+.table-hover > tbody > tr:hover > th {
+	background: rgba(0,229,160,.06) !important;
+}
+
+/* Breadcrumbs. */
+.breadcrumb, .breadcrumbs, .ace-nav .breadcrumb {
+	background: var(--rc-surface2) !important;
+	border-color: var(--rc-border) !important;
+	color: var(--rc-muted) !important;
+}
+.breadcrumb > li > a, .breadcrumbs a { color: var(--rc-accent) !important; }
+
+/* Dropdowns. */
+.dropdown-menu {
+	background: var(--rc-surface2) !important;
+	border-color: var(--rc-border2) !important;
+	box-shadow: 0 6px 20px rgba(0,0,0,.5) !important;
+}
+.dropdown-menu > li > a, .dropdown-menu li a { color: var(--rc-text) !important; }
+.dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus {
+	background: var(--rc-accent) !important;
+	color: #000 !important;
+}
+
+/* Pestanas (.nav-tabs). */
+.nav-tabs { border-color: var(--rc-border) !important; }
+.nav-tabs > li > a { color: var(--rc-muted) !important; border-color: transparent !important; }
+.nav-tabs > li.active > a, .nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+	background: var(--rc-surface) !important;
+	border-color: var(--rc-border) var(--rc-border) transparent !important;
+	color: var(--rc-accent) !important;
+}
+
+/* Modales. */
+.modal-content {
+	background: var(--rc-surface) !important;
+	border-color: var(--rc-border2) !important;
+	color: var(--rc-text) !important;
+}
+.modal-header, .modal-footer { border-color: var(--rc-border) !important; }
+
+/* Inputs Bootstrap (.form-control) ademas de los legacy de arriba. */
+.form-control {
+	background: var(--rc-surface2) !important;
+	color: var(--rc-text) !important;
+	border-color: var(--rc-border2) !important;
+}
+.form-control:focus {
+	border-color: var(--rc-accent) !important;
+	box-shadow: 0 0 0 3px rgba(0,229,160,.12) !important;
+}
+
+/* Alertas / mensajes. */
+.alert {
+	background: var(--rc-surface2) !important;
+	border-color: var(--rc-border2) !important;
+	color: var(--rc-text) !important;
+}
+
+/* Texto auxiliar Ace (gris claro sobre blanco -> ilegible en oscuro). */
+.lighter, .grey, .text-muted, .muted, label, .control-label,
+.bigger-110, .smaller-80, dt, dd, p, span, li, td, th, h1, h2, h3, h4, h5, h6 {
+	color: var(--rc-text);
+}
+.text-muted, .muted, .grey, .lighter { color: var(--rc-muted) !important; }
+
+/* Separadores. */
+hr, .hr { border-color: var(--rc-border) !important; background: var(--rc-border) !important; }
+
+/* Pie Ace del core (lo borra el JS, esto es respaldo visual). */
+.footer, .footer-inner, .footer-content {
+	background: var(--rc-surface) !important;
+	color: var(--rc-muted) !important;
+	border-color: var(--rc-border) !important;
 }
 
 /* ── Responsive movil ─────────────────────────────────────────────────────

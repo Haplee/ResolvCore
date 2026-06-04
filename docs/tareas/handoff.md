@@ -1,6 +1,13 @@
 # Handoff — ResolveCore
 
 > Estado del proyecto al 2026-05-26. Para retomar trabajo o entregar contexto al tutor.
+> **Actualización 2026-06-04:** cerrado el pendiente `docs/tareas/pendiente-2026-06-02-tarde.md`
+> (8 tareas). T1–T3, T5–T7 ya estaban implementadas; T4 cerrada archivando `generar_factura.py`
+> a `_archivo/common/` (los launchers ya no la exponen); T8 (responsive) reforzada en
+> `style.css`/`page-tecnicos.php` + toggle de Mantis por delegación. Validación estática
+> (`bash -n`/`py_compile`/`php -l`) limpia en Linux; falta la verificación PowerShell y la
+> revisión visual en móvil, que hace el autor. Detalle por tarea/criterio en el propio pending
+> y en el changelog de `docs/defensa/defensa-tfg.md` (entrada 2026-06-04).
 
 ---
 

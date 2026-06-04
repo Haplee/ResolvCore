@@ -221,7 +221,7 @@
 	.rc-hero {
 		position: relative; min-height: 100vh;
 		display: flex; align-items: center; justify-content: center;
-		padding: 80px 2.5rem 0; overflow: hidden;
+		padding: 88px 2.5rem 56px; overflow: hidden;
 		text-align: center;
 		background: var(--rc-grad-hero);
 	}
@@ -818,6 +818,41 @@
 	.rc-hcard-pill.ok { color: var(--rc-accent); border-color: rgba(0,229,160,.3); }
 	.rc-hcard-pill.warn { color: #febc2e; border-color: rgba(254,188,46,.3); }
 
+	/* ---- "Algo mas": vida en la tarjeta de diagnostico ---- */
+	/* La entrada (fade) va en el wrapper; la tarjeta no lleva animacion continua
+	   para que el hover-lift no choque con un transform de keyframes. */
+	.rc-hero-visual { position: relative; animation: rcFadeUp .9s .25s ease both; }
+	/* Halo de acento detras de la tarjeta: profundidad y anclaje visual. */
+	.rc-hero-visual::before {
+		content: ''; position: absolute; inset: -14% -10%; z-index: 0;
+		background: radial-gradient(circle at 65% 38%, rgba(0,229,160,.14), transparent 62%);
+		filter: blur(26px); pointer-events: none;
+	}
+	.rc-hero-card {
+		animation: none; position: relative; z-index: 1; will-change: transform;
+		transition: transform .35s ease, box-shadow .35s ease;
+	}
+	.rc-hero-card:hover {
+		transform: translateY(-6px);
+		box-shadow: 0 26px 64px rgba(0,0,0,.5), 0 0 0 1px rgba(0,229,160,.28);
+	}
+	/* Indicador "en vivo" junto al titulo de la tarjeta. */
+	.rc-hcard-title::after {
+		content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 8px;
+		border-radius: 50%; background: var(--rc-accent); vertical-align: middle;
+		animation: rcLive 2s ease-out infinite;
+	}
+	@keyframes rcLive {
+		0%   { box-shadow: 0 0 0 0 rgba(0,229,160,.5); }
+		70%  { box-shadow: 0 0 0 7px rgba(0,229,160,0); }
+		100% { box-shadow: 0 0 0 0 rgba(0,229,160,0); }
+	}
+	/* Las barras de metricas se rellenan al cargar (scaleX desde 0). */
+	@media (prefers-reduced-motion: no-preference) {
+		.rc-hcard-bar i { transform-origin: left; animation: rcBarFill 1.1s .55s cubic-bezier(.4,0,.2,1) both; }
+	}
+	@keyframes rcBarFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
 	@media (max-width: 880px) {
 		.rc-hero--split .rc-hero-inner { grid-template-columns: 1fr; gap: 2.5rem; text-align: center; }
 		.rc-hero--split .rc-hero-content { margin: 0 auto; text-align: center; }
@@ -967,7 +1002,7 @@
 			<div class="rc-hcard-foot">
 			<span class="rc-hcard-pill ok">● 0 críticas</span>
 			<span class="rc-hcard-pill warn">2 avisos</span>
-			<span class="rc-hcard-pill">informe PDF listo</span>
+			<span class="rc-hcard-pill">informe .txt listo</span>
 			</div>
 		</div>
 		</aside>
@@ -1079,8 +1114,8 @@
 	<div class="rc-flow-step">
 		<div class="rc-flow-num">06</div>
 		<div class="rc-flow-icon">◎</div>
-		<div class="rc-flow-title">INFORME PDF</div>
-		<div class="rc-flow-desc">El JSON del diagnóstico se transforma en un informe técnico PDF y se adjunta a la incidencia</div>
+		<div class="rc-flow-title">INFORME .TXT</div>
+		<div class="rc-flow-desc">El JSON del diagnóstico pre-rellena una plantilla de informe .txt que el técnico completa y sube a la incidencia</div>
 	</div>
 	<div class="rc-flow-arrow">→</div>
 	<div class="rc-flow-step">
@@ -1228,8 +1263,8 @@
 			'El escaneo automatizado tarda 3–5 minutos. La sesión completa (diagnóstico + resolución + informe) ronda 30–90 min según incidencia.',
 		),
 		array(
-			'¿Qué incluye el informe PDF?',
-			'Resumen ejecutivo, incidencias detectadas, problemas solucionados, estado actual del equipo, recomendaciones y proyección de vida útil del hardware.',
+			'¿Qué incluye el informe técnico?',
+			'Una plantilla .txt con: resumen ejecutivo, incidencias detectadas, problemas solucionados, estado actual del equipo, recomendaciones y proyección de vida útil del hardware. El técnico la rellena y la sube a tu ticket.',
 		),
 		array(
 			'¿Mis datos están seguros?',
@@ -1590,20 +1625,20 @@ document.querySelectorAll('.rc-vuln-fix').forEach(btn => btn.addEventListener('c
 /* ── Plataformas: prompt + comando real por SO ── */
 const demoPlatforms = {
 	windows: { label: 'Windows', prompt: 'PS C:\\>',
-	cmd: { diagnostico: '.\\ResolveCore.ps1 -Scan -Full',
-			vulnerabilidades: '.\\ResolveCore.ps1 -VulnScan',
-			hardware: '.\\ResolveCore.ps1 -HardwareCheck',
-			optimizacion: '.\\ResolveCore.ps1 -Optimize -Safe' } },
+	cmd: { diagnostico: '.\\diagnostico.ps1 -Ticket 42',
+			vulnerabilidades: 'python buscar_vulnerabilidades.py --plataforma windows --salida-json',
+			hardware: '.\\diagnostico.ps1 -Ticket 42',
+			optimizacion: '.\\optimizacion.ps1 -DryRun' } },
 	linux:   { label: 'Linux', prompt: 'rc@linux:~$',
-	cmd: { diagnostico: 'bash diagnostico.sh --full',
-			vulnerabilidades: 'python3 buscar_vulnerabilidades.py',
-			hardware: 'bash diagnostico.sh --hardware',
-			optimizacion: 'bash optimizacion.sh --safe' } },
+	cmd: { diagnostico: 'bash diagnostico.sh --ticket 42',
+			vulnerabilidades: 'python3 buscar_vulnerabilidades.py --plataforma linux --salida-json',
+			hardware: 'bash diagnostico.sh --ticket 42',
+			optimizacion: 'bash optimizacion.sh --dry-run' } },
 	android: { label: 'Android', prompt: 'rc@android:/ $',
-	cmd: { diagnostico: 'bash diagnostico.sh --adb',
-			vulnerabilidades: 'python3 buscar_vulnerabilidades.py --platform A',
-			hardware: 'bash diagnostico.sh --battery',
-			optimizacion: 'bash optimizacion.sh --trim-cache' } },
+	cmd: { diagnostico: 'bash diagnostico.sh --ticket 42',
+			vulnerabilidades: 'python3 buscar_vulnerabilidades.py --plataforma android',
+			hardware: 'bash diagnostico.sh',
+			optimizacion: 'bash optimizacion.sh' } },
 };
 
 /* Un texto puede ser string o un objeto {windows,linux,android} */
@@ -1676,7 +1711,7 @@ const demoModules = {
 				android: '✓ Batería: 86% — 320 ciclos' }],
 		['dim', '─────────────────────────────'],
 		['info', '→ Vida útil estimada: ~18 meses'],
-		['ok', '✓ Proyección guardada en el informe PDF'],
+		['ok', '✓ Proyeccion anadida a la plantilla de informe .txt'],
 	],
 	stats: [ { num: 79, label: 'Salud /100' }, { num: 94, label: '% salud SSD' }, { num: 18, label: 'meses de vida' } ],
 	vulns: [],

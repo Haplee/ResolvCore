@@ -4,7 +4,7 @@ Theme URI: https://github.com/Haplee
 Author: Francisco Vidal Mateo
 Author URI: https://github.com/Haplee
 Description: Tema landing page para ResolveCore — plataforma cross-platform de mantenimiento y optimización de sistemas.
-Version: 3.2.1
+Version: 3.2.2
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tags: one-page, dark, full-width-template, custom-colors
@@ -49,6 +49,11 @@ Text Domain: resolvecore
    ESTILOS COMPARTIDOS
 ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Guard global contra desbordamiento horizontal: en movil cualquier hijo que
+   calcule un ancho mayor que el viewport (flex sin min-width:0, 100vw con
+   scrollbar) empujaba el layout y dejaba el footer "corrido" a la derecha. */
+html, body { overflow-x: hidden; }
 
 body {
   background: var(--rc-bg); color: var(--rc-text);
@@ -340,13 +345,19 @@ a:hover { text-decoration: underline; }
   .rc-fab-contact:hover { transform: none; }
 }
 
-.rc-docs-main,
-.rc-cl-main {
-  margin-left: 240px !important;
-  max-width: calc(100vw - 280px) !important;
-  width: calc(100vw - 280px) !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
+/* El override !important del ancho del contenido solo aplica en escritorio (con
+   la sidebar fija de 240px). En movil debe ganar el reset de @media 760px
+   (margin-left:0); sin este min-width el !important empujaba el contenido 240px
+   a la derecha y lo dejaba con ancho calc(100vw-280px) en el telefono. */
+@media (min-width: 761px) {
+  .rc-docs-main,
+  .rc-cl-main {
+    margin-left: 240px !important;
+    max-width: calc(100vw - 280px) !important;
+    width: calc(100vw - 280px) !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
 }
 
 .rc-code-block { overflow-x: auto !important; max-width: 100% !important; }
