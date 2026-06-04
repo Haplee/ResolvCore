@@ -38,18 +38,19 @@
 ## Tabla de contenidos
 
 1. [Resumen ejecutivo](#resumen-ejecutivo)
-2. [Flujo del servicio](#flujo-del-servicio)
-3. [Stack tecnológico](#stack-tecnológico)
-4. [Estructura del repositorio](#estructura-del-repositorio)
-5. [Instalación](#instalación)
-6. [Uso rápido](#uso-rápido)
-7. [Módulos](#módulos)
-8. [Seguridad y reversibilidad](#seguridad-y-reversibilidad)
-9. [Documentación](#documentación)
-10. [Roadmap](#roadmap)
-11. [Estado del proyecto](#estado-del-proyecto)
-12. [Licencia](#licencia)
-13. [Autor](#autor)
+2. [Vista del sistema](#vista-del-sistema)
+3. [Flujo del servicio](#flujo-del-servicio)
+4. [Stack tecnológico](#stack-tecnológico)
+5. [Estructura del repositorio](#estructura-del-repositorio)
+6. [Instalación](#instalación)
+7. [Uso rápido](#uso-rápido)
+8. [Módulos](#módulos)
+9. [Seguridad y reversibilidad](#seguridad-y-reversibilidad)
+10. [Documentación](#documentación)
+11. [Roadmap](#roadmap)
+12. [Estado del proyecto](#estado-del-proyecto)
+13. [Licencia](#licencia)
+14. [Autor](#autor)
 
 ---
 
@@ -64,6 +65,39 @@
 - **Cross-platform real**: paridad funcional entre Windows, Linux, macOS y Android.
 - **Escáner CVE multi-feed** sin dependencias pip — solo Python 3.8+ stdlib.
 - **Cero vendor lock-in**: APIs públicas, software libre, integraciones REST estándar.
+
+---
+
+## Vista del sistema
+
+<div align="center">
+
+<table>
+<tr>
+<td width="50%" align="center">
+<img src="docs/capturas/mar20-mantisbt-web/01_web-resolvecore-homepage-hero.png" alt="Web pública ResolveCore" width="100%"><br>
+<sub><b>Web pública</b> — landing del servicio (tema dark custom, sin frameworks CSS)</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/capturas/mar20-mantisbt-web/08_mantisbt-ticket-creado-desde-formulario.png" alt="Ticket creado desde el formulario web" width="100%"><br>
+<sub><b>Flujo end-to-end</b> — el formulario web crea el ticket en MantisBT vía REST</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
+<img src="docs/capturas/mar20-mantisbt-web/05_mantisbt-api-token-generado.png" alt="Token API MantisBT" width="100%"><br>
+<sub><b>Integración MantisBT</b> — API REST autenticada por token</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/capturas/workbench/04_tickets-por-estado.png" alt="Consulta SQL tickets por estado" width="100%"><br>
+<sub><b>Persistencia</b> — verificación directa en BD (tickets por estado)</sub>
+</td>
+</tr>
+</table>
+
+<sub>Más evidencias en <a href="docs/capturas/">docs/capturas/</a> (entornos · MantisBT · workbench).</sub>
+
+</div>
 
 ---
 
@@ -317,19 +351,31 @@ Cada script guarda el JSON estructurado e **imprime un resumen legible en termin
 
 Tras el escaneo, los launchers leen el JSON y ofrecen un **menú de desinstalación** del software vulnerable (selección + confirmación explícita; Spooler/cups y componentes del sistema siempre excluidos). El escáner de puertos Nmap (`escaner_nmap.py`) queda archivado en `_archivo/common/`. Sin dependencias `pip` — solo Python 3.8+ stdlib.
 
-### 4. Plugin WordPress: rc-mantisbt
+### 4. Plugins WordPress
+
+El núcleo web se reparte en cuatro plugins desacoplados con prefijo `rc_`. Cada uno tiene una responsabilidad única y versiona de forma independiente.
+
+#### 4.1 rc-mantisbt — integración de tickets
 
 Cliente REST para MantisBT 2.x. Provee el transporte (`RC_Mantis_API`) que crea tickets, adjunta informes y consulta estado vía la API REST de MantisBT.
 
 Panel de configuración en **Ajustes → MantisBT**: URL, API Token, ID de proyecto.
 
-### 4c. Plugin WordPress: rc-core
+#### 4.2 rc-core — alta y dashboard de clientes
 
 Funciones de cliente. El formulario público de la home **da de alta una cuenta `rc_cliente`** (no crea ticket) y envía un email de activación con enlace para fijar contraseña. Los tickets se crean luego desde el **dashboard del cliente** (`[rc_cliente_dashboard]`); el alta usa `[rc_registro_cliente]`. Throttle por IP y por email, honeypot anti-spam y purga cron de cuentas no activadas.
 
 > *"¡Solicitud recibida! Te hemos enviado un email para fijar tu contraseña y acceder a tu panel."*
 
-### 4b. Servicios adicionales (congelación · clonación · kit)
+#### 4.3 rc-fleet — panel de flota
+
+Agentes diagnóstico publican su JSON vía `POST /wp-json/rc/v1/fleet` (Bearer). Endpoint público agregado `GET /wp-json/rc/v1/fleet/stats` y página **Estado de la flota** muestran score medio, distribución de salud y recuento por SO — sin emails, hostnames ni IPs.
+
+#### 4.4 rc-tech — panel técnico interno
+
+Lógica de operaciones que consume el portal `/tecnicos/`: cola de tickets, SLA, alertas y timeline (`class-rc-tech-queue`, `-sla`, `-alerts`, `-timeline`). Expone una API REST propia (`class-rc-tech-rest`) y un addon opcional de notificaciones Telegram.
+
+### 5. Servicios adicionales (congelación · clonación · kit)
 
 Scripts operativos en `scripts/servicios/`:
 
@@ -354,7 +400,7 @@ bash scripts/servicios/congelacion/congelacion-linux.sh --action=snapshot --etiq
 bash scripts/servicios/clonacion/registrar-imagen.sh --imagen=/ruta/imagen.img --equipo=pc-cliente-01 --so=linux --estado=limpio
 ```
 
-### 4c. Portal de técnicos
+### 6. Portal de técnicos
 
 Página WordPress protegida en `/tecnicos/` (rol Editor o Admin). Centro de operaciones del técnico.
 
@@ -404,17 +450,13 @@ curl -fsSL https://resolvecore.website/install.sh | sudo bash
 
 URL en producción: `https://resolvecore.website/tecnicos/`
 
-### 4d. Adjuntador de informes MantisBT (legacy)
-
-CLI Python hexagonal (stdlib-only) que sube un fichero al ticket vía `POST /api/rest/issues/{id}/files`. Se conserva como utilidad, pero **no forma parte del flujo actual**: el informe `.txt` lo sube el técnico **a mano** a MantisBT. Ver [`docs/defensa/mantisbt-api-integracion.md`](docs/defensa/mantisbt-api-integracion.md).
-
-### 4c. Plugin Fleet Panel (rc-fleet)
-
-Agentes diagnóstico publican su JSON vía `POST /wp-json/rc/v1/fleet` (Bearer). Endpoint público agregado `GET /wp-json/rc/v1/fleet/stats` y página **Estado de la flota** muestran score medio, distribución de salud y recuento por SO — sin emails, hostnames ni IPs.
-
-### 5. Tema WordPress: resolvecore-theme
+### 7. Tema WordPress: resolvecore-theme
 
 Tema dark custom (sin Bootstrap, sin Tailwind). Paleta `#0a0c10` / `#00e5a0`. Páginas incluidas: landing, documentación, changelog, contacto. Responsive, AJAX nativo.
+
+### 8. Adjuntador de informes MantisBT (legacy)
+
+CLI Python hexagonal (stdlib-only) que sube un fichero al ticket vía `POST /api/rest/issues/{id}/files`. Se conserva como utilidad, pero **no forma parte del flujo actual**: el informe `.txt` lo sube el técnico **a mano** a MantisBT. Ver [`docs/defensa/mantisbt-api-integracion.md`](docs/defensa/mantisbt-api-integracion.md).
 
 ---
 
@@ -521,7 +563,7 @@ El escáner de vulnerabilidades y los scripts de diagnóstico son software libre
 ### Francisco Vidal Mateo
 
 **Técnico Superior en ASIR**  
-*TFG 2024/25 · Plataforma de soporte técnico remoto*
+*TFG ASIR 2025-26 · Plataforma de soporte técnico remoto*
 
 | Plataforma | Enlace |
 |---|---|
