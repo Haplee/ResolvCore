@@ -102,6 +102,23 @@ cat > "$REMOTE_FOOTER" <<'PHP'
 a[href*="mantisbt.org"],
 a[href*="mantisbt.com"] { display: none !important; }
 </style>
+<script>
+// Arregla el enlace de la marca del navbar. $g_logo_url es absoluto
+// ('https://resolvecore.website') pero Mantis le antepone su path al renderizar,
+// dejando href="/https://resolvecore.website" -> el navegador lo resuelve como
+// "https://mantis.resolvecore.website/https://resolvecore.website" -> nginx 404.
+// Normalizamos cualquier <a> cuyo href contenga el dominio pero no sea exacto.
+// Va aqui (footer = $g_bottom_include_page) y no en el plugin porque este footer
+// SI se despliega al VPS (mantis-branding.sh); el plugin no.
+document.addEventListener('DOMContentLoaded', function () {
+	document.querySelectorAll('a').forEach(function (a) {
+		var href = a.getAttribute('href') || '';
+		if (href.indexOf('https://resolvecore.website') !== -1 && href !== 'https://resolvecore.website') {
+			a.setAttribute('href', 'https://resolvecore.website');
+		}
+	});
+});
+</script>
 PHP
 chown www-data:www-data "$REMOTE_FOOTER"
 chmod 0644 "$REMOTE_FOOTER"

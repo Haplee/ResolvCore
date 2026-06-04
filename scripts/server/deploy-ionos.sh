@@ -120,6 +120,13 @@ server {
 server {
     listen 80; server_name mantis.${DOMAIN};
     root /var/www/mantis; index index.php;
+    
+    # Corrige bug de MantisBT: \$g_logo_url absoluto -> Mantis antepone su path ->
+    # href="/https://dominio" -> nginx 404. No se puede capturar el esquema con
+    # ^/(https?://.*) porque merge_slashes (ON por defecto) colapsa // -> / antes
+    # del match. El enlace de marca siempre va a la home: hardcodeamos destino.
+    location ~ ^/https { return 301 https://${DOMAIN}; }
+    
     location / { try_files \$uri \$uri/ /index.php?\$args; }
     location ~ \.php$ { fastcgi_pass unix:/run/php/php${PHP_VERSION}-fpm.sock; include fastcgi_params; fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name; }
 }

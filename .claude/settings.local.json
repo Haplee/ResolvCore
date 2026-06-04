@@ -211,7 +211,8 @@
       "Bash(ls -la \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\graphify-out\")",
       "Bash(dir \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\graphify-out\")",
       "Bash(dir C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\graphify-out\\\\2026-06-03 *)",
-      "WebFetch(domain:franvi.mintlify.app)"
+      "WebFetch(domain:franvi.mintlify.app)",
+      "Bash(grep *)"
     ]
   }
 }
