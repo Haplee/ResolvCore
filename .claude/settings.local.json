@@ -212,7 +212,8 @@
       "Bash(dir \"C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\graphify-out\")",
       "Bash(dir C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\graphify-out\\\\2026-06-03 *)",
       "WebFetch(domain:franvi.mintlify.app)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(shellcheck -S warning scripts/android/diagnostico.sh)"
     ]
   }
 }

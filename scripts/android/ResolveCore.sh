@@ -125,39 +125,30 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; NC='\033[0m'
 
+# Reglas a ancho completo (cadenas fijas: sin calculo de anchura -> nunca se
+# desalinean, a diferencia de las cajas con borde derecho del estilo anterior).
+RC_RULE="  ==================================================================="
+RC_THIN="  -------------------------------------------------------------------"
+
 show_banner() {
     clear
     echo ""
-    echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |                    ${WHITE}RESOLVECORE${NC}                                |"
-    echo -e "  |              ${GRAY}Menu de Herramientas - Android${NC}              |"
-    echo -e "  +---------------------------------------------------------------+"
-    echo ""
-    echo -e "  ${GRAY}Fecha:${NC} $(date '+%Y-%m-%d %H:%M:%S')"
+    echo -e "${WHITE}${RC_RULE}${NC}"
+    echo -e "  ${WHITE}R E S O L V E C O R E${NC}   ${GRAY}.  Menu de Herramientas (Android)${NC}"
+    echo -e "${WHITE}${RC_RULE}${NC}"
+    echo -e "   ${GRAY}Fecha:${NC} $(date '+%Y-%m-%d %H:%M')"
     echo ""
 }
 
 show_menu() {
-    echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |  ${WHITE}SELECCIONA UNA OPCION:${NC}                                        |"
-    echo -e "  +---------------------------------------------------------------+"
-    echo ""
-    echo -e "    ${GREEN}1.${NC}  [DIAGNOSTICO]   - Analisis completo del dispositivo Android"
-    echo -e "                       - Recoge hardware, software, apps, seguridad"
-    echo -e "                       - Genera archivo JSON para ResolveCore"
-    echo ""
-    echo -e "    ${YELLOW}2.${NC}  [OPTIMIZACION]  - Optimizar rendimiento del Android"
-    echo -e "                       - Niveles: Basico, Estandar"
-    echo -e "                       - Incluye limpieza, apps, permisos"
-    echo ""
-    echo -e "    \033[0;35m3.${NC}  [VULNERABILIDADES] - Buscar CVEs (NVD + KEV + OSV)"
-    echo -e "                       - Audita patch de seguridad y apps"
-    echo ""
-    echo -e "    ${CYAN}4.${NC}  [AYUDA]         - Ver guia rapida de uso"
-    echo ""
-    echo -e "    ${RED}5.${NC}  [SALIR]         - Salir del programa"
-    echo ""
-    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  ${WHITE}SELECCIONA UNA OPCION${NC}"
+    echo -e "$RC_THIN"
+    echo -e "   ${GREEN}[1] Diagnostico${NC}       Analisis completo del dispositivo (hw, apps, seguridad)"
+    echo -e "   ${YELLOW}[2] Optimizacion${NC}      Limpieza de cache + acta de acciones (.txt/.json)"
+    echo -e "   ${MAGENTA}[3] Vulnerabilidades${NC}  CVE (NVD + KEV + OSV) + riesgo de compromiso"
+    echo -e "   ${CYAN}[4] Ayuda${NC}             Guia rapida de uso"
+    echo -e "   ${RED}[5] Salir${NC}             Salir del programa"
+    echo -e "$RC_THIN"
     echo ""
 }
 
@@ -267,6 +258,72 @@ ensure_deps() {
     command -v python3 &>/dev/null && command -v adb &>/dev/null
 }
 
+# Muestra la probabilidad estimada de compromiso del dispositivo a partir del
+# JSON del escaner. Modelo agregado: P(compromiso) = 1 - prod(1 - p_i), con p_i
+# por severidad (KEV explotado=0.85, critica>=9.0=0.30, alta 7.0-8.9=0.12,
+# resto=0.02). Indicador de exposicion requerido por el registro del TFG.
+mostrar_riesgo() {
+    local json="$1"
+    [ -f "$json" ] || return
+    local linea
+    linea=$(python3 - "$json" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print("0.0|MINIMO|0|0|0|0|0"); raise SystemExit
+vulns = d.get("vulnerabilidades", [])
+# Fuente unica: si el escaner ya calculo 'riesgo', lo usamos tal cual.
+r = d.get("riesgo")
+if r:
+    f = r.get("factores", {})
+    print("%s|%s|%d|%d|%d|%d|%d" % (
+        r.get("probabilidad_compromiso_pct", 0), r.get("nivel", "MINIMO"),
+        f.get("kev", 0), f.get("criticas", 0), f.get("altas", 0), f.get("otras", 0), len(vulns)))
+    raise SystemExit
+pno = 1.0
+nk = nc = na = no = 0
+for v in vulns:
+    c = v.get("cvss")
+    if v.get("kev"):
+        p = 0.85; nk += 1
+    elif c is not None and c >= 9.0:
+        p = 0.30; nc += 1
+    elif c is not None and c >= 7.0:
+        p = 0.12; na += 1
+    else:
+        p = 0.02; no += 1
+    pno *= (1.0 - p)
+prob = round((1.0 - pno) * 100, 1)
+nivel = ("CRITICO" if prob >= 80 else "ALTO" if prob >= 50 else
+         "MEDIO" if prob >= 25 else "BAJO" if prob >= 5 else "MINIMO")
+print("%.1f|%s|%d|%d|%d|%d|%d" % (prob, nivel, nk, nc, na, no, len(vulns)))
+PY
+)
+    local prob nivel nk nc na no ntot
+    IFS='|' read -r prob nivel nk nc na no ntot <<< "$linea"
+    local col="$GREEN"
+    case "$nivel" in CRITICO|ALTO) col="$RED" ;; MEDIO|BAJO) col="$YELLOW" ;; esac
+    local interp
+    case "$nivel" in
+        CRITICO) interp="Compromiso muy probable: hay CVE explotados activamente. Actuar de inmediato." ;;
+        ALTO)    interp="Exposicion alta: actualizar apps y parche de seguridad con prioridad." ;;
+        MEDIO)   interp="Exposicion moderada: planificar actualizaciones." ;;
+        BAJO)    interp="Exposicion baja: mantener el dispositivo al dia." ;;
+        *)       interp="Sin indicios relevantes de compromiso." ;;
+    esac
+    echo ""
+    echo -e "  ${WHITE}+============== EVALUACION DE RIESGO DE COMPROMISO ==============+${NC}"
+    echo -e "   Probabilidad estimada de compromiso : ${col}${prob}%  [${nivel}]${NC}"
+    echo -e "   Vulnerabilidades explotadas (KEV) ..: ${nk}"
+    echo -e "   Criticas (CVSS >= 9.0) .............: ${nc}"
+    echo -e "   Altas (CVSS 7.0-8.9) ...............: ${na}"
+    echo -e "   Otras / informativas ...............: ${no}   (total ${ntot})"
+    echo -e "   ${GRAY}${interp}${NC}"
+    echo -e "  ${WHITE}+===============================================================+${NC}"
+    echo ""
+}
+
 run_vulnerabilidades() {
     VULN="$(dirname "$SCRIPT_DIR")/common/buscar_vulnerabilidades.py"
     if ! ensure_deps; then
@@ -284,14 +341,15 @@ run_vulnerabilidades() {
         echo ""
         SERIAL=$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')
         if [ -n "$SERIAL" ]; then
-            python3 "$VULN" --plataforma android --serial "$SERIAL" --salida-json /tmp/rc-vuln-android.json >/dev/null \
+            python3 "$VULN" --plataforma android --serial "$SERIAL" --max 300 --salida-json /tmp/rc-vuln-android.json >/dev/null \
                 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         else
-            python3 "$VULN" --plataforma android --salida-json /tmp/rc-vuln-android.json >/dev/null \
+            python3 "$VULN" --plataforma android --max 300 --salida-json /tmp/rc-vuln-android.json >/dev/null \
                 || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         fi
         echo ""
         echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
+        mostrar_riesgo /tmp/rc-vuln-android.json
         desinstalar_vulns_android /tmp/rc-vuln-android.json "$SERIAL"
     else
         echo -e "  ${RED}[X] No encontrado: $VULN${NC}"

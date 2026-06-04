@@ -509,16 +509,52 @@ function Invoke-Vulnerabilidades {
     if (Test-Path $outJson) { Remove-Item $outJson -Force -ErrorAction SilentlyContinue }
 
     try {
-        & $py.Source $script --plataforma windows --salida-json $outJson @args
+        & $py.Source $script --plataforma windows --max 300 --salida-json $outJson @args
         Write-Host ""
         Write-Host "  [OK] Escaneo completado" -ForegroundColor Green
     } catch {
         Write-Host "  [!] Error durante escaneo: $_" -ForegroundColor Yellow
     }
 
+    Show-Riesgo -JsonPath $outJson
     Invoke-DesinstalacionVulns -JsonPath $outJson
 
     Read-Host "  Presiona ENTER"
+}
+
+# Muestra la probabilidad estimada de compromiso del equipo. Lee el campo
+# 'riesgo' que ya calcula el escaner comun (P = 1 - prod(1 - p_i) por severidad).
+# Es el indicador de exposicion que pide el registro del TFG.
+function Show-Riesgo {
+    param([string]$JsonPath)
+    if (-not (Test-Path $JsonPath)) { return }
+    try {
+        $data = Get-Content -Raw -Path $JsonPath -Encoding UTF8 | ConvertFrom-Json
+    } catch { return }
+    $r = $data.riesgo
+    if (-not $r) { return }
+    $col = switch ($r.nivel) {
+        'CRITICO' { 'Red' }    'ALTO' { 'Red' }
+        'MEDIO'   { 'Yellow' } 'BAJO' { 'Yellow' }
+        default   { 'Green' }
+    }
+    $interp = switch ($r.nivel) {
+        'CRITICO' { 'Compromiso muy probable: hay CVE explotados activamente. Actuar de inmediato.' }
+        'ALTO'    { 'Exposicion alta: parchear/actualizar con prioridad.' }
+        'MEDIO'   { 'Exposicion moderada: planificar actualizaciones.' }
+        'BAJO'    { 'Exposicion baja: mantener el sistema al dia.' }
+        default   { 'Sin indicios relevantes de compromiso.' }
+    }
+    Write-Host ""
+    Write-Host "  +============== EVALUACION DE RIESGO DE COMPROMISO ==============+" -ForegroundColor White
+    Write-Host ("   Probabilidad estimada de compromiso : {0}%  [{1}]" -f $r.probabilidad_compromiso_pct, $r.nivel) -ForegroundColor $col
+    Write-Host ("   Vulnerabilidades explotadas (KEV) ..: {0}" -f $r.factores.kev)
+    Write-Host ("   Criticas (CVSS >= 9.0) .............: {0}" -f $r.factores.criticas)
+    Write-Host ("   Altas (CVSS 7.0-8.9) ...............: {0}" -f $r.factores.altas)
+    Write-Host ("   Otras / informativas ...............: {0}" -f $r.factores.otras)
+    Write-Host ("   {0}" -f $interp) -ForegroundColor DarkGray
+    Write-Host "  +===============================================================+" -ForegroundColor White
+    Write-Host ""
 }
 
 # Servicios/componentes que NUNCA se proponen para desinstalar. El Spooler (cola

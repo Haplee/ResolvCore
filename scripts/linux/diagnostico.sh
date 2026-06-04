@@ -77,19 +77,49 @@ info "Recogiendo métricas de $HOST..."
 
 cpu_model=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)
 cpu_cores=$(nproc)
-cpu_load=$(awk '{print $1}' /proc/loadavg)   # carga 1 minuto
+cpu_load=$(awk '{print $1}' /proc/loadavg)    # carga 1 minuto
+cpu_load5=$(awk '{print $2}' /proc/loadavg)   # carga 5 minutos
+cpu_load15=$(awk '{print $3}' /proc/loadavg)  # carga 15 minutos
+
+# Uso global de CPU = 100 - %idle de la segunda muestra de top (la primera es
+# acumulada desde el arranque y no refleja el momento actual). Best-effort.
+cpu_uso=$(top -bn2 -d 0.3 2>/dev/null | awk '/%Cpu/{u=100-$8} END{if(u!="")printf "%.1f",u}')
+
+# Temperatura: 'sensors' si esta; si no, la primera thermal_zone de tipo x86/cpu.
+cpu_temp=""
+if command -v sensors >/dev/null 2>&1; then
+    cpu_temp=$(sensors 2>/dev/null | awk '/^(Tctl|Package id 0|Tdie|Core 0)/{gsub(/[+°C]/,"",$NF); print $NF; exit}')
+fi
+if [ -z "$cpu_temp" ] && [ -r /sys/class/thermal/thermal_zone0/temp ]; then
+    tz=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
+    [ -n "$tz" ] && cpu_temp=$(awk "BEGIN{v=$tz; if(v>1000) v=v/1000; printf \"%.1f\", v}")
+fi
 
 # ── Memoria ─────────────────────────────────────────────────────────────────
 # /proc/meminfo da KiB. Convertimos a GB con dos decimales.
 
-mem_total=$(awk '/MemTotal/    {printf "%.2f", $2/1048576}' /proc/meminfo)
-mem_libre=$(awk '/MemAvailable/{printf "%.2f", $2/1048576}' /proc/meminfo)
+mem_total=$(awk '/^MemTotal/    {printf "%.2f", $2/1048576}' /proc/meminfo)
+mem_libre=$(awk '/^MemAvailable/{printf "%.2f", $2/1048576}' /proc/meminfo)
+mem_usado=$(awk '/^MemTotal/{t=$2} /^MemAvailable/{a=$2} END{printf "%.2f",(t-a)/1048576}' /proc/meminfo)
+swap_total=$(awk '/^SwapTotal/{printf "%.2f", $2/1048576}' /proc/meminfo)
+swap_libre=$(awk '/^SwapFree/ {printf "%.2f", $2/1048576}' /proc/meminfo)
 
 # ── Disco raíz ──────────────────────────────────────────────────────────────
 
 disk_usado=$(df -h  / | awk 'NR==2 {print $3}')
 disk_libre=$(df -h  / | awk 'NR==2 {print $4}')
 disk_porcentaje=$(df / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
+inodos_uso=$(df -i / 2>/dev/null | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
+
+# Todos los sistemas de ficheros reales (excluye tmpfs/devtmpfs/overlay).
+discos_json=""
+while read -r fs total usado libre pct punto; do
+    [ -z "$punto" ] && continue
+    pct=${pct%\%}
+    fs=$(echo "$fs" | sed 's/"/\\"/g'); punto=$(echo "$punto" | sed 's/"/\\"/g')
+    [ -n "$discos_json" ] && discos_json="$discos_json,"
+    discos_json="$discos_json{\"dispositivo\":\"$fs\",\"punto\":\"$punto\",\"usado\":\"$usado\",\"libre\":\"$libre\",\"porcentaje_uso\":${pct:-0}}"
+done < <(df -hPx tmpfs -x devtmpfs -x overlay -x squashfs 2>/dev/null | tail -n +2)
 
 # ── Sistema operativo ───────────────────────────────────────────────────────
 
@@ -107,10 +137,15 @@ uptime_horas=$(awk '{printf "%.1f", $1/3600}' /proc/uptime)
 # pendiente. Si no hay apt-get o falla devolvemos 0.
 
 actualizaciones=0
+actualizaciones_seg=0
 if command -v apt-get >/dev/null 2>&1; then
-    actualizaciones=$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)
+    apt_sim=$(apt-get -s upgrade 2>/dev/null)
+    actualizaciones=$(echo "$apt_sim" | grep -c '^Inst' || true)
+    # Las de seguridad llevan el repo *-security en la linea Inst.
+    actualizaciones_seg=$(echo "$apt_sim" | grep '^Inst' | grep -ci 'security' || true)
 elif command -v dnf >/dev/null 2>&1; then
     actualizaciones=$(dnf -q check-update 2>/dev/null | grep -c '^[a-zA-Z0-9]' || true)
+    actualizaciones_seg=$(dnf -q --security check-update 2>/dev/null | grep -c '^[a-zA-Z0-9]' || true)
 fi
 
 # ── Recogida ampliada (cada bloque tolera fallo: no aborta el diagnostico) ────
@@ -119,12 +154,27 @@ fi
 ultimo_arranque=$(uptime -s 2>/dev/null || echo "")
 
 # Servicios criticos. cups = cola de impresion: SIEMPRE se reporta, nunca se toca.
+# OJO: systemctl is-active devuelve exit!=0 para servicios no activos (imprime
+# 'inactive' y sale con 3). Un 'cmd || echo desconocido' concatenaba ambos con
+# un salto de linea DENTRO del string ("inactive\ndesconocido") y rompia el JSON
+# (Invalid control character). Capturamos la salida tal cual y solo caemos a
+# 'desconocido' si viene vacia.
 servicios_json=""
 for s in ssh cron cups systemd-journald NetworkManager; do
-    estado=$(systemctl is-active "$s" 2>/dev/null || echo "desconocido")
+    estado=$(systemctl is-active "$s" 2>/dev/null)
+    [ -z "$estado" ] && estado="desconocido"
     [ -n "$servicios_json" ] && servicios_json="$servicios_json,"
     servicios_json="$servicios_json{\"nombre\":\"$s\",\"estado\":\"$estado\"}"
 done
+
+# Unidades systemd en estado failed (array de nombres). Senal directa de averia.
+servicios_fallidos_json=""
+while read -r unidad; do
+    [ -z "$unidad" ] && continue
+    unidad=$(echo "$unidad" | sed 's/"/\\"/g')
+    [ -n "$servicios_fallidos_json" ] && servicios_fallidos_json="$servicios_fallidos_json,"
+    servicios_fallidos_json="$servicios_fallidos_json\"$unidad\""
+done < <(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}')
 
 # Top procesos por CPU (nombre/cpu/mem). comm no suele llevar espacios.
 procesos_json=""
@@ -135,9 +185,55 @@ while read -r pcpu pmem pcomm; do
     procesos_json="$procesos_json{\"nombre\":\"$pcomm\",\"cpu\":$pcpu,\"mem\":$pmem}"
 done < <(ps -eo %cpu,%mem,comm --sort=-%cpu 2>/dev/null | tail -n +2 | head -10)
 
+# Top procesos por MEMORIA (complementa el de CPU: a veces el problema es RAM).
+procesos_mem_json=""
+while read -r pmem pcpu pcomm; do
+    [ -z "$pcomm" ] && continue
+    pmem=${pmem:-0}; pcpu=${pcpu:-0}
+    [ -n "$procesos_mem_json" ] && procesos_mem_json="$procesos_mem_json,"
+    procesos_mem_json="$procesos_mem_json{\"nombre\":\"$pcomm\",\"mem\":$pmem,\"cpu\":$pcpu}"
+done < <(ps -eo %mem,%cpu,comm --sort=-%mem 2>/dev/null | tail -n +2 | head -10)
+
+# Paquetes instalados (recuento). dpkg en Debian/Ubuntu, rpm en Fedora/RHEL.
+paquetes_instalados=0
+if command -v dpkg-query >/dev/null 2>&1; then
+    paquetes_instalados=$(dpkg-query -f '.\n' -W 2>/dev/null | wc -l)
+elif command -v rpm >/dev/null 2>&1; then
+    paquetes_instalados=$(rpm -qa 2>/dev/null | wc -l)
+fi
+
+# Usuarios con sesion abierta (array de nombres unicos).
+usuarios_json=""
+while read -r u; do
+    [ -z "$u" ] && continue
+    [ -n "$usuarios_json" ] && usuarios_json="$usuarios_json,"
+    usuarios_json="$usuarios_json\"$u\""
+done < <(who 2>/dev/null | awk '{print $1}' | sort -u)
+
+# GPU (modelo). lspci si esta disponible; vacio si no.
+gpu_modelo=""
+if command -v lspci >/dev/null 2>&1; then
+    gpu_modelo=$(lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/^[^:]*: //; s/"/\\"/g')
+fi
+
 # Red: IP/gateway/DNS + puertos en escucha.
 ip_local=$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | head -1)
 gateway=$(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')
+
+# Interfaces de red (nombre/mac/ip). Excluye loopback.
+interfaces_json=""
+while read -r idx iface rest; do
+    iface=${iface%:}
+    [ "$iface" = "lo" ] && continue
+    [ -z "$iface" ] && continue
+    mac=$(cat "/sys/class/net/$iface/address" 2>/dev/null | tr -d '\n')
+    ip_if=$(ip -4 -o addr show dev "$iface" 2>/dev/null | awk '{print $4}' | head -1)
+    [ -n "$interfaces_json" ] && interfaces_json="$interfaces_json,"
+    interfaces_json="$interfaces_json{\"nombre\":\"$iface\",\"mac\":\"$mac\",\"ip\":\"$ip_if\"}"
+done < <(ip -o link show 2>/dev/null | awk -F': ' '{print $1" "$2}')
+
+# Conexiones TCP establecidas (recuento).
+conexiones_estab=$(ss -tnH state established 2>/dev/null | wc -l)
 dns_json=""
 while read -r d; do
     [ -z "$d" ] && continue
@@ -156,20 +252,63 @@ elif command -v iptables >/dev/null 2>&1; then
     [ "$(iptables -S 2>/dev/null | grep -vc '^-P')" -gt 0 ] 2>/dev/null && firewall="true"
 fi
 
-# SMART del primer disco (requiere smartctl; null si no disponible o sin permiso).
-smart_status="null"
+# Login root por SSH (PermitRootLogin). 'true' si esta explicitamente permitido.
+ssh_root_login="null"
+if [ -r /etc/ssh/sshd_config ]; then
+    prl=$(grep -iE '^\s*PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null | tail -1 | awk '{print tolower($2)}')
+    case "$prl" in
+        yes|prohibit-password|without-password) ssh_root_login="true" ;;
+        no) ssh_root_login="false" ;;
+        *) ssh_root_login="null" ;;
+    esac
+fi
+
+# MAC: AppArmor (Debian/Ubuntu) o SELinux (Fedora/RHEL). "" si ninguno.
+mac_lsm=""
+if command -v aa-status >/dev/null 2>&1 && aa-status --enabled 2>/dev/null; then
+    mac_lsm="apparmor"
+elif command -v getenforce >/dev/null 2>&1; then
+    ge=$(getenforce 2>/dev/null)
+    [ -n "$ge" ] && mac_lsm="selinux:$(echo "$ge" | tr 'A-Z' 'a-z')"
+fi
+
+# fail2ban activo y reinicio pendiente (tras updates de kernel/libc).
+fail2ban="false"
+[ "$(systemctl is-active fail2ban 2>/dev/null)" = "active" ] && fail2ban="true"
+reinicio_requerido="false"
+[ -f /var/run/reboot-required ] && reinicio_requerido="true"
+
+# SMART de cada disco fisico (array). Requiere smartctl + permiso; [] si no.
+disco_smart_json=""
 if command -v smartctl >/dev/null 2>&1; then
-    disk=$(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2=="disk"{print $1; exit}')
-    if [ -n "$disk" ]; then
-        sm=$(smartctl -H "/dev/$disk" 2>/dev/null | grep -i 'overall-health' \
+    while read -r disk; do
+        [ -z "$disk" ] && continue
+        sm=$(smartctl -H "/dev/$disk" 2>/dev/null | grep -iE 'overall-health|SMART Health Status' \
              | awk -F: '{gsub(/^[ \t]+/,"",$2); print $2}')
-        [ -n "$sm" ] && smart_status="\"$sm\""
-    fi
+        [ -z "$sm" ] && sm="desconocido"
+        [ -n "$disco_smart_json" ] && disco_smart_json="$disco_smart_json,"
+        disco_smart_json="$disco_smart_json{\"dispositivo\":\"$disk\",\"salud\":\"$sm\"}"
+    done < <(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2=="disk"{print $1}')
+fi
+
+# Bateria (solo portatiles). null si no hay BAT*.
+bateria_json="null"
+bat_path=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -1)
+if [ -n "$bat_path" ]; then
+    bnivel=$(cat "$bat_path/capacity" 2>/dev/null | tr -d '\n')
+    bestado=$(cat "$bat_path/status" 2>/dev/null | tr -d '\n')
+    bateria_json="{\"nivel\":${bnivel:-0},\"estado\":\"${bestado:-Desconocido}\"}"
 fi
 
 # Blindaje de arrays/cadenas vacias para que el JSON quede valido.
 servicios_json=${servicios_json:-}
+servicios_fallidos_json=${servicios_fallidos_json:-}
 procesos_json=${procesos_json:-}
+procesos_mem_json=${procesos_mem_json:-}
+interfaces_json=${interfaces_json:-}
+usuarios_json=${usuarios_json:-}
+discos_json=${discos_json:-}
+disco_smart_json=${disco_smart_json:-}
 dns_json=${dns_json:-}
 puertos_escucha=${puertos_escucha:-}
 
@@ -179,18 +318,29 @@ puertos_escucha=${puertos_escucha:-}
 # JSON con un valor ausente ("campo": ,).
 cpu_cores=${cpu_cores:-0}
 cpu_load=${cpu_load:-0}
+cpu_load5=${cpu_load5:-0}
+cpu_load15=${cpu_load15:-0}
+cpu_uso=${cpu_uso:-null}
+cpu_temp=${cpu_temp:-null}
 mem_total=${mem_total:-0}
 mem_libre=${mem_libre:-0}
+mem_usado=${mem_usado:-0}
+swap_total=${swap_total:-0}
+swap_libre=${swap_libre:-0}
 uptime_horas=${uptime_horas:-0}
 disk_porcentaje=${disk_porcentaje:-0}
+inodos_uso=${inodos_uso:-0}
 actualizaciones=${actualizaciones:-0}
+actualizaciones_seg=${actualizaciones_seg:-0}
+paquetes_instalados=${paquetes_instalados:-0}
+conexiones_estab=${conexiones_estab:-0}
 
 cat > "$FILE" <<EOF
 {
   "_meta": {
     "plataforma": "linux",
     "hostname": "$HOST",
-    "version": "3.1"
+    "version": "4.0"
   },
   "timestamp": "$(date -Iseconds)",
   "hostname": "$HOST",
@@ -201,36 +351,63 @@ cat > "$FILE" <<EOF
     "nombre": "$os_name",
     "kernel": "$kernel",
     "uptime_horas": $uptime_horas,
-    "ultimo_arranque": "$ultimo_arranque"
+    "ultimo_arranque": "$ultimo_arranque",
+    "reinicio_requerido": $reinicio_requerido
   },
   "cpu": {
     "modelo": "$cpu_model",
     "cores": $cpu_cores,
-    "carga_1min": $cpu_load
+    "carga_1min": $cpu_load,
+    "carga_5min": $cpu_load5,
+    "carga_15min": $cpu_load15,
+    "uso_pct": $cpu_uso,
+    "temperatura_c": $cpu_temp
   },
   "ram": {
     "total_gb": $mem_total,
-    "libre_gb": $mem_libre
+    "libre_gb": $mem_libre,
+    "usado_gb": $mem_usado,
+    "swap_total_gb": $swap_total,
+    "swap_libre_gb": $swap_libre
   },
   "disco": {
     "usado": "$disk_usado",
     "libre": "$disk_libre",
     "porcentaje_uso": $disk_porcentaje
   },
-  "disco_smart": $smart_status,
+  "discos": [$discos_json],
+  "inodos": {
+    "porcentaje_uso": $inodos_uso
+  },
+  "disco_smart": [$disco_smart_json],
   "actualizaciones": {
-    "pendientes": $actualizaciones
+    "pendientes": $actualizaciones,
+    "seguridad": $actualizaciones_seg
+  },
+  "paquetes": {
+    "instalados": $paquetes_instalados
   },
   "servicios_criticos": [$servicios_json],
+  "servicios_fallidos": [$servicios_fallidos_json],
   "procesos_top": [$procesos_json],
+  "procesos_top_mem": [$procesos_mem_json],
+  "bateria": $bateria_json,
+  "gpu": "$gpu_modelo",
+  "usuarios_conectados": [$usuarios_json],
   "red": {
     "ip": "$ip_local",
     "gateway": "$gateway",
     "dns": [$dns_json],
-    "puertos_escucha": [$puertos_escucha]
+    "interfaces": [$interfaces_json],
+    "puertos_escucha": [$puertos_escucha],
+    "conexiones_estab": $conexiones_estab
   },
   "seguridad": {
-    "firewall": $firewall
+    "firewall": $firewall,
+    "ssh_root_login": $ssh_root_login,
+    "mac_lsm": "$mac_lsm",
+    "fail2ban_activo": $fail2ban,
+    "reinicio_requerido": $reinicio_requerido
   }
 }
 EOF
@@ -247,16 +424,23 @@ echo "  +-------------------- RESUMEN DEL DIAGNOSTICO --------------------+"
 echo "   Equipo .......: $HOST"
 echo "   Sistema ......: $os_name ($kernel)"
 echo "   Uptime .......: ${uptime_horas} h"
-echo "   CPU ..........: $cpu_model (${cpu_cores} cores, carga 1min ${cpu_load})"
-echo "   RAM ..........: ${mem_libre} GB libres de ${mem_total} GB"
-echo "   Disco / .....: ${disk_libre} libres (${disk_porcentaje}% usado)"
-[ -n "$ip_local" ] && echo "   Red ..........: IP ${ip_local} | GW ${gateway} | puertos ${puertos_escucha:-(ninguno)}"
-echo "   Firewall .....: $firewall"
-echo "   Updates ......: ${actualizaciones} pendientes"
+echo "   CPU ..........: $cpu_model (${cpu_cores} cores, carga ${cpu_load}/${cpu_load5}/${cpu_load15}, uso ${cpu_uso}%, ${cpu_temp} C)"
+echo "   RAM ..........: ${mem_libre} GB libres de ${mem_total} GB  ·  swap ${swap_libre}/${swap_total} GB"
+echo "   Disco / .....: ${disk_libre} libres (${disk_porcentaje}% usado, inodos ${inodos_uso}%)"
+[ -n "$gpu_modelo" ] && echo "   GPU ..........: $gpu_modelo"
+[ -n "$ip_local" ] && echo "   Red ..........: IP ${ip_local} | GW ${gateway} | con.estab ${conexiones_estab} | puertos ${puertos_escucha:-(ninguno)}"
+echo "   Firewall .....: $firewall  ·  fail2ban $fail2ban  ·  MAC ${mac_lsm:-(ninguno)}  ·  SSH root $ssh_root_login"
+echo "   Updates ......: ${actualizaciones} pendientes (${actualizaciones_seg} de seguridad)"
+[ "$reinicio_requerido" = "true" ] && echo "   [!] Reinicio requerido (actualización de kernel/libc pendiente de aplicar)"
 echo "   Servicios ....: $(echo "$servicios_json" | grep -o '"nombre":"[^"]*","estado":"[^"]*"' | sed 's/"nombre":"//;s/","estado":"/=/;s/"//' | paste -sd' ' -)"
+[ -n "$servicios_fallidos_json" ] && echo "   [!] Servicios FALLIDOS: $(echo "$servicios_fallidos_json" | sed 's/"//g')"
+echo "   Paquetes .....: ${paquetes_instalados} instalados"
 echo "   Top procesos (CPU):"
 ps -eo %cpu,%mem,comm --sort=-%cpu 2>/dev/null | tail -n +2 | head -5 \
     | awk '{printf "     - %-20s cpu=%s%% mem=%s%%\n", $3, $1, $2}'
+echo "   Top procesos (MEM):"
+ps -eo %mem,%cpu,comm --sort=-%mem 2>/dev/null | tail -n +2 | head -5 \
+    | awk '{printf "     - %-20s mem=%s%% cpu=%s%%\n", $3, $1, $2}'
 echo "  +-----------------------------------------------------------------+"
 echo ""
 

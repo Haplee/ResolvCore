@@ -163,51 +163,33 @@ read_ticket_sesion() {
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; MAGENTA='\033[0;35m'; NC='\033[0m'
 
+# Reglas a ancho completo (cadenas fijas: sin calculo de anchura -> nunca se
+# desalinean, a diferencia de las cajas con borde derecho del estilo anterior).
+RC_RULE="  ==================================================================="
+RC_THIN="  -------------------------------------------------------------------"
+
 show_banner() {
     clear
     echo ""
-    echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |                    ${WHITE}RESOLVECORE${NC}                                |"
-    echo -e "  |              ${GRAY}Menu de Herramientas - Linux${NC}                   |"
-    echo -e "  +---------------------------------------------------------------+"
-    echo ""
-    echo -e "  ${GRAY}Equipo:${NC} $(hostname)"
-    echo -e "  ${GRAY}Usuario:${NC} $(whoami)"
-    echo -e "  ${GRAY}Fecha:${NC} $(date '+%Y-%m-%d %H:%M:%S')"
+    echo -e "${WHITE}${RC_RULE}${NC}"
+    echo -e "  ${WHITE}R E S O L V E C O R E${NC}   ${GRAY}.  Menu de Herramientas (Linux)${NC}"
+    echo -e "${WHITE}${RC_RULE}${NC}"
+    echo -e "   ${GRAY}Equipo:${NC} $(hostname)    ${GRAY}Usuario:${NC} $(whoami)    ${GRAY}Fecha:${NC} $(date '+%Y-%m-%d %H:%M')"
     echo ""
 }
 
 show_menu() {
-    echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |  ${WHITE}SELECCIONA UNA OPCION:${NC}                                        |"
-    echo -e "  +---------------------------------------------------------------+"
-    echo ""
-    echo -e "    ${GREEN}1.${NC}  [DIAGNOSTICO]   - Analisis completo del sistema Linux"
-    echo -e "                       - Recoge hardware, software, red, seguridad"
-    echo -e "                       - Genera archivo JSON para ResolveCore"
-    echo ""
-    echo -e "    ${YELLOW}2.${NC}  [OPTIMIZACION]  - Optimizar rendimiento del sistema"
-    echo -e "                       - Niveles: Basico, Estandar, Rendimiento"
-    echo -e "                       - Incluye limpieza, servicios, kernel"
-    echo ""
-    echo -e "    ${MAGENTA}3.${NC}  [VULNERABILIDADES] - Buscar y corregir CVEs"
-    echo -e "                       - Escaneo NVD + CISA KEV + OSV + EPSS"
-    echo -e "                       - Audita configuracion y puertos abiertos"
-    echo ""
-    echo -e "    ${CYAN}4.${NC}  [INFORME]       - Plantilla .txt para rellenar a mano"
-    echo -e "                       - Apartados predefinidos del informe tecnico"
-    echo -e "                       - El tecnico lo sube a MantisBT manualmente"
-    echo ""
-    echo -e "    ${WHITE}5.${NC}  [SERVICIOS]     - Congelacion / Clonacion de sistemas"
-    echo -e "                       - Snapper/BTRFS, registro de imagenes"
-    echo ""
-    echo -e "    ${CYAN}6.${NC}  [AYUDA]         - Ver guia rapida de uso"
-    echo ""
-    echo -e "    ${RED}7.${NC}  [SALIR]         - Salir del programa"
-    echo ""
-    echo -e "    ${GRAY}    (La facturacion se gestiona desde MantisBT, no desde este menu.)${NC}"
-    echo ""
-    echo -e "  +---------------------------------------------------------------+"
+    echo -e "  ${WHITE}SELECCIONA UNA OPCION${NC}"
+    echo -e "$RC_THIN"
+    echo -e "   ${GREEN}[1] Diagnostico${NC}       Analisis completo del sistema (hw, red, seguridad) -> JSON"
+    echo -e "   ${YELLOW}[2] Optimizacion${NC}      Limpieza + acta de acciones (.txt cliente / .json tecnico)"
+    echo -e "   ${MAGENTA}[3] Vulnerabilidades${NC}  CVE (NVD + CISA KEV + OSV) + riesgo de compromiso"
+    echo -e "   ${CYAN}[4] Informe${NC}           Plantilla .txt para rellenar a mano (sube a MantisBT)"
+    echo -e "   ${WHITE}[5] Servicios${NC}         Congelacion / Clonacion de sistemas"
+    echo -e "   ${CYAN}[6] Ayuda${NC}             Guia rapida de uso"
+    echo -e "   ${RED}[7] Salir${NC}             Salir del programa"
+    echo -e "$RC_THIN"
+    echo -e "   ${GRAY}(La facturacion se gestiona desde MantisBT, no desde este menu.)${NC}"
     echo ""
 }
 
@@ -396,6 +378,73 @@ desinstalar_vulns() {
     done
 }
 
+# Muestra la probabilidad estimada de compromiso del equipo a partir del JSON
+# del escaner. Modelo agregado de exposicion: P(compromiso) = 1 - prod(1 - p_i),
+# con p_i por severidad de cada CVE (KEV explotado=0.85, critica>=9.0=0.30,
+# alta 7.0-8.9=0.12, resto=0.02). Asi un solo CVE explotado dispara el riesgo y
+# muchos altos tambien saturan hacia el 100%. Es el indicador que el TFG pide.
+mostrar_riesgo() {
+    local json="$1"
+    [ -f "$json" ] || return
+    local linea
+    linea=$(python3 - "$json" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print("0.0|MINIMO|0|0|0|0|0"); raise SystemExit
+vulns = d.get("vulnerabilidades", [])
+# Fuente unica: si el escaner ya calculo 'riesgo', lo usamos tal cual.
+r = d.get("riesgo")
+if r:
+    f = r.get("factores", {})
+    print("%s|%s|%d|%d|%d|%d|%d" % (
+        r.get("probabilidad_compromiso_pct", 0), r.get("nivel", "MINIMO"),
+        f.get("kev", 0), f.get("criticas", 0), f.get("altas", 0), f.get("otras", 0), len(vulns)))
+    raise SystemExit
+pno = 1.0
+nk = nc = na = no = 0
+for v in vulns:
+    c = v.get("cvss")
+    if v.get("kev"):
+        p = 0.85; nk += 1
+    elif c is not None and c >= 9.0:
+        p = 0.30; nc += 1
+    elif c is not None and c >= 7.0:
+        p = 0.12; na += 1
+    else:
+        p = 0.02; no += 1
+    pno *= (1.0 - p)
+prob = round((1.0 - pno) * 100, 1)
+nivel = ("CRITICO" if prob >= 80 else "ALTO" if prob >= 50 else
+         "MEDIO" if prob >= 25 else "BAJO" if prob >= 5 else "MINIMO")
+print("%.1f|%s|%d|%d|%d|%d|%d" % (prob, nivel, nk, nc, na, no, len(vulns)))
+PY
+)
+    local prob nivel nk nc na no ntot
+    IFS='|' read -r prob nivel nk nc na no ntot <<< "$linea"
+    local col="$GREEN"
+    case "$nivel" in CRITICO|ALTO) col="$RED" ;; MEDIO|BAJO) col="$YELLOW" ;; esac
+    local interp
+    case "$nivel" in
+        CRITICO) interp="Compromiso muy probable: hay CVE explotados activamente. Actuar de inmediato." ;;
+        ALTO)    interp="Exposicion alta: parchear/actualizar con prioridad." ;;
+        MEDIO)   interp="Exposicion moderada: planificar actualizaciones." ;;
+        BAJO)    interp="Exposicion baja: mantener el sistema al dia." ;;
+        *)       interp="Sin indicios relevantes de compromiso." ;;
+    esac
+    echo ""
+    echo -e "  ${WHITE}+============== EVALUACION DE RIESGO DE COMPROMISO ==============+${NC}"
+    echo -e "   Probabilidad estimada de compromiso : ${col}${prob}%  [${nivel}]${NC}"
+    echo -e "   Vulnerabilidades explotadas (KEV) ..: ${nk}"
+    echo -e "   Criticas (CVSS >= 9.0) .............: ${nc}"
+    echo -e "   Altas (CVSS 7.0-8.9) ...............: ${na}"
+    echo -e "   Otras / informativas ...............: ${no}   (total ${ntot})"
+    echo -e "   ${GRAY}${interp}${NC}"
+    echo -e "  ${WHITE}+===============================================================+${NC}"
+    echo ""
+}
+
 run_vulnerabilidades() {
     VULN="$(dirname "$SCRIPT_DIR")/common/buscar_vulnerabilidades.py"
     if ! ensure_python; then
@@ -408,10 +457,13 @@ run_vulnerabilidades() {
         echo -e "  ${YELLOW}Ejecutando escaneo de vulnerabilidades...${NC}"
         echo ""
         # stdout (JSON completo) al fichero; el progreso va por stderr y se ve.
-        python3 "$VULN" --plataforma linux --salida-json /tmp/rc-vuln.json >/dev/null \
+        # --max 300: Linux va por OSV (sin rate limit), asi cubrimos muchos mas
+        # paquetes que el default de 20 sin que el escaneo secuencial se eternice.
+        python3 "$VULN" --plataforma linux --max 300 --salida-json /tmp/rc-vuln.json >/dev/null \
             || echo -e "  ${YELLOW}[!] Escaneo termino con avisos${NC}"
         echo ""
         echo -e "  ${GREEN}[OK] Escaneo completado${NC}"
+        mostrar_riesgo /tmp/rc-vuln.json
         desinstalar_vulns /tmp/rc-vuln.json
     else
         echo -e "  ${RED}[X] No encontrado: $VULN${NC}"
@@ -611,30 +663,48 @@ run_clonacion() {
     local reg="$SERVICIOS_DIR/clonacion/registrar-imagen.sh"
     local ver="$SERVICIOS_DIR/clonacion/verificar-imagen.sh"
 
+    # Manifiesto en una ruta estable y COMPARTIDA entre registrar y verificar.
+    # Sin esto, cada script usaba "./imagenes-manifest.json" relativo al CWD y
+    # 'verificar' no encontraba lo que 'registrar' habia escrito desde otra ruta.
+    local repo_root manifest_dir manifest
+    repo_root="$(dirname "$(dirname "$SCRIPT_DIR")")"
+    manifest_dir="${RC_REPARACIONES_DIR:-$repo_root/reparaciones}"
+    manifest="$manifest_dir/imagenes-manifest.json"
+    mkdir -p "$manifest_dir"
+
     echo -e "    ${CYAN}1.${NC}  Registrar imagen en manifiesto"
     echo -e "    ${CYAN}2.${NC}  Verificar integridad de imagen"
     echo -e "    ${GRAY}3.${NC}  Volver"
     echo ""
+    echo -e "  ${GRAY}Manifiesto: $manifest${NC}"
     read -rp "  Selecciona (1-3): " op
     case "$op" in
         1)
             read -rp "  Ruta imagen o carpeta Clonezilla: " img
-            read -rp "  Nombre del equipo (ej: pc-cliente-01): " equipo
-            read -rp "  SO (windows|linux|macos): " so
-            read -rp "  Estado (limpio|post-instalacion|produccion): " estado
-            read -rp "  Notas (ENTER = ninguna): " notas
-            echo ""
-            echo -e "  ${YELLOW}Calculando SHA-256...${NC}"
-            bash "$reg" --imagen "$img" --equipo "$equipo" --so "$so" \
-                        --estado "$estado" --notas "$notas"
+            # Validar aqui: si la ruta va vacia o no existe, no llamamos al
+            # script (evita el confuso "Faltan argumentos obligatorios").
+            if [[ -z "$img" ]]; then
+                echo -e "  ${RED}[X] Debes indicar la ruta de la imagen.${NC}"
+            elif [[ ! -e "$img" ]]; then
+                echo -e "  ${RED}[X] No existe: $img${NC}"
+            else
+                read -rp "  Nombre del equipo (ej: pc-cliente-01): " equipo
+                read -rp "  SO (windows|linux|macos): " so
+                read -rp "  Estado (limpio|post-instalacion|produccion): " estado
+                read -rp "  Notas (ENTER = ninguna): " notas
+                echo ""
+                echo -e "  ${YELLOW}Calculando SHA-256...${NC}"
+                bash "$reg" --imagen "$img" --equipo "$equipo" --so "$so" \
+                            --estado "$estado" --notas "$notas" --manifest "$manifest"
+            fi
             ;;
         2)
             read -rp "  Ruta imagen (o ENTER para buscar por ID): " img
             if [[ -n "$img" ]]; then
-                bash "$ver" --imagen "$img"
+                bash "$ver" --imagen "$img" --manifest "$manifest"
             else
                 read -rp "  ID del manifiesto: " id
-                bash "$ver" --id "$id"
+                bash "$ver" --id "$id" --manifest "$manifest"
             fi
             ;;
         3) return ;;

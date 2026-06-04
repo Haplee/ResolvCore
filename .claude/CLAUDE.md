@@ -58,6 +58,13 @@ bash ./scripts/linux/diagnostico.sh
 # borrado en 12890ac, recuperable de histórico. Ver auditoría A11/D5.)
 # bash ./scripts/macos/diagnostico.sh
 
+# Optimización + acta de acciones (.txt cliente + .json técnico/flota en
+# reparaciones/<NNNNN>/). --confirm obligatorio; --stop-hogs (Bash) / -StopHogs
+# (PS) ademas detiene los top consumidores no críticos. Ver docs/scripting/schema-optimizacion.md
+bash ./scripts/linux/optimizacion.sh --confirm [--ticket N] [--stop-hogs]
+bash ./scripts/android/optimizacion.sh --confirm [--ticket N] [--stop-hogs]
+pwsh ./scripts/windows/optimizacion.ps1 -Confirm [-Ticket N] [-StopHogs]
+
 # Buscar vulnerabilidades
 python scripts/common/buscar_vulnerabilidades.py
 

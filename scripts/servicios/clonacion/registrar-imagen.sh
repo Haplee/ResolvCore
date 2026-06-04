@@ -74,8 +74,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ── Validaciones ────────────────────────────────────────────────────────────
-if [[ -z "$IMAGEN" || -z "$EQUIPO" || -z "$SO" || -z "$ESTADO" ]]; then
-    echo "Faltan argumentos obligatorios: --imagen --equipo --so --estado" >&2
+# Reportamos SOLO los que faltan (antes se listaban los cuatro siempre, lo que
+# despistaba cuando solo uno estaba vacio).
+FALTAN=()
+[[ -z "$IMAGEN" ]] && FALTAN+=("--imagen")
+[[ -z "$EQUIPO" ]] && FALTAN+=("--equipo")
+[[ -z "$SO"     ]] && FALTAN+=("--so")
+[[ -z "$ESTADO" ]] && FALTAN+=("--estado")
+if [[ ${#FALTAN[@]} -gt 0 ]]; then
+    echo "Faltan argumentos obligatorios: ${FALTAN[*]}" >&2
     exit 1
 fi
 
