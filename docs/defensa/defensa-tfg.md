@@ -26,27 +26,52 @@
 
 ## Tabla de contenidos
 
+> **Nota sobre la paginación:** este documento es la fuente en Markdown, formato
+> que no maneja números de página. La numeración de página exacta que pide el
+> tribunal se genera automáticamente al exportar a Word/PDF aplicando estilos de
+> Título e insertando una *Tabla de contenido automática* (ver
+> [Anexo B — Instrucciones de maquetación](#anexo-b--instrucciones-de-maquetación)).
+
 1. [Idea y motivación](#1-idea-y-motivación)
+   - 1.1 Problema detectado · 1.2 Propuesta de valor · 1.3 Eslogan · 1.4 Justificación académica (ASIR)
 2. [Objetivos y alcance](#2-objetivos-y-alcance)
+   - 2.1 Objetivo principal · 2.2 Objetivos específicos · 2.3 Fuera de alcance (declarado)
 3. [Arquitectura general](#3-arquitectura-general)
+   - 3.1 Capas
 4. [Flujo de servicio (7 fases)](#4-flujo-de-servicio-7-fases)
 5. [Stack técnico](#5-stack-técnico)
 6. [Módulo 1 — Diagnóstico multiplataforma](#6-módulo-1--diagnóstico-multiplataforma)
+   - 6.1 Windows · 6.2 Linux · 6.3 Android · 6.4 macOS (stub) · 6.5 Schema JSON unificado
 7. [Módulo 2 — Optimización del sistema](#7-módulo-2--optimización-del-sistema)
-8. [Módulo 3 — Base de vulnerabilidades CVE](#8-módulo-3--base-de-vulnerabilidades-cve)
+   - 7.1 Qué hace · 7.2 Spooler y procesos de sistema · 7.3 Mecanismos de seguridad · 7.4 Bug crítico Android
+8. [Módulo 3 — Vulnerabilidades CVE](#8-módulo-3--vulnerabilidades-cve-buscar_vulnerabilidadespy-v10)
+   - 8.1 Decisión arquitectónica · 8.2 Pipeline · 8.3 Fuentes públicas · 8.4 Normalización de inventario · 8.5 RiskScore · 8.6 Informes · 8.7 Mensaje al cliente · 8.8 CLI · 8.9 Tabla `rc_vulnerabilities` · 8.10 Defensa académica
 9. [Módulo 4 — MantisBT (tickets)](#9-módulo-4--mantisbt-tickets)
+   - 9.1 Por qué MantisBT · 9.2 Endpoints REST consumidos
 10. [Módulo 5 — Plugin WordPress de integración](#10-módulo-5--plugin-wordpress-de-integración)
+    - 10.1 Estructura · 10.2 Clase `RC_Mantis_API` · 10.3 Helper `rc_mantis_attach_diagnostic()`
 11. [Módulo 6 — Tema WordPress (frontend público)](#11-módulo-6--tema-wordpress-frontend-público)
-12. [Módulo 7 — Informe técnico PDF](#12-módulo-7--informe-técnico-pdf)
+    - 11.1 `resolvecore-theme` · 11.2 Navegación · 11.3 Mejoras · 11.4 Alta de cliente · 11.5 Endurecimiento · 11.6 Privacidad · 11.7 Lighthouse
+12. [Módulo 7 — Informe técnico (.txt)](#12-módulo-7--informe-técnico-txt)
+    - 12.1 Plantilla + generador
 13. [Despliegue / Infraestructura](#13-despliegue--infraestructura)
+    - 13.1 Entornos · 13.2 VPS · 13.3 Opciones evaluadas · 13.4 Despliegue automatizado
 14. [Seguridad y cumplimiento](#14-seguridad-y-cumplimiento)
+    - 14.1 Sanitización · 14.2 Headers HTTP · 14.3 Datos sensibles · 14.4 Operaciones destructivas
 15. [Modelo de negocio](#15-modelo-de-negocio)
-15b. [Servicios adicionales — scripts operativos](#15b-servicios-adicionales--scripts-operativos)
-16. [Decisiones de diseño justificadas](#16-decisiones-de-diseño-justificadas)
-17. [Errores cometidos y aprendizajes](#17-errores-cometidos-y-aprendizajes)
-18. [Demostración en vivo (guion)](#18-demostración-en-vivo-guion)
-19. [Roadmap futuro](#19-roadmap-futuro)
-20. [Bibliografía y referencias](#20-bibliografía-y-referencias)
+    - 15.1 Pago por servicio · 15.2 Suscripción · 15.3 Costes operativos
+16. [Servicios adicionales — scripts operativos](#16-servicios-adicionales--scripts-operativos)
+    - 16.1 Congelación · 16.2 Clonación · 16.3 Kit de implantación · 16.4 Modelo de precios
+17. [Decisiones de diseño justificadas](#17-decisiones-de-diseño-justificadas)
+18. [Errores cometidos y aprendizajes](#18-errores-cometidos-y-aprendizajes)
+19. [Demostración en vivo (guion)](#19-demostración-en-vivo-guion)
+    - 19.1 Material · 19.2 Guion (20 min) · 19.3 Riesgos demo + mitigación
+20. [Roadmap futuro](#20-roadmap-futuro)
+    - 20.1 Corto plazo · 20.2 Medio plazo · 20.3 Largo plazo
+21. [Bibliografía y referencias](#21-bibliografía-y-referencias)
+    - 21.1 Documentación oficial · 21.2 Documentos internos · 21.3 Repositorios
+22. [Anexos](#anexos)
+    - Anexo A — Documentación de scripts · Anexo B — Instrucciones de maquetación
 
 ---
 
@@ -74,6 +99,9 @@ El proyecto integra **todos los bloques curriculares del ciclo**:
 - Seguridad (CVE, headers HTTP, sanitización)
 - Lenguajes de marcas y gestión de información (HTML/CSS/JSON)
 
+![WordPress activo en el entorno local de ResolveCore](../capturas/lun19-entornos-backup/12_wordpress-sitio-activo-resolvecore-local.png)
+*Fig. 9 — Sitio WordPress de ResolveCore funcionando en el entorno local, base sobre la que se integran MantisBT y los scripts.*
+
 ---
 
 ## 2. Objetivos y alcance
@@ -89,14 +117,14 @@ Construir una plataforma operativa que permita a un técnico:
 ### Objetivos específicos
 | ID | Objetivo | Estado |
 |----|----------|--------|
-| O1 | Scripts diagnóstico Windows (PowerShell 5.1+) | ✅ Completado v4.0.0 |
-| O2 | Scripts diagnóstico Linux (Bash) | ✅ Completado v3.0.0 |
-| O3 | Scripts diagnóstico Android (Termux/ADB) | ✅ Completado v2.1.0 |
+| O1 | Scripts diagnóstico Windows (PowerShell 5.1+) | ✅ Completado v2.2.0 |
+| O2 | Scripts diagnóstico Linux (Bash) | ✅ Completado v4.0.0 |
+| O3 | Scripts diagnóstico Android (Termux/ADB) | ✅ Completado v3.0.0 |
 | O4 | Scripts diagnóstico macOS (stub demo) | 🟡 ROADMAP — stub borrado en `12890ac`, en histórico |
-| O5 | Schema JSON cross-platform unificado | ✅ Completado — Windows migrado a `hardware {}` v4.0.0 |
+| O5 | Schema JSON cross-platform unificado | ✅ Completado — modelo **PLANO** con paridad Windows↔Linux (v2.2.0) |
 | O6 | Plugin WP integración MantisBT | ✅ Completado |
 | O7 | Tema WP landing pública | ✅ Completado v3.0.0 |
-| O8 | Generador PDF informes | ✅ Completado — `reports/generate-report.php` + wkhtmltopdf |
+| O8 | Informe técnico al cliente | ✅ Completado — plantilla `.txt` rellenada a mano (`generar_informe.py`); generador HTML→PDF *legacy* opcional |
 | O9 | Base CVE sincronizada con NVD | 🟡 Schema definido, cron pendiente |
 | O10 | Despliegue VPS productivo | 🟡 Scripts listos (`deploy-ionos.sh` + `upload-to-vps.ps1`), pendiente ejecución |
 | O11 | Servicio congelación de sistemas (Windows + Linux) | ✅ Completado — `scripts/servicios/congelacion/` (restaurado) |
@@ -152,6 +180,11 @@ Construir una plataforma operativa que permita a un técnico:
 - **Datos:** MariaDB (Mantis schema + tablas `rc_*` propias) + ficheros JSON locales.
 - **Integración:** REST API MantisBT 2.x + AnyDesk (sesión remota).
 
+> 🖼️ **Fig. 1 (insertar imagen):** exporta el diagrama de capas anterior como
+> imagen — captura del bloque o recréalo en draw.io/Excalidraw — y colócalo aquí.
+> Pie sugerido: *«Fig. 1 — Arquitectura en capas de ResolveCore (presentación,
+> aplicación, datos, integración)».*
+
 ---
 
 ## 4. Flujo de servicio (7 fases)
@@ -163,10 +196,15 @@ Construir una plataforma operativa que permita a un técnico:
 | 3 | Conexión | Técnico | Acceso remoto al equipo (AnyDesk) | Sesión cifrada |
 | 4 | Diagnóstico | Técnico | Ejecuta `diagnostico.ps1`/`.sh` | JSON estructurado |
 | 5 | Resolución | Técnico | Aplica `optimizacion.*`, parches CVE | Logs + estado_previo (undo) |
-| 6 | Informe PDF | Sistema | Genera PDF y lo adjunta al ticket | `informe_TICKET.pdf` |
-| 7 | Facturación | Sistema | Factura por intervención o suscripción | Factura PDF |
+| 6 | Informe | Técnico | Rellena a mano la plantilla `.txt` (`generar_informe.py`) y la sube a MantisBT | `informe_TICKET.txt` |
+| 7 | Facturación | Técnico | Rellena la plantilla de factura `.txt` (`generar_factura.py`) | `factura.txt` |
 
 Cada fase emite un **evento auditable**: log local en cliente, nota en ticket, fichero adjunto. Permite trazabilidad completa de la intervención.
+
+> 🖼️ **Fig. 2 (insertar imagen):** diagrama de flujo de las 7 fases
+> (solicitud → ticket → conexión → diagnóstico → resolución → informe → factura).
+> Recréalo en draw.io a partir de esta tabla. Pie: *«Fig. 2 — Flujo de servicio en
+> 7 fases con su artefacto auditable».*
 
 > 📸 **Evidencia:** Capturas demostrativas de la integración con el sistema de tickets se encuentran en `docs/capturas/20-05-MantisBT/`.
 
@@ -194,20 +232,29 @@ Cada fase emite un **evento auditable**: log local en cliente, nota en ticket, f
 
 ## 6. Módulo 1 — Diagnóstico multiplataforma
 
-### Windows (`scripts/windows/diagnostico.ps1` v4.0.0)
-Recolecta:
-- CPU: modelo, núcleos, carga (Get-CimInstance Win32_Processor reusado)
-- RAM: total, en uso, % libre
-- Disco: capacidad, libre, S.M.A.R.T (predicción fallo)
-- Red: IPs, MACs, gateway, latencia
-- Servicios críticos: estado y modo arranque
+### Windows (`scripts/windows/diagnostico.ps1` v2.2.0)
+Recolecta (modelo **PLANO**: las claves cuelgan de la raíz, no de un sub-objeto `hardware{}`):
+- CPU: nombre, núcleos, carga (`Get-CimInstance Win32_Processor` reusado)
+- RAM: total, libre y swap / archivo de paginación (`Win32_PageFileUsage`)
+- GPU: modelo (`Win32_VideoController`)
+- Disco: capacidad, libre y S.M.A.R.T (predicción de fallo) por unidad
+- Red: IP/gateway/DNS, puertos en escucha, interfaces (nombre/MAC/IP) y conexiones TCP establecidas
+- Servicios: críticos (estado) + servicios automáticos sin arrancar (`servicios_fallidos`)
 - Windows Update: parches pendientes
-- Eventos: últimos errores System/Application
-- Seguridad: Defender activo, firewall, BitLocker
+- Seguridad: Defender activo, firewall, UAC
+- Procesos: top 10 por CPU **y** top 10 por memoria
+- Usuarios con sesión iniciada; reinicio pendiente del sistema
 
-Salida: JSON (v4.0.0 — todos los datos hardware bajo `hardware {}`) + HTML resumen. Exit codes 0/1/2.
+Salida: JSON con marca de tiempo + resumen legible en terminal. Exit codes 0/2.
 
-### Linux (`scripts/linux/diagnostico.sh` v3.0.0)
+> **Paridad Windows ↔ Linux (v2.2.0, 2026-06-05):** el agente Windows se amplió
+> para emitir los mismos datos que ya producía Linux — GPU, interfaces de red,
+> conexiones establecidas, usuarios conectados, swap, top de procesos por memoria,
+> servicios fallidos y reinicio pendiente. La resolución de la carpeta de salida se
+> blindó (`$PSScriptRoot` vacío ya no manda el JSON a `C:\Windows\System32`): el
+> ticket cae siempre en `reparaciones\<NNNNN>\`.
+
+### Linux (`scripts/linux/diagnostico.sh` v4.0.0)
 - `top`/`uptime`/`free -h` → CPU, carga, RAM
 - `df -h`, `lsblk`, `smartctl` → disco
 - `journalctl -p 3` → errores recientes
@@ -215,7 +262,7 @@ Salida: JSON (v4.0.0 — todos los datos hardware bajo `hardware {}`) + HTML res
 - `ss -tulpn` → puertos abiertos
 - `systemctl --failed` → servicios caídos
 
-### Android (`scripts/android/diagnostico.sh` v2.1.0)
+### Android (`scripts/android/diagnostico.sh` v3.0.0)
 - ADB: `dumpsys battery`, `dumpsys meminfo`, `pm list packages`
 - Termux: `getprop`, `df`, `top -n 1`
 - Detección de apps con permisos peligrosos.
@@ -226,37 +273,57 @@ Salida: JSON (v4.0.0 — todos los datos hardware bajo `hardware {}`) + HTML res
 Esqueleto CLI con `--host --user --port --output --dry-run --confirm`. Devuelve JSON placeholder con `_meta.stub: true`. **Decisión consciente:** la versión completa anterior contenía operaciones destructivas (`mdutil off`, `rm -rf ~/Library/Caches`, `networksetup -setdnsservers`) sin guardas — se redujo a stub hasta poder revisar a fondo.
 
 ### Schema JSON unificado
-Documentado en [`docs/schema-diagnostico.md`](../scripting/schema-diagnostico.md). Convenciones:
-- Unidades: GB / MB / MHz / °C / ms
-- Fechas: ISO-8601 UTC
-- Valores desconocidos: `null` literal (nunca `"unknown"`)
-- `_meta { version, plataforma, hostname, generado_en }` obligatorio
-- Todas las plataformas exponen los datos de hardware bajo `hardware {}` (Windows migrado en v4.0.0)
+Documentado en [`docs/scripting/schema-diagnostico.md`](../scripting/schema-diagnostico.md). Convenciones:
+- **Modelo PLANO** en las tres plataformas: las claves (`cpu`, `ram`, `discos`, `red`, …) cuelgan de la raíz, no de un sub-objeto `hardware{}`.
+- Unidades: GB / MB / °C / horas (uptime) / décimas de grado (batería Android)
+- Fechas: ISO-8601
+- Valores desconocidos: `null` literal en Windows; cadena vacía `""` / `0` blindado en Bash (para no romper el JSON generado a mano)
+- `_meta { version, plataforma, hostname }` obligatorio + `timestamp`
+- Versionado SemVer por plataforma (Windows 2.2.0 · Linux 4.0.0 · Android 3.0.0)
 
-Pendiente: actualizar template `reports/informe.html` para leer de `hardware.*` en vez de raíz del JSON.
+![Demo interactiva del diagnóstico en la web de ResolveCore](../capturas/mar20-mantisbt-web/11_web-demo-interactiva-diagnostico.png)
+*Fig. 3 — Demo interactiva del módulo de diagnóstico: el JSON estructurado alimenta el resumen visual por módulo (CPU, RAM, disco, red, seguridad).*
 
-> 📸 **Evidencia:** Capturas de ejecución de los scripts de diagnóstico están disponibles en `docs/capturas/18-05-Scripting/`.
+> 📸 **Evidencia adicional:** capturas de los entornos y la web en `docs/capturas/`.
 
 ---
 
 ## 7. Módulo 2 — Optimización del sistema
 
-### Niveles
-- `ligero`: limpieza temporales, sin tocar servicios.
-- `estandar`: + desactiva BITS, WSearch.
-- `rendimiento`: + DiagTrack, DPS.
-- `extreme`: + SysMain.
+### Qué hace (limpieza única con acta)
+Cada plataforma ejecuta **una limpieza no destructiva** y deja constancia de todo
+lo realizado en un acta doble: `optimizacion.txt` (legible, para el cliente) y
+`optimizacion.json` (estructurado, técnico/flota), en `reparaciones/<NNNNN>/`.
+- **Windows** (`optimizacion.ps1`): vacía TEMP de usuario/sistema/LocalAppData y
+  la caché de Windows Update, vacía la papelera, detecta procesos de alto consumo
+  y reporta los programas de arranque. Mide el espacio liberado en cada paso.
+- **Linux** (`optimizacion.sh`): `apt autoremove`, vaciado del journal, `/tmp`,
+  purga de revisiones antiguas de snap y detección de procesos de alto consumo.
+- **Android** (`optimizacion.sh` vía ADB): `pm trim-caches` (limpia solo caché,
+  **conserva** sesiones y datos), borra `/data/local/tmp` y detecta apps que
+  consumen batería en segundo plano.
 
-### Servicio Spooler — exclusión durable
-**NUNCA** se desactiva el servicio **Spooler (cola de impresión)** en ningún nivel. Decisión tomada tras feedback del usuario: muchos clientes finales tienen impresoras locales o de red; desactivar Spooler rompe impresión sin beneficio de rendimiento perceptible. Esta regla está fijada como memoria persistente del proyecto.
+El lanzador Windows ofrece una selección de nivel; hoy `optimizacion.ps1` aplica
+la misma limpieza única y el nivel `extreme` se traduce a `-StopHogs` (cierre de
+los consumidores no críticos). No hay desactivación de servicios por nivel.
+
+### Servicio Spooler y procesos de sistema — exclusión durable
+**NUNCA** se desactiva el servicio **Spooler (cola de impresión)** ni se cierran
+procesos críticos del sistema (`System`, `svchost`, `explorer`, `lsass`, …), ni
+siquiera con `-StopHogs`. Muchos clientes finales tienen impresoras locales o de
+red; tocar el Spooler rompe la impresión sin beneficio perceptible. Regla fijada
+como memoria persistente del proyecto.
 
 ### Mecanismos de seguridad
-- **Idempotencia:** todas las operaciones se pueden re-ejecutar sin cambio acumulado.
-- **Snapshot estado_previo.json:** antes de modificar nada se guarda el estado actual (servicios + claves registro).
-- **Backup .reg:** las modificaciones de registro Windows se exportan antes de aplicar.
-- **Undo log:** `--undo` revierte cambios exactos basándose en el snapshot.
-- **Confirmación explícita:** niveles `rendimiento` / `extreme` requieren `--confirm` para arrancar (regla CLAUDE.md: scripts destructivos requieren flag explícito).
-- **Dry-run:** `--dry-run` muestra qué haría sin ejecutar.
+- **Confirmación explícita obligatoria:** sin `--confirm` (Bash) / `-Confirm` (PS)
+  el script no actúa (regla CLAUDE.md: operaciones que modifican el equipo requieren
+  flag explícito). Evita ejecuciones accidentales por doble clic o por SSH.
+- **No destructivo por diseño:** se limpian cachés y temporales; en Android
+  `pm trim-caches` conserva los datos del usuario (corrige el bug de `pm clear`).
+- **Exclusión de elementos críticos:** Spooler y procesos de sistema nunca se tocan.
+- **Acta auditable:** cada paso queda registrado (OK / FALLO / OMITIDO) en el
+  `.txt` del cliente y el `.json` técnico, con el espacio liberado.
+- **Idempotencia:** las operaciones se pueden re-ejecutar sin cambio acumulado.
 
 ### Bug crítico Android — corregido
 La versión anterior (`scripts/android/optimizacion.sh` v3.0.0) usaba `pm clear $app` para "limpiar caché". `pm clear` borra **todos los datos de usuario** (sesiones, ficheros, configuraciones), no solo caché. Reemplazado por `pm trim-caches 1073741824` (1 GB cache trim, no destructivo). Lección: validar exhaustivamente comandos del sistema antes de incluirlos en producción.
@@ -417,6 +484,9 @@ CREATE TABLE IF NOT EXISTS rc_vulnerabilities (
 
 Pendiente: cron semanal que vuelque `vuln_history.json` a esta tabla para vista global del parque de equipos del cliente.
 
+![Tablas de la base de datos en MySQL Workbench](../capturas/workbench/02_show-tables.png)
+*Fig. 4 — Esquema de la base de datos (MariaDB): tablas de MantisBT y las tablas propias `rc_*` del proyecto.*
+
 ### Defensa académica
 
 | Competencia | Demostración |
@@ -462,6 +532,9 @@ MantisBT alinea stack (PHP + MariaDB), permite custom fields para datos del diag
 
 Detalle completo: [`docs/mantis-integration.md`](../tecnica/mantis-integration.md).
 
+![Ticket creado en MantisBT desde el formulario web](../capturas/mar20-mantisbt-web/08_mantisbt-ticket-creado-desde-formulario.png)
+*Fig. 5 — Ticket generado automáticamente en MantisBT a partir del formulario público (REST `POST /api/rest/issues`).*
+
 ---
 
 ## 10. Módulo 5 — Plugin WordPress de integración
@@ -501,6 +574,12 @@ Si falla la nota pero el adjunto subió → no se aborta (el JSON ya está en el
 ---
 
 ## 11. Módulo 6 — Tema WordPress (frontend público)
+
+![Home pública de ResolveCore (hero)](../capturas/mar20-mantisbt-web/01_web-resolvecore-homepage-hero.png)
+*Fig. 6 — Frontend público de ResolveCore: hero de la landing one-page con el tema custom `resolvecore-theme`.*
+
+![Sección de módulos en la web](../capturas/mar20-mantisbt-web/10_web-seccion-modulos.png)
+*Fig. 7 — Sección de módulos del servicio en la home (diagnóstico, optimización, vulnerabilidades).*
 
 ### `wordpress/resolvecore-theme/`
 - `front-page.php` — landing pública one-page
@@ -573,12 +652,28 @@ Al recibir el formulario, `resolvecore_handle_contact()` llama a `rc_crear_cuent
 
 ---
 
-## 12. Módulo 7 — Informe técnico PDF
+## 12. Módulo 7 — Informe técnico (.txt)
 
-### Plantilla + generador (implementado)
+### Flujo actual: plantilla .txt rellenada a mano
+El entregable que recibe el cliente es una **plantilla de informe en texto plano**
+generada por `scripts/common/generar_informe.py` (apartados obligatorios en blanco)
+que el técnico rellena a mano y sube él mismo a MantisBT. La factura sigue el mismo
+modelo con `scripts/common/generar_factura.py`. **No se genera PDF** (decisión del
+autor, 2026-06-02): elimina la dependencia de un binario externo sin mantenimiento
+y conserva el control humano sobre el contenido entregado. Las secciones son fijas
+por diseño del servicio (resumen ejecutivo, incidencias detectadas, problemas
+solucionados, estado actual del sistema, recomendaciones, proyección de vida útil)
+— el generador las imprime en blanco y `--json` pre-rellena la cabecera con los
+datos del diagnóstico.
+
+### Legacy (no en el flujo actual): generador HTML → PDF
+> El plugin web `rc-tech` y `reports/generate-report.php` conservan un generador
+> HTML→PDF (wkhtmltopdf) que **no forma parte del flujo actual**. Se mantiene como
+> trabajo realizado y posible vía futura; el informe que el cliente recibe hoy es la
+> plantilla `.txt` descrita arriba. El resto de este apartado documenta ese generador.
 
 **Artefactos:**
-- `reports/informe.html` — plantilla HTML autocontenida, paleta corporativa dark, gauges SVG circulares, score de salud, cards por módulo (CPU/RAM/disco/red/seguridad/batería), sección de recomendaciones priorizadas (crit/warn/ok). Normaliza JSON Windows v4.0.0 y Linux/macOS/Android.
+- `reports/informe.html` — plantilla HTML autocontenida, paleta corporativa dark, gauges SVG circulares, score de salud, cards por módulo (CPU/RAM/disco/red/seguridad/batería), sección de recomendaciones priorizadas (crit/warn/ok). Normaliza JSON Windows v2.2.0 y Linux/Android.
 - `reports/generate-report.php` — generador CLI:
 
 ```bash
@@ -618,7 +713,6 @@ php reports/generate-report.php --json diag.json --ticket 42
 
 **Decisión wkhtmltopdf vs DomPDF:** wkhtmltopdf renderiza el HTML idéntico al navegador (gauges SVG, CSS vars, grid), DomPDF no soporta SVG ni CSS custom properties de forma fiable. El VPS incluye wkhtmltopdf en el deploy script.
 
-> 📸 **Evidencia:** Justificaciones y servicios documentados gráficamente en `docs/capturas/17-05-Servicios/`.
 
 ---
 
@@ -628,6 +722,9 @@ php reports/generate-report.php --json diag.json --ticket 42
 - **Desarrollo:** Aislado mediante *LocalWP* (NGINX + PHP 8.2 + MariaDB). Permite pruebas seguras de integración con MantisBT y simulación de correos vía MailHog.
 - **Producción:** WordPress en subdominio `.com` y MantisBT planificado en VPS dedicado utilizando contenedor/raw.
 - **Backup (DRC):** Política 3-2-1. `UpdraftPlus` en WordPress (frecuencia semanal/diaria) con destino a Google Drive. Copias manuales de BBDD (`mysqldump`) y archivos (`tar -czvf`) pre-despliegues críticos para MantisBT.
+
+![Entorno LocalWP personalizado: PHP 8.2 + nginx + MySQL](../capturas/lun19-entornos-backup/08_localwp-entorno-custom-php82-nginx-mysql.png)
+*Fig. 8 — Entorno de desarrollo aislado en LocalWP (PHP 8.2 + nginx + MySQL), réplica de la pila de producción del VPS.*
 
 ### VPS — análisis
 Se evaluó hosting compartido vs VPS:
@@ -742,7 +839,7 @@ Punto de equilibrio: 1 cliente Pro mensual cubre infraestructura.
 
 ---
 
-## 15b. Servicios adicionales — scripts operativos
+## 16. Servicios adicionales — scripts operativos
 
 > ℹ️ `scripts/servicios/` se restauró tras la auditoría A11 (source completo).
 > Único elemento no versionado: el binario `kit/anydesk.exe` (7.9 MB), que aporta el
@@ -797,7 +894,7 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 ---
 
-## 16. Decisiones de diseño justificadas
+## 17. Decisiones de diseño justificadas
 
 ### Por qué WordPress
 - **Audiencia objetivo** son pequeñas empresas y autónomos no-tech: WordPress = familiar.
@@ -842,7 +939,7 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 ---
 
-## 17. Errores cometidos y aprendizajes
+## 18. Errores cometidos y aprendizajes
 
 > Sección importante para la defensa: muestra capacidad crítica.
 
@@ -859,7 +956,7 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 ---
 
-## 18. Demostración en vivo (guion)
+## 19. Demostración en vivo (guion)
 
 ### Material a tener listo
 - Laptop con WSL Ubuntu + WordPress local (DevKinsta o `docker compose`)
@@ -908,21 +1005,21 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 ---
 
-## 19. Roadmap futuro
+## 20. Roadmap futuro
 
 ### Corto plazo (post-defensa, antes de producción)
-- [ ] Implementar generador PDF (wkhtmltopdf + plantilla HTML)
+- [x] Paridad de campos del diagnóstico Windows ↔ Linux (hecho 2026-06-05; modelo PLANO mantenido)
 - [ ] Cron sync NVD operativo
-- [ ] Migrar Windows diag para exponer hardware bajo `hardware {}` (alinear schema)
 - [ ] Tests integración Mantis (PHPUnit) contra instancia local
 - [ ] Despliegue VPS productivo + dominio + Let's Encrypt
+- [ ] (Opcional) Reactivar el generador HTML→PDF como alternativa al informe `.txt` actual
 
 ### Medio plazo
 - [ ] Panel admin WordPress para subir JSON diagnóstico vía UI
 - [ ] App nativa Android (Kotlin + Jetpack Compose + Material 3) — comunicación con backend WP REST
 - [ ] macOS diagnostico completo (sustituir stub)
 - [ ] Notificaciones email branded vía SMTP transaccional
-- [ ] Dashboard cliente: historial de diagnósticos + descargas PDF
+- [ ] Dashboard cliente: historial de diagnósticos + descarga del informe `.txt`
 
 ### Largo plazo (post-TFG)
 - [ ] Modelo predictivo ML para vida útil hardware (ML.NET / scikit-learn)
@@ -932,7 +1029,7 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 ---
 
-## 20. Bibliografía y referencias
+## 21. Bibliografía y referencias
 
 ### Documentación oficial
 - [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
@@ -960,10 +1057,206 @@ Genera `README-cliente.txt` con instrucciones no técnicas (conexión AnyDesk, d
 
 ---
 
+## Anexos
+
+### Anexo A — Documentación de scripts
+
+Catálogo de los scripts de administración del proyecto. Para cada uno se indica
+**lenguaje · función · requisitos · ejecución y ejemplos · ubicación del código
+fuente**. La organización por sistema operativo refleja el reparto del CLAUDE.md
+(PowerShell en Windows, Bash compatible con `sh` en Linux/Android, Python 3 sin
+clases en `common/`).
+
+> **Cómo incluir el código fuente completo en la entrega.** Esta memoria es la
+> fuente Markdown; para no duplicar miles de líneas que se desincronizarían del
+> repositorio, cada ficha referencia la ruta exacta del script. En el documento
+> final de Word, bajo cada ficha, inserta el contenido íntegro del fichero con
+> **Insertar → Objeto → Texto de archivo…** (o pégalo en un bloque con fuente
+> monoespaciada, p. ej. *Consolas 9 pt*). Así el anexo lleva el código limpio y
+> aumenta el número de páginas, manteniendo una única fuente de verdad: el repo.
+
+#### Tabla resumen
+
+| # | Script | Lenguaje | Función |
+|---|--------|----------|---------|
+| A.1 | `scripts/windows/ResolveCore.ps1` | PowerShell 5.1 | Menú del técnico (Windows) |
+| A.2 | `scripts/windows/diagnostico.ps1` | PowerShell 5.1 | Diagnóstico del equipo → JSON |
+| A.3 | `scripts/windows/optimizacion.ps1` | PowerShell 5.1 | Optimización + acta |
+| A.4 | `scripts/linux/ResolveCore.sh` | Bash | Menú del técnico (Linux) |
+| A.5 | `scripts/linux/diagnostico.sh` | Bash | Diagnóstico del equipo → JSON |
+| A.6 | `scripts/linux/optimizacion.sh` | Bash | Optimización + acta |
+| A.7 | `scripts/android/ResolveCore.sh` | Bash (ADB) | Menú del técnico (Android) |
+| A.8 | `scripts/android/diagnostico.sh` | Bash (ADB) | Diagnóstico del dispositivo → JSON |
+| A.9 | `scripts/android/optimizacion.sh` | Bash (ADB) | Optimización (trim-caches) + acta |
+| A.10 | `scripts/common/buscar_vulnerabilidades.py` | Python 3 | Escáner CVE multi-feed |
+| A.11 | `scripts/common/generar_informe.py` | Python 3 | Plantilla `.txt` de informe |
+| A.12 | `scripts/common/generar_factura.py` | Python 3 | Plantilla `.txt` de factura |
+
+#### A.1 · `scripts/windows/ResolveCore.ps1` — Menú del técnico (Windows)
+- **Lenguaje:** PowerShell 5.1 (el que trae Windows 10/11; sin dependencia de PS7).
+- **Función:** lanzador interactivo (TUI) que reúne diagnóstico, optimización,
+  escaneo de vulnerabilidades, generación de informe y servicios adicionales,
+  invocando al resto de scripts de la carpeta. Auto-instala Python (scoop/choco)
+  si falta para el módulo CVE.
+- **Requisitos:** PowerShell 5.1+, terminal interactiva, Administrador recomendado.
+  Opcional: WSL o Git Bash para los servicios de clonación.
+- **Ejecución:**
+  ```powershell
+  .\ResolveCore.ps1                 # menú interactivo
+  .\ResolveCore.ps1 -A              # pass-through a diagnóstico (auto-install deps)
+  .\ResolveCore.ps1 -Nivel extreme  # pass-through a optimización (-StopHogs)
+  ```
+- **Código fuente:** `scripts/windows/ResolveCore.ps1` *(insertar fichero completo aquí)*.
+
+#### A.2 · `scripts/windows/diagnostico.ps1` — Diagnóstico Windows (v2.2.0)
+- **Lenguaje:** PowerShell 5.1 (recogida vía CIM, sin instalar nada).
+- **Función:** vuelca a JSON (modelo PLANO) CPU, RAM/swap, GPU, discos + S.M.A.R.T,
+  red (IP/gateway/DNS, puertos, interfaces, conexiones establecidas), servicios
+  críticos y fallidos, antivirus/Defender/firewall/UAC, procesos top por CPU y por
+  memoria, usuarios conectados y reinicio pendiente. **Paridad de datos con Linux.**
+- **Requisitos:** PowerShell 5.1+, Administrador recomendado (algunas métricas CIM/red).
+- **Ejecución:**
+  ```powershell
+  .\diagnostico.ps1 -Ticket 42      # salida en reparaciones\00042\diagnostico.json
+  .\diagnostico.ps1 -OutputDir C:\Temp -Silent
+  ```
+- **Código fuente:** `scripts/windows/diagnostico.ps1` *(insertar fichero completo aquí)*.
+
+#### A.3 · `scripts/windows/optimizacion.ps1` — Optimización Windows (v3.0)
+- **Lenguaje:** PowerShell 5.1.
+- **Función:** vacía TEMP de usuario/sistema/LocalAppData y la caché de Windows
+  Update, vacía la papelera, detecta procesos de alto consumo y reporta programas
+  de arranque; deja acta `.txt` (cliente) + `.json` (técnico). **Spooler y procesos
+  de sistema nunca se tocan.**
+- **Requisitos:** PowerShell 5.1+, `-Confirm` obligatorio, Administrador recomendado.
+- **Ejecución:**
+  ```powershell
+  .\optimizacion.ps1 -Confirm -Ticket 42 -StopHogs
+  ```
+- **Código fuente:** `scripts/windows/optimizacion.ps1` *(insertar fichero completo aquí)*.
+
+#### A.4 · `scripts/linux/ResolveCore.sh` — Menú del técnico (Linux)
+- **Lenguaje:** Bash (`#!/usr/bin/env bash`, `set -uo pipefail`).
+- **Función:** TUI análoga a la de Windows (diagnóstico, optimización, CVE,
+  informe, servicios de congelación/clonación). Auto-instala Python si falta.
+- **Requisitos:** bash 4+, terminal interactiva, `sudo` para optimización; `jq`
+  para el menú de desinstalación de paquetes vulnerables.
+- **Ejecución:**
+  ```bash
+  bash scripts/linux/ResolveCore.sh            # menú
+  sudo bash scripts/linux/ResolveCore.sh --dry-run rendimiento   # pass-through
+  ```
+- **Código fuente:** `scripts/linux/ResolveCore.sh` *(insertar fichero completo aquí)*.
+
+#### A.5 · `scripts/linux/diagnostico.sh` — Diagnóstico Linux (v4.0.0)
+- **Lenguaje:** Bash. **Función:** JSON PLANO con CPU (carga 1/5/15, uso, temp),
+  RAM/swap, discos[] + inodos + S.M.A.R.T, paquetes, servicios críticos y
+  fallidos, procesos top por CPU y memoria, batería, GPU, usuarios, red
+  (interfaces, puertos, conexiones) y seguridad (firewall, ssh, MAC/LSM, fail2ban).
+- **Requisitos:** coreutils; opcional `lm-sensors`, `smartmontools`, `jq`, `bc`.
+- **Ejecución:** `bash scripts/linux/diagnostico.sh --ticket 42`
+- **Código fuente:** `scripts/linux/diagnostico.sh` *(insertar fichero completo aquí)*.
+
+#### A.6 · `scripts/linux/optimizacion.sh` — Optimización Linux
+- **Lenguaje:** Bash. **Función:** `apt autoremove`, vaciado de journal, `/tmp`,
+  purga de snaps antiguos y detección de procesos de alto consumo; acta `.txt`+`.json`.
+- **Requisitos:** `apt`/`dnf`, `sudo`, `--confirm` obligatorio.
+- **Ejecución:** `bash scripts/linux/optimizacion.sh --confirm --ticket 42 --stop-hogs`
+- **Código fuente:** `scripts/linux/optimizacion.sh` *(insertar fichero completo aquí)*.
+
+#### A.7 · `scripts/android/ResolveCore.sh` — Menú del técnico (Android)
+- **Lenguaje:** Bash sobre ADB (o Termux). **Función:** TUI de diagnóstico,
+  optimización y CVE del dispositivo Android.
+- **Requisitos:** `adb` instalado y dispositivo autorizado (Depuración USB).
+- **Ejecución:** `bash scripts/android/ResolveCore.sh`
+- **Código fuente:** `scripts/android/ResolveCore.sh` *(insertar fichero completo aquí)*.
+
+#### A.8 · `scripts/android/diagnostico.sh` — Diagnóstico Android (v3.0.0)
+- **Lenguaje:** Bash/ADB. **Función:** JSON PLANO con identidad del dispositivo,
+  batería ampliada, CPU, RAM, almacenamiento, pantalla, red (Wi-Fi/móvil),
+  seguridad, apps y térmico. Best-effort: si una métrica falla, el resto se completa.
+- **Requisitos:** `adb`; dispositivo conectado y autorizado.
+- **Ejecución:** `bash scripts/android/diagnostico.sh [serial] --ticket 42`
+- **Código fuente:** `scripts/android/diagnostico.sh` *(insertar fichero completo aquí)*.
+
+#### A.9 · `scripts/android/optimizacion.sh` — Optimización Android (v3.0)
+- **Lenguaje:** Bash/ADB. **Función:** `pm trim-caches` (limpia **solo caché**,
+  conserva sesiones/datos — corrige el bug de `pm clear`), borra `/data/local/tmp`
+  y detecta apps de alto consumo en segundo plano; acta `.txt`+`.json`.
+- **Requisitos:** `adb`; `--confirm` obligatorio.
+- **Ejecución:** `bash scripts/android/optimizacion.sh --confirm --stop-hogs`
+- **Código fuente:** `scripts/android/optimizacion.sh` *(insertar fichero completo aquí)*.
+
+#### A.10 · `scripts/common/buscar_vulnerabilidades.py` — Escáner CVE
+- **Lenguaje:** Python 3 (arquitectura hexagonal `domain` → `ports` → `adapters`).
+- **Función:** inventaría el software del equipo y consulta múltiples fuentes
+  públicas (NVD, CISA KEV, OSV, EPSS) para emitir un JSON con las vulnerabilidades,
+  los avisos accionables y un **RiskScore** (probabilidad de compromiso por
+  severidad). Lo consume el menú de cada plataforma para mostrar riesgo y ofrecer
+  desinstalación de paquetes peligrosos.
+- **Requisitos:** Python 3; acceso a Internet para los *feeds* REST.
+- **Ejecución:**
+  ```bash
+  python scripts/common/buscar_vulnerabilidades.py --plataforma linux --max 300 --salida-json /tmp/rc-vuln.json
+  ```
+- **Código fuente:** `scripts/common/buscar_vulnerabilidades.py` *(insertar fichero completo aquí)*.
+
+#### A.11 · `scripts/common/generar_informe.py` — Plantilla `.txt` de informe
+- **Lenguaje:** Python 3 (stdlib). **Función:** genera la plantilla de informe en
+  texto plano con los apartados obligatorios en blanco para que el técnico la
+  rellene a mano; `--json` pre-rellena la cabecera con el diagnóstico.
+- **Requisitos:** Python 3.
+- **Ejecución:** `python scripts/common/generar_informe.py --json diagnostico.json --ticket 42`
+- **Código fuente:** `scripts/common/generar_informe.py` *(insertar fichero completo aquí)*.
+
+#### A.12 · `scripts/common/generar_factura.py` — Plantilla `.txt` de factura
+- **Lenguaje:** Python 3 (stdlib). **Función:** genera la plantilla de factura en
+  texto plano con los campos predefinidos para que el técnico la rellene y la
+  entregue al cliente (sin PDF).
+- **Requisitos:** Python 3.
+- **Ejecución:** `python scripts/common/generar_factura.py`
+- **Código fuente:** `scripts/common/generar_factura.py` *(insertar fichero completo aquí)*.
+
+> **Otros scripts (por referencia):** `scripts/server/linux/post-install.sh`
+> (provisión del VPS), `scripts/servicios/congelacion/*` y `…/clonacion/*`
+> (servicios operativos), `scripts/servicios/kit/construir-kit.ps1` (kit AnyDesk).
+> Documentados en `docs/defensa/defensa-scripts-mantis.md`.
+
+### Anexo B — Instrucciones de maquetación
+
+Pasos para producir el documento final paginado y con formato homogéneo a partir
+de esta fuente Markdown (Word o LibreOffice Writer):
+
+1. **Importar.** Pega/convierte el Markdown a Word (o usa `pandoc defensa-tfg.md -o
+   defensa-tfg.docx`). Verifica que los `#/##/###` quedan como **Título 1/2/3**.
+2. **Índice con números de página.** Borra la tabla de contenidos manual, sitúa el
+   cursor donde va el índice e inserta **Referencias → Tabla de contenido →
+   Automática**. Genera la jerarquía con su número de página real. Actualízala
+   (clic derecho → *Actualizar campos*) antes de exportar.
+3. **Numeración de apartados.** Activa **Lista multinivel → vinculada a Título 1/2/3**
+   para que los subapartados se numeren solos (1.1, 1.2, 1.2.1…). Así desaparece
+   cualquier salto manual: el antiguo «15b» ya se renombró a **16** en la fuente y
+   las secciones siguientes se desplazaron (17–21).
+4. **Justificación (apartado señalado por el tribunal).** Selecciona todo
+   (`Ctrl+E` en Word) y aplica **alineación Justificada** (`Ctrl+J`). En Markdown
+   no existe la justificación, por eso el margen derecho aparecía irregular: se
+   resuelve aquí. Revisa específicamente el párrafo que la numeración automática
+   ubique en 3.2.3.
+5. **Homogeneizar formato.** Fuente de cuerpo única (p. ej. Calibri/Carlito 11 pt),
+   interlineado 1,15–1,5, márgenes 2,5 cm, código en monoespaciada (Consolas 9–10 pt).
+6. **Figuras.** Inserta las imágenes en los puntos marcados *Fig. 1…9*; las
+   `Fig. 1` y `Fig. 2` son diagramas a generar (draw.io) según su pie indicado.
+7. **Anexo A.** Bajo cada ficha, inserta el código del fichero (paso descrito en el
+   Anexo A) y exporta finalmente a **PDF** (Archivo → Exportar → PDF).
+
+---
+
 ## Changelog del documento
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-06-05 | **Correcciones de tribunal (correo 04/06) + sincronización con scripts.** Índice rehecho **jerárquico** (apartados + subapartados) con nota de paginación; **renumeración** del salto «15b» → **16** y cascada 17–21 (TOC + cabeceras + anclas). Insertadas **9 figuras** (`Fig. 1–9`: 7 capturas reales de `docs/capturas/` + 2 diagramas a generar) y corregidas dos referencias de evidencia rotas (`18-05-Scripting/`, `17-05-Servicios/`). Nuevo bloque **ANEXOS**: Anexo A (documentación de los 12 scripts: lenguaje, función, requisitos, ejecución y ruta de código) y Anexo B (instrucciones de maquetación en Word para nº de página, numeración multinivel y justificación del margen derecho). **Sync con la corrección de scripts del mismo día:** sección 6 reescrita al modelo **PLANO** real y a Windows **v2.2.0** con paridad de datos Windows↔Linux (GPU, interfaces, conexiones, usuarios, swap, top por memoria, servicios fallidos, reinicio pendiente) y blindaje de la ruta de salida (`$PSScriptRoot` vacío ya no manda el JSON a `System32`); sección 7 corregida a «limpieza única con acta» (se eliminó la descripción ficticia de niveles/undo/dry-run/backup .reg que `optimizacion.ps1` no implementa); sección 12 renombrada a «Informe técnico (**.txt**)» con el flujo real (plantilla rellenada a mano, sin PDF) y el generador HTML→PDF marcado como *legacy*; tabla del flujo (fases 6–7) y roadmap actualizados a `.txt` y sin la migración a `hardware {}`. |
+| 2026-06-05 | **Auditoría de robustez de tribunal + 5 blindajes.** Simulación de examinador (pentester/SysAdmin) sobre 15 vectores en 6 módulos (web/WordPress, API MantisBT, PowerShell, Bash/ADB, escáner CVE Python, Docker/MariaDB), por lectura directa del código real. Resultado: **10/15 MITIGADO de origen, 0 críticos**; los controles sensibles (acceso por rol `page-tecnicos.php`, token API solo backend `class-mantis-api.php`, persistencia volumen `docker-compose.yml`, timeouts y `JSONDecodeError` en adapters Python) ya estaban bien. **5 endurecimientos aplicados**: (A) `buscar_vulnerabilidades.py` captura `KeyboardInterrupt` (Ctrl+C → mensaje limpio, exit 130) en vez de Traceback; (B) `ResolveCore.ps1` menú TUI `default { return }` → `continue` (opción inválida ya no cerraba el programa); (C) aviso `Write-Warning` no bloqueante de privilegios admin en `diagnostico.ps1`/`optimizacion.ps1`; (D) helper `adb_vivo()` + abort ante desconexión mid-run en `android/diagnostico.sh`+`optimizacion.sh` (antes emitía ceros falsos al JSON); (E) nuevo launcher `scripts/windows/ResolveCore.bat` con `-ExecutionPolicy Bypass` + nota en README para equipos con `Restricted`. Informe completo en `AUDITORIA-ROBUSTEZ.md` (raíz). Schema de diagnóstico **no** tocado (Fix D aborta, no añade campo JSON). |
 | 2026-06-04 | **Cierre del pendiente 06-02 (verificación + 2 huecos reales).** Repaso del pending `docs/tareas/pendiente-2026-06-02-tarde.md` contra el código committeado: las tareas T1–T3, T5–T7 ya estaban implementadas (la sesión anterior cerró ~90 %, pero el pending no se marcó). **(T4 cerrada de verdad)**: `generar_factura.py` estaba **todavía en `scripts/common/`** pese a que la entrada del 06-02 lo daba por archivado y `_archivo/README.md` ya lo listaba; `git mv scripts/common/generar_factura.py _archivo/common/` — los launchers ya no lo invocan (solo dejan la nota «la facturación se gestiona desde MantisBT»), `grep` sin referencias residuales. **(T8 reforzada)**: el footer ya apilaba bien, pero el desplazamiento a la derecha en móvil venía de la regla `.rc-docs-main,.rc-cl-main { width:calc(100vw-280px)!important; margin-left:240px!important }` (`style.css`) que estaba **fuera de toda media query** y vencía por `!important` al reset móvil de `@media 760px`; confinada a `@media (min-width:761px)`. Añadido guard global `html,body{overflow-x:hidden}`; refuerzos `min-width:0`/`max-width:100%` en grids y mocks de `page-tecnicos.php`. Toggle del hamburguesa de MantisBT (`ResolveCoreBranding.php`) pasado de listener directo a **delegación en `document`** para sobrevivir a los repintados del header de Mantis. Bump de caché CSS `3.2.1`→`3.2.2` (`functions.php` + cabecera `style.css`). **Validación estática limpia** (en este entorno Linux): `bash -n` ×22, `python -m py_compile` (common + capas), `php -l` en los 3 ficheros tocados, plantilla de informe 0 bytes no-ASCII. **Pendiente de validar por el autor en Windows/móvil real**: ejecución de `diagnostico.ps1 --ticket`, parser PowerShell, y revisión visual de la web + Mantis en teléfono. Pending marcado con estado real (✅/⚠️). |
 | 2026-06-03 | **Diagrama ER + favicon nítido + validación de scripts.** **(1) Modelo de datos**: añadido el diagrama entidad-relación de la BD de MantisBT (`mantisbt`) en `docs/ER/diagrama-er-mantisbt.{pdf,png,svg}`, generado por ingeniería inversa del esquema real (`mysqldump --no-data` → dbdiagram.io); indexado en `docs/INDEX.md`. **(2) Favicon MantisBT nítido**: el logo completo (trazos finos + contorno) se empastaba al reducirse a 16/32px; nueva variante simplificada `assets/logo/resolvcore-favicon.svg` (sin contorno, trazo grueso, fondo oscuro) + set `.ico`/PNG 16/32/180. `ResolveCoreBranding.php` (`favicon_link()`), `config_inc.php` (`$g_favicon_image = images/rc-favicon.ico`) y `mantis-branding.sh` apuntan al nuevo set. **(3) Validación de scripts**: chequeo estático de los 49 scripts → 0 errores (`bash -n` ×23, `py_compile` ×19, parser AST PowerShell ×7); BOM UTF-8 verificado en los 7 `.ps1` con no-ASCII. **(4) Limpieza VPS**: consolidación A4 (borrado de `/opt/resolvecore-git` y `/opt/resolvecore-source`, canónico `/opt/resolvecore-repo`). **(5) Evidencias BD**: conexión de MySQL Workbench a la BD `mantisbt` del VPS vía túnel SSH (`ssh -L 3307:127.0.0.1:3306`); 5 capturas de consultas `SHOW`/`SELECT` en `docs/workbench/` (recuentos, tablas, tickets por estado, usuarios por nivel de acceso), indexadas en `docs/INDEX.md`. |
 | 2026-06-02 (tarde, fixes) | **Correcciones tras prueba en producción.** **(1) Favicon MantisBT**: `ResolveCoreBranding.php` apunta ahora al icono cuadrado del tema (`assets/logo/resolvcore-icon.svg`+png) en vez del icono apaisado/deformado. **(2) Pie de Mantis**: nuevo JS `cleanFooter()` (+ respaldo CSS) que elimina "Powered by", "Copyright © … MantisBT Team" y "Contacta con el administrador por ayuda"; el único pie es `.rc-mantis-footer`. **(3) Login técnicos (`wp-login.php`)**: usaba el logo **oscuro sobre fondo oscuro** (invisible); cambiado a `resolvcore-logo-light.svg` + fondo con gradiente de marca + ancho de caja. **(4) Doble logout en dashboard cliente**: eliminado el botón del pie; queda solo el del hero. **(5) Email de alta**: el registro **con contraseña** no enviaba ningún correo (cuenta activa al instante, rama sin `wp_mail`); añadida `rc_cliente_email_bienvenida()` que envía confirmación HTML+texto con enlace al panel. **(6) CTA cliente del header**: "Mi panel" (link muerto/redundante) → **"Solicitar informe"** con deep-link `/dashboard/#solicitar` (el `<details>` del formulario recibe `id="solicitar"`). `php -l` limpio en los 5 ficheros. |

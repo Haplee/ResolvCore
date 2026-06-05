@@ -45,6 +45,10 @@ __pycache__/
 # Diagnósticos generados (datos locales con hostnames/IPs reales)
 scripts/diagnosticos/
 
+# Salidas por ticket: diagnosticos/tickets/<NNNNN>/ (diagnostico.json,
+# optimizacion.{txt,json}, informe.txt). Datos de cliente — nunca se versionan.
+/diagnosticos/
+
 # Reparaciones por ticket (diagnostico.json + informe.txt del tecnico).
 # Datos locales con hostnames/IPs reales — nunca se versionan.
 reparaciones/

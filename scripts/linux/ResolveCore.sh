@@ -22,8 +22,10 @@ SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Pass-through: si llega flag de modulo, invocar directo y salir ──────────
 DIAG_FLAGS=()
-OPT_FLAGS=()
 NIVEL_POSITIONAL=""
+OPT_REQUESTED=0
+OPT_DRYRUN=0
+OPT_UNDO=0
 # shellcheck disable=SC2034
 PARSE_DONE=false
 ARGS_REMAIN=()
@@ -55,10 +57,13 @@ FLAGS DE DIAGNOSTICO (forward a diagnostico.sh)
     -A, --auto-install      Igual que -I sin confirmar.
 
 FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
-    NIVEL                   ligero | estandar | rendimiento | extreme
-                            (default: estandar).
-    --dry-run               Simula sin aplicar.
-    --undo                  Restaura sysctl y servicios.
+    NIVEL                   ligero | estandar | rendimiento | extreme.
+                            optimizacion.sh aplica una limpieza unica con acta
+                            (.txt/.json); 'extreme' ademas activa --stop-hogs
+                            (detiene procesos de alto consumo no criticos).
+                            Siempre se pasa --confirm.
+    --dry-run / --undo      No implementados en optimizacion.sh: se rechazan.
+                            Usa --confirm [--stop-hogs] directamente.
 
 MENU
     1. DIAGNOSTICO     Lanza diagnostico.sh (genera JSON + resumen en pantalla).
@@ -85,13 +90,13 @@ EXAMPLES
     bash scripts/linux/ResolveCore.sh -A
     bash scripts/linux/ResolveCore.sh -O /tmp -S
 
-    # Pass-through optimizacion
-    sudo bash scripts/linux/ResolveCore.sh --dry-run rendimiento
-    sudo bash scripts/linux/ResolveCore.sh --undo
+    # Pass-through optimizacion (siempre con --confirm)
+    sudo bash scripts/linux/ResolveCore.sh rendimiento
+    sudo bash scripts/linux/ResolveCore.sh extreme      # ademas --stop-hogs
 
     # Equivalente directo
     bash scripts/linux/diagnostico.sh -A
-    sudo bash scripts/linux/optimizacion.sh ligero
+    sudo bash scripts/linux/optimizacion.sh --confirm
 
 EXIT CODES
     0    Salida normal o ayuda mostrada.
@@ -109,23 +114,33 @@ while [[ $# -gt 0 ]]; do
         -I|--install|--install-deps) DIAG_FLAGS+=("--install"); shift ;;
         -A|--auto-install)      DIAG_FLAGS+=("--auto-install"); shift ;;
         # Optimizacion flags
-        --dry-run)              OPT_FLAGS+=("--dry-run"); shift ;;
-        --undo)                 OPT_FLAGS+=("--undo"); shift ;;
-        ligero|estandar|rendimiento|extreme) NIVEL_POSITIONAL="$1"; shift ;;
+        --dry-run)              OPT_DRYRUN=1; OPT_REQUESTED=1; shift ;;
+        --undo)                 OPT_UNDO=1; OPT_REQUESTED=1; shift ;;
+        ligero|estandar|rendimiento|extreme) NIVEL_POSITIONAL="$1"; OPT_REQUESTED=1; shift ;;
         *) ARGS_REMAIN+=("$1"); shift ;;
     esac
 done
 
-if [[ ${#DIAG_FLAGS[@]} -gt 0 && (${#OPT_FLAGS[@]} -gt 0 || -n "$NIVEL_POSITIONAL") ]]; then
+if [[ ${#DIAG_FLAGS[@]} -gt 0 && "$OPT_REQUESTED" == "1" ]]; then
     echo "[X] Flags de diagnostico y optimizacion son mutuamente exclusivos." >&2
     exit 2
 fi
 if [[ ${#DIAG_FLAGS[@]} -gt 0 ]]; then
     exec bash "$SCRIPT_DIR_EARLY/diagnostico.sh" "${DIAG_FLAGS[@]}"
 fi
-if [[ ${#OPT_FLAGS[@]} -gt 0 || -n "$NIVEL_POSITIONAL" ]]; then
-    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh" "${OPT_FLAGS[@]}")
-    [[ -n "$NIVEL_POSITIONAL" ]] && OPT_CMD+=("$NIVEL_POSITIONAL")
+if [[ "$OPT_REQUESTED" == "1" ]]; then
+    # optimizacion.sh aplica una limpieza unica con acta: solo soporta
+    # --confirm/--stop-hogs/--ticket. --dry-run/--undo NO estan implementados:
+    # se rechazan (no aplicar limpieza real ante un --dry-run).
+    if [[ "$OPT_DRYRUN" == "1" || "$OPT_UNDO" == "1" ]]; then
+        echo "[X] --dry-run/--undo no estan implementados en optimizacion.sh." >&2
+        echo "    Ejecuta: sudo bash optimizacion.sh --confirm [--stop-hogs] [--ticket N]" >&2
+        exit 2
+    fi
+    # El nivel elegido se traduce: 'extreme' activa --stop-hogs (detiene los
+    # procesos de mayor consumo no criticos). --confirm es obligatorio.
+    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh" --confirm)
+    [[ "$NIVEL_POSITIONAL" == "extreme" ]] && OPT_CMD+=(--stop-hogs)
     exec "${OPT_CMD[@]}"
 fi
 
@@ -140,20 +155,20 @@ SERVICIOS_DIR="$(dirname "$SCRIPT_DIR")/servicios"
 source "$SCRIPT_DIR/../.env" 2>/dev/null
 
 # Ticket de MantisBT de la sesion. Se pide una vez al inicio y se reutiliza para
-# que diagnostico e informe se guarden juntos en reparaciones/<ticket>/.
+# que diagnostico e informe se guarden juntos en diagnosticos/tickets/<ticket>/.
 TICKET_SESION=""
 read_ticket_sesion() {
     echo ""
     read -rp "  Numero de ticket MantisBT para esta reparacion (ENTER = sin ticket): " t
     if [[ "$t" =~ ^[0-9]+$ ]]; then
         TICKET_SESION="$t"
-        printf "  [i] Sesion asociada al ticket #%s. Salidas en reparaciones/%05d/\n" "$t" "$t"
+        printf "  [i] Sesion asociada al ticket #%s. Salidas en diagnosticos/tickets/%05d/\n" "$t" "$t"
     else
         TICKET_SESION=""
         if [[ -n "$t" ]]; then
             echo "  [!] '$t' no es un numero de ticket valido; sesion sin ticket."
         else
-            echo "  [i] Sesion sin ticket (salidas en reparaciones/sin-ticket/)."
+            echo "  [i] Sesion sin ticket (salidas en diagnosticos/tickets/sin-ticket/)."
         fi
     fi
     sleep 1
@@ -270,9 +285,12 @@ get_system_analysis() {
         fi
     fi
 
-    # Check services
-    if systemctl is-active --quiet snapd 2>/dev/null; then
-        :
+    # Check failed systemd units
+    if command -v systemctl &> /dev/null; then
+        FAILED_UNITS=$(systemctl --failed --no-legend --plain 2>/dev/null | awk 'NF{c++} END{print c+0}')
+        if [ "${FAILED_UNITS:-0}" -gt 0 ]; then
+            echo -e "  ${RED}[X] SERVICIOS FALLIDOS: ${FAILED_UNITS} unidad(es) systemd en estado failed${NC}"
+        fi
     fi
 
     echo ""
@@ -493,10 +511,10 @@ run_informe() {
     fi
 
     # Buscar JSON mas reciente. Con ticket de sesion se prioriza
-    # reparaciones/<ticket>/; si no, la carpeta legacy scripts/diagnosticos.
+    # diagnosticos/tickets/<ticket>/; si no, la carpeta legacy scripts/diagnosticos.
     local repo_root base_rep diag_dir
     repo_root="$(cd "$(dirname "$SCRIPT_DIR")/.." && pwd)"
-    base_rep="${RC_REPARACIONES_DIR:-$repo_root/reparaciones}"
+    base_rep="${RC_REPARACIONES_DIR:-$repo_root/diagnosticos/tickets}"
     if [[ -n "$TICKET_SESION" ]] && compgen -G "$base_rep/$(printf '%05d' "$TICKET_SESION")/*.json" >/dev/null 2>&1; then
         diag_dir="$base_rep/$(printf '%05d' "$TICKET_SESION")"
     else
@@ -629,23 +647,27 @@ run_congelacion() {
     echo -e "    ${YELLOW}4.${NC}  ROLLBACK — restaurar estado anterior  [root, destructivo]"
     echo -e "    ${GRAY}5.${NC}  Volver"
     echo ""
-    read -rp "  Selecciona (1-5): " op
-    case "$op" in
-        1) bash "$s" --action status ;;
-        2) sudo bash "$s" --action configure ;;
-        3)
-            read -rp "  Etiqueta del snapshot (ENTER = 'estado-limpio'): " etq
-            [[ -z "$etq" ]] && etq="estado-limpio"
-            sudo bash "$s" --action snapshot --etiqueta "$etq"
-            ;;
-        4)
-            echo -e "  ${YELLOW}[!] ROLLBACK descarta el estado actual del sistema.${NC}"
-            read -rp "  Escribe 'SI' para confirmar: " conf
-            [[ "$conf" == "SI" ]] && sudo bash "$s" --action rollback --confirm
-            ;;
-        5) return ;;
-        *) echo -e "  ${RED}Opcion no valida${NC}" ;;
-    esac
+    # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.
+    local op=""
+    while true; do
+        read -rp "  Selecciona (1-5): " op
+        case "$op" in
+            1) bash "$s" --action status; break ;;
+            2) sudo bash "$s" --action configure; break ;;
+            3)
+                read -rp "  Etiqueta del snapshot (ENTER = 'estado-limpio'): " etq
+                [[ -z "$etq" ]] && etq="estado-limpio"
+                sudo bash "$s" --action snapshot --etiqueta "$etq"
+                break ;;
+            4)
+                echo -e "  ${YELLOW}[!] ROLLBACK descarta el estado actual del sistema.${NC}"
+                read -rp "  Escribe 'SI' para confirmar: " conf
+                [[ "$conf" == "SI" ]] && sudo bash "$s" --action rollback --confirm
+                break ;;
+            5) return ;;
+            *) echo -e "  ${RED}Opcion no valida. Introduce 1-5.${NC}" ;;
+        esac
+    done
     echo ""
     read -rp "  Presiona ENTER..." _
 }
@@ -677,6 +699,9 @@ run_clonacion() {
     echo -e "    ${GRAY}3.${NC}  Volver"
     echo ""
     echo -e "  ${GRAY}Manifiesto: $manifest${NC}"
+    # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.
+    local op=""
+    while true; do
     read -rp "  Selecciona (1-3): " op
     case "$op" in
         1)
@@ -697,7 +722,7 @@ run_clonacion() {
                 bash "$reg" --imagen "$img" --equipo "$equipo" --so "$so" \
                             --estado "$estado" --notas "$notas" --manifest "$manifest"
             fi
-            ;;
+            break ;;
         2)
             read -rp "  Ruta imagen (o ENTER para buscar por ID): " img
             if [[ -n "$img" ]]; then
@@ -706,10 +731,11 @@ run_clonacion() {
                 read -rp "  ID del manifiesto: " id
                 bash "$ver" --id "$id" --manifest "$manifest"
             fi
-            ;;
+            break ;;
         3) return ;;
-        *) echo -e "  ${RED}Opcion no valida${NC}" ;;
+        *) echo -e "  ${RED}Opcion no valida. Introduce 1-3.${NC}" ;;
     esac
+    done
     echo ""
     read -rp "  Presiona ENTER..." _
 }
@@ -772,23 +798,25 @@ run_optimizacion() {
 
     echo ""
     echo -e "  +---------------------------------------------------------------+"
-    echo -e "  |  ${WHITE}SELECCIONA NIVEL DE OPTIMIZACION:${NC}                            |"
+    echo -e "  |  ${WHITE}OPTIMIZACION DEL SISTEMA (Linux)${NC}                             |"
     echo -e "  +---------------------------------------------------------------+"
     echo ""
-    echo -e "    ${GREEN}1.${NC}  BASICO       - Limpieza basica y servicios esenciales"
-    echo -e "    ${YELLOW}2.${NC}  ESTANDAR     - Optimizacion completa (recomendado)"
-    echo -e "    ${MAGENTA}3.${NC}  RENDIMIENTO - Mayor optimizacion"
-    echo -e "    ${RED}4.${NC}  VOLVER al menu principal"
+    echo -e "    ${GREEN}1.${NC}  EJECUTAR limpieza + acta de acciones"
+    echo -e "    ${RED}2.${NC}  VOLVER al menu principal"
     echo ""
+    echo -e "  ${GRAY}(Vacia cache/temporales y registra un acta .txt/.json. Excluye servicios criticos.)${NC}"
     echo -e "  +---------------------------------------------------------------+"
 
-    read -p "  Selecciona opcion (1-4): " nivel
-
-    case $nivel in
-        1|2|3) : ;;   # continuar (hoy optimizacion.sh aplica una unica limpieza)
-        4) return ;;
-        *) echo -e "  ${RED}Opcion no valida${NC}"; return ;;
-    esac
+    # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.
+    local opt=""
+    while true; do
+        read -rp "  Selecciona opcion (1-2): " opt
+        case "$opt" in
+            1) break ;;
+            2) return ;;
+            *) echo -e "  ${RED}Opcion no valida. Introduce 1 o 2.${NC}" ;;
+        esac
+    done
 
     echo ""
     echo -e "  ${YELLOW}Ejecutando optimizacion...${NC}"
@@ -817,7 +845,12 @@ while true; do
     show_menu
 
     read -rp "  Selecciona una opcion (1-7): " opcion
-    [[ -z "$opcion" ]] && { echo ""; exit 0; }
+    # ENTER vacio NO cierra el programa: re-muestra el menu. Solo se sale con [7].
+    if [[ -z "$opcion" ]]; then
+        echo -e "  ${YELLOW}Introduce una opcion (1-7).${NC}"
+        sleep 1
+        continue
+    fi
 
     case $opcion in
         1) run_diagnostico ;;

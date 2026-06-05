@@ -23,7 +23,7 @@
 
 | Plataforma | Script                    | Versión actual | Notas |
 |------------|---------------------------|----------------|-------|
-| Windows    | `windows/diagnostico.ps1` | **2.1.0**      | +sistema, disco_smart, seguridad, servicios_criticos, actualizaciones, procesos_top, red (2026-06-02) |
+| Windows    | `windows/diagnostico.ps1` | **2.2.0**      | **minor** (paridad con Linux): +gpu, +usuarios_conectados, +procesos_top_mem, +servicios_fallidos, sistema(+reinicio_requerido), cpu(+carga_5min/15min=null), ram(+swap_total/libre_gb), red(+interfaces[]{nombre,mac,ip}, +conexiones_estab) (2026-06-05). Base previa 2.1.0: +sistema, disco_smart, seguridad, servicios_criticos, actualizaciones, procesos_top, red (2026-06-02). |
 | Linux      | `linux/diagnostico.sh`    | **4.0.0**      | Diagnóstico completo: +cpu(carga_5/15min, uso_pct, temperatura_c), ram(usado/swap), discos[], inodos, paquetes, servicios_fallidos, procesos_top_mem, bateria, gpu, usuarios_conectados, red(interfaces[], conexiones_estab), seguridad(ssh_root_login, mac_lsm, fail2ban, reinicio_requerido). **major**: `disco_smart` pasa de `string\|null` a **array** (2026-06-04). **Fix**: `servicios_criticos` ya no rompe el JSON cuando un servicio está inactivo. |
 | Android    | `android/diagnostico.sh`  | **3.0.0**      | Diagnóstico completo: +modelo_interno, hardware, build, fingerprint, kernel, uptime_horas, batería ampliada (estado/salud/voltaje/tecnología/fuente/ciclos), cpu, ram, almacenamiento{}, pantalla, red ampliada (ip_movil/mac/wifi/operador), seguridad{}, apps{}, termico{} (2026-06-04). **major**: `bateria` añade claves; `red` pasa de `{ip}` a objeto ampliado. |
 | macOS      | `macos/diagnostico.sh`    | — (ROADMAP)    | Borrado en `12890ac`, recuperable de histórico. |
@@ -46,41 +46,53 @@ Tras `_meta`, todas llevan `timestamp` (ISO-8601) y `hostname`/`dispositivo`.
 
 ---
 
-## Windows — `diagnostico.ps1` (v2.1)
+## Windows — `diagnostico.ps1` (v2.2)
+
+> **v2.2 — paridad con Linux.** Se añaden los campos que ya emitía Linux y eran
+> recogibles en Windows con herramientas nativas (CIM + cmdlets `Net*`). Los
+> campos antiguos se conservan sin cambios (no breaking → **minor**).
 
 | Campo | Tipo | Origen | Notas |
 |-------|------|--------|-------|
 | `os` | string | `Win32_OperatingSystem` | Caption + Version. |
-| `sistema` | object | `Win32_OperatingSystem` | `{nombre, version, build, uptime_horas, ultimo_arranque}`. |
-| `cpu` | object | `Win32_Processor` | `{name, cores, load}`. |
-| `ram` | object | CIM | `{total_gb, free_gb}`. |
+| `sistema` | object | `Win32_OperatingSystem` + registro | `{nombre, version, build, uptime_horas, ultimo_arranque, reinicio_requerido}`. `reinicio_requerido` ∈ `true\|false\|null` (claves CBS/WindowsUpdate/PendingFileRename). |
+| `cpu` | object | `Win32_Processor` | `{name, cores, load, carga_5min, carga_15min}`. **Windows no tiene load average**: `carga_5min`/`carga_15min` siempre `null` (presentes por paridad). |
+| `ram` | object | CIM + `Win32_PageFileUsage` | `{total_gb, free_gb, swap_total_gb, swap_libre_gb}`. swap = archivo de paginación; `null` si no hay pagefile. |
+| `gpu` | string \| null | `Win32_VideoController` | nombre del primer adaptador de vídeo. `null` si no se obtiene. |
 | `discos[]` | array | `Get-PSDrive` | `{drive, used_gb, free_gb, total_gb}`. |
 | `disco_smart` | array \| null | `MSStorageDriver_FailurePredictStatus` | `{instancia, fallo_predicho}`. `null` si el driver no lo expone. |
 | `antivirus[]` | array | `root/SecurityCenter2` | nombres de producto. |
 | `seguridad` | object | Defender/Firewall/UAC | `{defender_activo, firewall, uac}` (bool \| null). |
 | `servicios_criticos[]` | array | `Get-Service` | Spooler, wuauserv, WinDefend, WSearch, BITS → `{nombre, display, estado}`. **Spooler solo se reporta.** |
+| `servicios_fallidos[]` | array(string) | `Get-Service` | servicios `StartType=Automatic` que no están `Running` (equivalente a `systemctl --failed`). |
 | `actualizaciones` | object | Windows Update Agent | `{pendientes}` (int \| null). |
 | `procesos_top[]` | array | `Get-Process` | top 10 por CPU → `{nombre, cpu_s, ram_mb}`. |
-| `red` | object | `Get-NetIPConfiguration`, `Get-NetTCPConnection` | `{ip, gateway, dns[], puertos_escucha[]}`. |
+| `procesos_top_mem[]` | array | `Get-Process` | top 10 por memoria (working set) → `{nombre, ram_mb, cpu_s}`. |
+| `usuarios_conectados[]` | array(string) | `Win32_LoggedOnUser` | usuarios con sesión iniciada (únicos). |
+| `red` | object | `Get-NetIPConfiguration`, `Get-NetTCPConnection`, `Get-NetAdapter` | `{ip, gateway, dns[], puertos_escucha[], interfaces[]{nombre,mac,ip}, conexiones_estab}`. `interfaces` = adaptadores `Up`; `conexiones_estab` = nº de conexiones TCP establecidas. |
 
-### Ejemplo mínimo — Windows 2.1
+### Ejemplo mínimo — Windows 2.2
 ```json
 {
-  "_meta": { "plataforma": "windows", "hostname": "PC-01", "version": "2.1" },
-  "timestamp": "2026-06-02T16:00:00+02:00",
+  "_meta": { "plataforma": "windows", "hostname": "PC-01", "version": "2.2" },
+  "timestamp": "2026-06-05T16:00:00+02:00",
   "hostname": "PC-01",
   "os": "Microsoft Windows 11 Pro 10.0.26100",
-  "sistema": { "nombre": "Microsoft Windows 11 Pro", "version": "10.0.26100", "build": "26100", "uptime_horas": 72.3, "ultimo_arranque": "2026-05-30T08:00:00+02:00" },
-  "cpu": { "name": "AMD Ryzen 5", "cores": 6, "load": 12 },
-  "ram": { "total_gb": 32.0, "free_gb": 18.5 },
+  "sistema": { "nombre": "Microsoft Windows 11 Pro", "version": "10.0.26100", "build": "26100", "uptime_horas": 72.3, "ultimo_arranque": "2026-05-30T08:00:00+02:00", "reinicio_requerido": false },
+  "cpu": { "name": "AMD Ryzen 5", "cores": 6, "load": 12, "carga_5min": null, "carga_15min": null },
+  "ram": { "total_gb": 32.0, "free_gb": 18.5, "swap_total_gb": 11.7, "swap_libre_gb": 8.2 },
+  "gpu": "NVIDIA GeForce RTX 3050 Ti",
   "discos": [ { "drive": "C", "used_gb": 200.1, "free_gb": 256.4, "total_gb": 456.5 } ],
   "disco_smart": [ { "instancia": "...", "fallo_predicho": false } ],
   "antivirus": [ "Windows Defender" ],
   "seguridad": { "defender_activo": true, "firewall": true, "uac": true },
   "servicios_criticos": [ { "nombre": "Spooler", "display": "Print Spooler", "estado": "Running" } ],
+  "servicios_fallidos": [ "MapsBroker" ],
   "actualizaciones": { "pendientes": 3 },
   "procesos_top": [ { "nombre": "chrome", "cpu_s": 124.5, "ram_mb": 850.2 } ],
-  "red": { "ip": "192.168.1.20", "gateway": "192.168.1.1", "dns": ["1.1.1.1"], "puertos_escucha": [135, 445, 3389] }
+  "procesos_top_mem": [ { "nombre": "chrome", "ram_mb": 850.2, "cpu_s": 124.5 } ],
+  "usuarios_conectados": [ "franc" ],
+  "red": { "ip": "192.168.1.20", "gateway": "192.168.1.1", "dns": ["1.1.1.1"], "puertos_escucha": [135, 445, 3389], "interfaces": [ { "nombre": "Wi-Fi", "mac": "AA-BB-CC-DD-EE-FF", "ip": "192.168.1.20" } ], "conexiones_estab": 57 }
 }
 ```
 
@@ -190,4 +202,4 @@ Tras `_meta`, todas llevan `timestamp` (ISO-8601) y `hostname`/`dispositivo`.
 
 ---
 
-*Última actualización: 2026-06-04*
+*Última actualización: 2026-06-05*
