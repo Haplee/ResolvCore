@@ -367,34 +367,41 @@ function Show-AnalysisAndSuggestions {
     Write-Host ""
 }
 
+# Reglas a ancho completo (cadenas fijas: sin calculo de anchura -> nunca se
+# desalinean, a diferencia de las cajas con borde derecho del estilo anterior).
+$RC_RULE = "  ==================================================================="
+$RC_THIN = "  -------------------------------------------------------------------"
+
 function Show-Banner {
     Clear-Host
     Write-Host ""
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor Cyan
-    Write-Host "  |                    RESOLVECORE                                |" -ForegroundColor Cyan
-    Write-Host "  |              Menu de Herramientas - Windows                   |" -ForegroundColor Cyan
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  Equipo: $env:COMPUTERNAME" -ForegroundColor White
-    Write-Host "  Usuario: $env:USERNAME" -ForegroundColor Gray
-    Write-Host "  Fecha: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
+    Write-Host $RC_RULE -ForegroundColor White
+    Write-Host "  R E S O L V E C O R E" -NoNewline -ForegroundColor White
+    Write-Host "   .  Menu de Herramientas (Windows)" -ForegroundColor DarkGray
+    Write-Host $RC_RULE -ForegroundColor White
+    Write-Host "   Equipo: $env:COMPUTERNAME    Usuario: $env:USERNAME" -ForegroundColor Gray
+    Write-Host "   Fecha:  $(Get-Date -Format 'yyyy-MM-dd HH:mm')" -ForegroundColor Gray
     Write-Host ""
 }
 
 function Show-Menu {
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
-    Write-Host "  |  SELECCIONA UNA OPCION:                                       |" -ForegroundColor DarkCyan
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
-    Write-Host ""
-    Write-Host "    1.  [DIAGNOSTICO]      - Analisis completo del sistema" -ForegroundColor Green
-    Write-Host "    2.  [OPTIMIZACION]     - Optimizar rendimiento" -ForegroundColor Yellow
-    Write-Host "    3.  [VULNERABILIDADES] - Buscar y corregir CVEs" -ForegroundColor Magenta
-    Write-Host "    4.  [INFORME]          - Plantilla .txt para rellenar a mano" -ForegroundColor Cyan
-    Write-Host "    5.  [SERVICIOS]        - Congelacion / Clonacion / Kit cliente" -ForegroundColor White
-    Write-Host "    6.  [AYUDA]            - Ver guia rapida" -ForegroundColor Gray
-    Write-Host "    7.  [SALIR]            - Salir" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "  +---------------------------------------------------------------+" -ForegroundColor DarkCyan
+    Write-Host "  SELECCIONA UNA OPCION" -ForegroundColor White
+    Write-Host $RC_THIN -ForegroundColor DarkGray
+    Write-Host "   [1] Diagnostico       " -NoNewline -ForegroundColor Green
+    Write-Host "Analisis completo del sistema (hw, red, seguridad) -> JSON" -ForegroundColor Gray
+    Write-Host "   [2] Optimizacion      " -NoNewline -ForegroundColor Yellow
+    Write-Host "Limpieza + acta de acciones (.txt/.json)" -ForegroundColor Gray
+    Write-Host "   [3] Vulnerabilidades  " -NoNewline -ForegroundColor Magenta
+    Write-Host "CVE (NVD + CISA KEV) + riesgo de compromiso" -ForegroundColor Gray
+    Write-Host "   [4] Informe           " -NoNewline -ForegroundColor Cyan
+    Write-Host "Plantilla .txt para rellenar a mano" -ForegroundColor Gray
+    Write-Host "   [5] Servicios         " -NoNewline -ForegroundColor White
+    Write-Host "Congelacion / Clonacion / Kit cliente" -ForegroundColor Gray
+    Write-Host "   [6] Ayuda             " -NoNewline -ForegroundColor DarkGray
+    Write-Host "Guia rapida de uso" -ForegroundColor Gray
+    Write-Host "   [7] Salir             " -NoNewline -ForegroundColor Red
+    Write-Host "Salir del programa" -ForegroundColor Gray
+    Write-Host $RC_THIN -ForegroundColor DarkGray
     Write-Host ""
 }
 
