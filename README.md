@@ -282,6 +282,10 @@ cp .env.example .env   # añadir NVD_API_KEY si se quiere mayor rate limit
 pwsh ./scripts/windows/ResolveCore.ps1
 ```
 
+> En equipos con la política por defecto `Restricted`, ejecuta el lanzador
+> `scripts/windows/ResolveCore.bat` (doble clic) o invoca con la evasión legítima:
+> `powershell -ExecutionPolicy Bypass -File ./scripts/windows/ResolveCore.ps1`.
+
 ```bash
 # Linux — menú interactivo
 bash ./scripts/linux/ResolveCore.sh

@@ -20,10 +20,9 @@ set -uo pipefail
 SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DIAG_FLAGS=()
-OPT_FLAGS=()
 NIVEL_POSITIONAL=""
 
-show_help() {
+show_usage() {
     cat <<'EOF'
 NAME
     ResolveCore.sh - Menu interactivo de herramientas ResolveCore para Android
@@ -48,10 +47,11 @@ FLAGS DE DIAGNOSTICO (forward a diagnostico.sh)
 
 FLAGS DE OPTIMIZACION (forward a optimizacion.sh)
     NIVEL                   ligero | estandar | rendimiento | extreme.
+                            'extreme' ademas activa --stop-hogs (fuerza-cierra
+                            los top consumidores no criticos). Siempre --confirm.
     --serial <id>           Dispositivo ADB concreto.
-    --dry-run               Simula sin aplicar.
-    --confirm               Requerido para niveles destructivos.
-    --undo                  Reactiva apps deshabilitadas.
+    --dry-run / --undo      No implementados en optimizacion.sh: se rechazan.
+                            Usa --confirm [--stop-hogs] directamente.
 
 MENU
     1. DIAGNOSTICO    Lanza diagnostico.sh.
@@ -70,9 +70,9 @@ EXAMPLES
     # Pass-through diagnostico
     bash scripts/android/ResolveCore.sh -O /tmp ABC123
 
-    # Pass-through optimizacion
-    bash scripts/android/ResolveCore.sh --dry-run rendimiento
-    bash scripts/android/ResolveCore.sh --serial ABC123 --confirm extreme
+    # Pass-through optimizacion (siempre con --confirm)
+    bash scripts/android/ResolveCore.sh rendimiento
+    bash scripts/android/ResolveCore.sh --serial ABC123 extreme
 
 EXIT CODES
     0    Salida normal o ayuda mostrada.
@@ -84,15 +84,18 @@ EOF
 DIAG_HAS_SERIAL_OR_OUTPUT=false
 OPT_HAS_FLAG=false
 SERIAL_POS=""
+OPT_SERIAL=""
+OPT_DRYRUN=0
+OPT_UNDO=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help) show_help; exit 0 ;;
+        -h|--help) show_usage; exit 0 ;;
         -O|--output)  DIAG_FLAGS+=("--output" "${2:-}"); DIAG_HAS_SERIAL_OR_OUTPUT=true; shift 2 ;;
-        --serial)     OPT_FLAGS+=("--serial" "${2:-}"); OPT_HAS_FLAG=true; shift 2 ;;
-        --dry-run)    OPT_FLAGS+=("--dry-run"); OPT_HAS_FLAG=true; shift ;;
-        --confirm)    OPT_FLAGS+=("--confirm"); OPT_HAS_FLAG=true; shift ;;
-        --undo)       OPT_FLAGS+=("--undo"); OPT_HAS_FLAG=true; shift ;;
+        --serial)     OPT_SERIAL="${2:-}"; OPT_HAS_FLAG=true; shift 2 ;;
+        --dry-run)    OPT_DRYRUN=1; OPT_HAS_FLAG=true; shift ;;
+        --confirm)    OPT_HAS_FLAG=true; shift ;;
+        --undo)       OPT_UNDO=1; OPT_HAS_FLAG=true; shift ;;
         ligero|estandar|rendimiento|extreme) NIVEL_POSITIONAL="$1"; OPT_HAS_FLAG=true; shift ;;
         *) SERIAL_POS="$1"; DIAG_HAS_SERIAL_OR_OUTPUT=true; shift ;;
     esac
@@ -108,8 +111,20 @@ if [[ "$DIAG_HAS_SERIAL_OR_OUTPUT" == "true" ]]; then
     exec "${DIAG_CMD[@]}"
 fi
 if [[ "$OPT_HAS_FLAG" == "true" ]]; then
-    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh" "${OPT_FLAGS[@]}")
-    [[ -n "$NIVEL_POSITIONAL" ]] && OPT_CMD+=("$NIVEL_POSITIONAL")
+    # optimizacion.sh aplica una limpieza unica con acta: solo soporta
+    # --confirm/--stop-hogs/--ticket/--output (+ serial posicional).
+    # --dry-run/--undo NO estan implementados: se rechazan.
+    if [[ "$OPT_DRYRUN" == "1" || "$OPT_UNDO" == "1" ]]; then
+        echo "[X] --dry-run/--undo no estan implementados en optimizacion.sh." >&2
+        echo "    Ejecuta: bash optimizacion.sh [serial] --confirm [--stop-hogs] [--ticket N]" >&2
+        exit 2
+    fi
+    # El nivel elegido se traduce: 'extreme' activa --stop-hogs. --confirm
+    # es obligatorio (la optimizacion no corre sin el).
+    OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh")
+    [[ -n "$OPT_SERIAL" ]] && OPT_CMD+=("$OPT_SERIAL")
+    OPT_CMD+=(--confirm)
+    [[ "$NIVEL_POSITIONAL" == "extreme" ]] && OPT_CMD+=(--stop-hogs)
     exec "${OPT_CMD[@]}"
 fi
 
@@ -123,7 +138,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Colores
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; NC='\033[0m'
+RED='\033[0;31m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; MAGENTA='\033[0;35m'; NC='\033[0m'
 
 # Reglas a ancho completo (cadenas fijas: sin calculo de anchura -> nunca se
 # desalinean, a diferencia de las cajas con borde derecho del estilo anterior).
@@ -475,13 +490,16 @@ run_optimizacion() {
     echo ""
     echo -e "  +---------------------------------------------------------------+"
 
-    read -p "  Selecciona opcion (1-2): " nivel
-
-    case $nivel in
-        1) : ;;   # continuar
-        2) return ;;
-        *) echo -e "  ${RED}Opcion no valida${NC}"; return ;;
-    esac
+    # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.
+    local nivel=""
+    while true; do
+        read -rp "  Selecciona opcion (1-2): " nivel
+        case "$nivel" in
+            1) break ;;
+            2) return ;;
+            *) echo -e "  ${RED}Opcion no valida. Introduce 1 o 2.${NC}" ;;
+        esac
+    done
 
     # 'pm clear' vacia tambien ajustes y sesiones de cada app (es destructivo):
     # exigimos confirmacion explicita del tecnico antes de pasar --confirm.
@@ -523,8 +541,13 @@ while true; do
     show_banner
     show_menu
 
-    read -p "  Selecciona una opcion (1-5): " opcion
-    [[ -z "$opcion" ]] && { echo ""; exit 0; }
+    read -rp "  Selecciona una opcion (1-5): " opcion
+    # ENTER vacio NO cierra el programa: re-muestra el menu. Solo se sale con [5].
+    if [[ -z "$opcion" ]]; then
+        echo -e "  ${YELLOW}Introduce una opcion (1-5).${NC}"
+        sleep 1
+        continue
+    fi
 
     case $opcion in
         1) run_diagnostico ;;

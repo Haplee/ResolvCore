@@ -7,14 +7,14 @@
 # espacio liberado en cada paso y detecta procesos de alto consumo.
 #
 # Deja constancia de TODO lo realizado en un acta para técnico y cliente:
-#   reparaciones/<NNNNN>/optimizacion.txt   (legible, para el cliente)
-#   reparaciones/<NNNNN>/optimizacion.json  (estructurado, técnico/flota)
+#   diagnosticos/tickets/<NNNNN>/optimizacion.txt   (legible, para el cliente)
+#   diagnosticos/tickets/<NNNNN>/optimizacion.json  (estructurado, técnico/flota)
 #
 # Requiere root (sudo) para apt y journalctl.
 #
 # Uso:
 #   sudo bash optimizacion.sh --confirm                 # optimiza + acta
-#   sudo bash optimizacion.sh --confirm --ticket 42     # acta en reparaciones/00042/
+#   sudo bash optimizacion.sh --confirm --ticket 42     # acta en diagnosticos/tickets/00042/
 #   sudo bash optimizacion.sh --confirm --stop-hogs     # ademas detiene top consumidores
 #
 # Autor:   Francisco Vidal Mateo (GitHub: Haplee)
@@ -26,7 +26,7 @@ export LC_ALL=C   # punto decimal en awk; sin esto el JSON se rompe en es_ES.
 
 # ── Argumentos ────────────────────────────────────────────────────────────────
 # --confirm     obligatorio: evita ejecuciones accidentales por SSH.
-# --ticket <N>  organiza el acta en reparaciones/<NNNNN>/optimizacion.{txt,json}
+# --ticket <N>  organiza el acta en diagnosticos/tickets/<NNNNN>/optimizacion.{txt,json}
 # --output <d>  carpeta de salida explicita (CI / back-compat)
 # --stop-hogs   ademas de detectar, DETIENE los procesos top no criticos.
 CONFIRM=0
@@ -57,14 +57,14 @@ warn() { echo "[!] $*" >&2; }
 
 # ── Resolucion de carpeta de salida (organizada por ticket) ──────────────────
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/reparaciones}"
+BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
     DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
 else
     DEST_DIR="$BASE_REP/sin-ticket"
-    echo "[!] No se ha indicado ticket. Guardando acta en reparaciones/sin-ticket/"
+    echo "[!] No se ha indicado ticket. Guardando acta en diagnosticos/tickets/sin-ticket/"
 fi
 mkdir -p "$DEST_DIR"
 

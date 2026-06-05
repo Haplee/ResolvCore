@@ -11,7 +11,7 @@
 #   bash diagnostico.sh                          # primer dispositivo
 #   bash diagnostico.sh <serial>                 # dispositivo concreto
 #   bash diagnostico.sh <serial> /tmp            # salida en /tmp
-#   bash diagnostico.sh --ticket 42              # reparaciones/00042/diagnostico.json
+#   bash diagnostico.sh --ticket 42              # diagnosticos/tickets/00042/diagnostico.json
 #
 # Modelo de salida: PLANO (las claves cuelgan de la raiz, no de hardware{}).
 # Cada bloque es best-effort: si una metrica falla, el resto se completa igual
@@ -38,7 +38,7 @@ export LC_ALL=C
 # ── Argumentos ────────────────────────────────────────────────────────────────
 # [serial]        primer posicional: serial ADB (uso historico)
 # [dir]           segundo posicional u --output <dir>: carpeta explicita
-# --ticket <N>    organiza la salida en reparaciones/<NNNNN>/diagnostico.json
+# --ticket <N>    organiza la salida en diagnosticos/tickets/<NNNNN>/diagnostico.json
 SERIAL=""
 OUTPUT_DIR=""
 TICKET=""
@@ -56,14 +56,14 @@ done
 
 # Resolucion de carpeta de salida (organizada por ticket).
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/reparaciones}"
+BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
     DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
 else
     DEST_DIR="$BASE_REP/sin-ticket"
-    echo "[!] No se ha indicado ticket. Guardando en reparaciones/sin-ticket/"
+    echo "[!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/"
 fi
 mkdir -p "$DEST_DIR"
 
@@ -83,6 +83,9 @@ fi
 prop() { $ADB shell getprop "$1" 2>/dev/null | tr -d '\r\n'; }
 # json_escape: escapa comillas y barras para meter strings libres en el JSON.
 json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+# adb_vivo: true si el dispositivo sigue en estado "device" (no se ha caído el
+# cable USB ni el Wi-Fi a mitad de la recogida).
+adb_vivo() { [ "$($ADB get-state 2>/dev/null | tr -d '\r\n')" = "device" ]; }
 
 # ── Identidad del dispositivo ────────────────────────────────────────────────
 DEVICE=$(prop ro.product.model)
@@ -100,6 +103,13 @@ kernel=$($ADB shell uname -r 2>/dev/null | tr -d '\r\n')
 # Uptime del dispositivo (segundos -> horas).
 uptime_s=$($ADB shell cat /proc/uptime 2>/dev/null | awk '{print $1}' | tr -d '\r')
 uptime_horas=$(awk "BEGIN{printf \"%.1f\", ${uptime_s:-0}/3600}")
+
+# Si el dispositivo se ha desconectado a mitad, abortamos en vez de seguir
+# emitiendo ceros falsos que corromperían las métricas del JSON.
+if ! adb_vivo; then
+    echo "ERROR: dispositivo desconectado durante la recogida. JSON incompleto." >&2
+    exit 1
+fi
 
 # ── Batería (completa) ───────────────────────────────────────────────────────
 # Capturamos dumpsys battery una sola vez y troceamos. La temperatura viene en
