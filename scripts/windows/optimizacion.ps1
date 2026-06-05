@@ -9,8 +9,8 @@
     Detecta procesos de alto consumo y programas de arranque (el análogo a
     "apps en segundo plano"). Deja constancia de TODO lo realizado en un acta
     para técnico y cliente:
-        reparaciones\<NNNNN>\optimizacion.txt   (legible, para el cliente)
-        reparaciones\<NNNNN>\optimizacion.json  (estructurado, técnico/flota)
+        diagnosticos\tickets\<NNNNN>\optimizacion.txt   (legible, para el cliente)
+        diagnosticos\tickets\<NNNNN>\optimizacion.json  (estructurado, técnico/flota)
 
     Idealmente como Administrador para que la limpieza de SoftwareDistribution
     funcione.
@@ -23,7 +23,7 @@
     que NO sean críticos del sistema.
 
 .PARAMETER Ticket
-    Nº de ticket MantisBT: el acta se guarda en reparaciones\<NNNNN>\.
+    Nº de ticket MantisBT: el acta se guarda en diagnosticos\tickets\<NNNNN>\.
 
 .EXAMPLE
     .\optimizacion.ps1 -Confirm
@@ -54,6 +54,15 @@ if (-not $Confirm) {
 }
 
 $hostName = $env:COMPUTERNAME
+
+# ── Aviso de privilegios (no bloqueante) ─────────────────────────────────────
+# Sin Administrador la limpieza de SoftwareDistribution (Windows Update) y otras
+# acciones quedan incompletas; avisamos en lugar de fallar a medias. No abortamos.
+$esAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $esAdmin) {
+    Write-Warning "Sin privilegios de Administrador: algunas acciones de limpieza quedaran incompletas."
+}
 
 # ── Registro de acciones (acta) ──────────────────────────────────────────────
 $acciones  = [System.Collections.ArrayList]::new()
@@ -168,8 +177,11 @@ if ($OutputDir) {
     $txtFile  = Join-Path $destDir "optimizacion_${hostName}_${ts}.txt"
     $ticketStr = 'sin-ticket'
 } else {
-    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path $repoRoot 'reparaciones' }
+    # Blindaje: si $PSScriptRoot viene vacio (dot-source/pipe) caeriamos al CWD
+    # (C:\Windows\System32 como admin). Resolvemos el directorio real del script.
+    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
+    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path (Join-Path $repoRoot 'diagnosticos') 'tickets' }
     if ($Ticket -and $Ticket -match '^\d+$') {
         $ticketStr = '{0:D5}' -f [int]$Ticket
         $destDir   = Join-Path $baseRep $ticketStr
@@ -187,7 +199,7 @@ if ($OutputDir) {
         $destDir   = Join-Path $baseRep 'sin-ticket'
         $jsonFile  = Join-Path $destDir "optimizacion_${hostName}_${ts}.json"
         $txtFile   = Join-Path $destDir "optimizacion_${hostName}_${ts}.txt"
-        Write-Host "  [!] No se ha indicado ticket. Guardando acta en reparaciones\sin-ticket\" -ForegroundColor Yellow
+        Write-Host "  [!] No se ha indicado ticket. Guardando acta en diagnosticos\tickets\sin-ticket\" -ForegroundColor Yellow
     }
 }
 if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }

@@ -293,4 +293,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n[!] Escaneo cancelado por el usuario.")
+        sys.exit(130)

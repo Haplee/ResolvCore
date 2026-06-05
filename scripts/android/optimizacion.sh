@@ -5,8 +5,8 @@
 # Limpia la caché de las apps (SIN borrar datos ni sesiones), borra temporales
 # de /data/local/tmp, detecta apps de alto consumo en segundo plano y deja
 # constancia de todo lo realizado en un acta para técnico y cliente:
-#   reparaciones/<NNNNN>/optimizacion.txt   (legible, para el cliente)
-#   reparaciones/<NNNNN>/optimizacion.json  (estructurado, técnico/flota)
+#   diagnosticos/tickets/<NNNNN>/optimizacion.txt   (legible, para el cliente)
+#   diagnosticos/tickets/<NNNNN>/optimizacion.json  (estructurado, técnico/flota)
 #
 # CAMBIO v3.0: ya NO se usa 'pm clear' (que borraba logins/ajustes de cada app).
 # Ahora 'pm trim-caches' limpia solo la caché y conserva los datos del usuario.
@@ -66,17 +66,19 @@ DEVICE_SAFE="${DEVICE// /_}"
 
 info() { echo "[+] $*"; }
 warn() { echo "[!] $*" >&2; }
+# adb_vivo: true si el dispositivo sigue en estado "device" (cable/Wi-Fi vivos).
+adb_vivo() { [ "$($ADB get-state 2>/dev/null | tr -d '\r\n')" = "device" ]; }
 
 # ── Resolucion de carpeta de salida (organizada por ticket) ──────────────────
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/reparaciones}"
+BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
     DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
 else
     DEST_DIR="$BASE_REP/sin-ticket"
-    echo "[!] No se ha indicado ticket. Guardando acta en reparaciones/sin-ticket/"
+    echo "[!] No se ha indicado ticket. Guardando acta en diagnosticos/tickets/sin-ticket/"
 fi
 mkdir -p "$DEST_DIR"
 
@@ -99,6 +101,13 @@ registra() {
     ACCIONES_TXT="${ACCIONES_TXT}${linea}"$'\n'
     info "$desc ... $marca ($resultado)"
 }
+
+# Si el dispositivo se ha desconectado antes de empezar a actuar, abortamos en
+# vez de registrar una cascada de pasos "fallo" que ensucian el acta.
+if ! adb_vivo; then
+    echo "ERROR: dispositivo desconectado antes de la optimización. Acta no generada." >&2
+    exit 1
+fi
 
 # ── 1. Limpieza de caché de apps (SIN borrar datos) ─────────────────────────
 # pm trim-caches pide al sistema liberar caché hasta el tamano indicado; con un

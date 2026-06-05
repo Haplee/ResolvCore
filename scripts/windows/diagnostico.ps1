@@ -6,13 +6,13 @@
 .DESCRIPTION
     Lanza una recogida rápida de información del sistema (CPU, RAM, discos,
     antivirus) y la vuelca en un JSON con marca de tiempo. La salida la
-    consume luego el técnico para generar el informe en HTML/PDF.
+    consume luego el técnico para rellenar a mano la plantilla de informe .txt.
 
     Pensado para Windows 10 y 11. No instala nada — solo consulta CIM.
 
 .PARAMETER OutputDir
-    Carpeta donde se deja el JSON. Por defecto ../diagnosticos respecto al
-    script.
+    Carpeta de salida explícita del JSON. Por defecto vacío: la salida se
+    organiza por ticket en <repo>\diagnosticos\tickets\<NNNNN>\ (o \sin-ticket\).
 
 .EXAMPLE
     .\diagnostico.ps1
@@ -20,15 +20,18 @@
 
 .NOTES
     Autor:   Francisco Vidal Mateo (GitHub: Haplee)
-    Versión: 2.0
+    Versión: 2.2
 #>
 
 param(
-    [string]$OutputDir = "$PSScriptRoot\..\diagnosticos",
+    # Carpeta de salida explicita. Vacio por defecto: la salida se organiza por
+    # ticket en <repo>\diagnosticos\tickets\ (ver resolucion mas abajo). Igualado
+    # al patron de optimizacion.ps1 para evitar el default fantasma con $PSScriptRoot.
+    [string]$OutputDir = '',
 
     # Numero de ticket MantisBT. Si se indica, el JSON se guarda en
-    # <repo>/reparaciones/<NNNNN>/diagnostico.json (zero-padded a 5 digitos).
-    # Sin ticket (y sin -OutputDir explicito) cae a reparaciones/sin-ticket/.
+    # <repo>/diagnosticos/tickets/<NNNNN>/diagnostico.json (zero-padded a 5 digitos).
+    # Sin ticket (y sin -OutputDir explicito) cae a diagnosticos/tickets/sin-ticket/.
     # Base configurable con la variable de entorno RC_REPARACIONES_DIR.
     [string]$Ticket = '',
 
@@ -45,6 +48,16 @@ param(
     [string]$Token       = $env:RC_FLEET_TOKEN,
     [int]$TicketId       = 0
 )
+
+# ── Aviso de privilegios (no bloqueante) ─────────────────────────────────────
+# Sin Administrador algunas consultas CIM/red quedan incompletas; avisamos en
+# lugar de dejar caer excepciones sueltas. No abortamos: el script degrada con
+# gracia (paridad con ResolveCore.ps1).
+$esAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $esAdmin -and -not $Silent) {
+    Write-Warning "Sin privilegios de Administrador: algunas metricas quedaran incompletas."
+}
 
 # ── Recogida vía CIM ────────────────────────────────────────────────────────
 # Get-CimInstance es más rápido que Get-WmiObject y no tira RPC clásico,
@@ -96,8 +109,8 @@ $procesosTop = @(
         }
 )
 
-# Red: IP/gateway/DNS del adaptador con salida + puertos en escucha.
-$red = [ordered]@{ ip = $null; gateway = $null; dns = @(); puertos_escucha = @() }
+# Red: IP/gateway/DNS del adaptador con salida + puertos en escucha + interfaces.
+$red = [ordered]@{ ip = $null; gateway = $null; dns = @(); puertos_escucha = @(); interfaces = @(); conexiones_estab = $null }
 try {
     $netCfg = Get-NetIPConfiguration -ErrorAction SilentlyContinue |
               Where-Object { $_.IPv4DefaultGateway } | Select-Object -First 1
@@ -129,11 +142,12 @@ try {
 
 # Sistema: build + uptime + ultimo arranque.
 $sistema = [ordered]@{
-    nombre          = $osInfo.Caption
-    version         = $osInfo.Version
-    build           = $osInfo.BuildNumber
-    uptime_horas    = $null
-    ultimo_arranque = $null
+    nombre             = $osInfo.Caption
+    version            = $osInfo.Version
+    build              = $osInfo.BuildNumber
+    uptime_horas       = $null
+    ultimo_arranque    = $null
+    reinicio_requerido = $null
 }
 try {
     $boot = $osInfo.LastBootUpTime
@@ -158,6 +172,93 @@ try {
     if ($uacKey) { $seguridad.uac = [bool]($uacKey.EnableLUA -eq 1) }
 } catch {}
 
+# ── Paridad con Linux: GPU, red ampliada, usuarios, swap, top por memoria, ────
+#    reinicio pendiente y servicios fallidos. Cada bloque aislado en try/catch.
+
+# GPU: primer adaptador de video (equivalente a 'gpu' de Linux).
+$gpu = $null
+try {
+    $gpu = (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty Name)
+} catch {}
+
+# Interfaces de red activas con MAC e IP (equivalente a red.interfaces[]).
+try {
+    $red.interfaces = @(
+        Get-NetAdapter -ErrorAction SilentlyContinue |
+            Where-Object { $_.Status -eq 'Up' } |
+            ForEach-Object {
+                $ipv4 = Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                        Select-Object -First 1 -ExpandProperty IPAddress
+                [ordered]@{ nombre = $_.Name; mac = $_.MacAddress; ip = $ipv4 }
+            }
+    )
+} catch {}
+
+# Conexiones TCP establecidas (equivalente a red.conexiones_estab).
+try {
+    $red.conexiones_estab = @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue).Count
+} catch {}
+
+# Usuarios con sesion iniciada (equivalente a usuarios_conectados[]).
+$usuarios = @()
+try {
+    $usuarios = @(
+        Get-CimInstance Win32_LoggedOnUser -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.Antecedent.Name } |
+            Where-Object { $_ } | Sort-Object -Unique
+    )
+} catch {}
+
+# Swap / archivo de paginacion (equivalente a swap_total_gb / swap_libre_gb).
+$swapTotalGb = $null; $swapLibreGb = $null
+try {
+    $pfAll = Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue
+    if ($pfAll) {
+        $totMb = ($pfAll | Measure-Object -Property AllocatedBaseSize -Sum).Sum
+        $usoMb = ($pfAll | Measure-Object -Property CurrentUsage -Sum).Sum
+        $swapTotalGb = [math]::Round($totMb / 1024, 2)
+        $swapLibreGb = [math]::Round(($totMb - $usoMb) / 1024, 2)
+    }
+} catch {}
+
+# Top 10 procesos por memoria (working set), complemento de procesos_top (CPU).
+$procesosTopMem = @(
+    Get-Process -ErrorAction SilentlyContinue |
+        Sort-Object WorkingSet64 -Descending |
+        Select-Object -First 10 |
+        ForEach-Object {
+            [ordered]@{
+                nombre = $_.ProcessName
+                ram_mb = [math]::Round($_.WorkingSet64 / 1MB, 1)
+                cpu_s  = if ($null -ne $_.CPU) { [math]::Round($_.CPU, 1) } else { $null }
+            }
+        }
+)
+
+# Reinicio pendiente (equivalente a sistema.reinicio_requerido de Linux).
+try {
+    $pendiente = $false
+    $rebootKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+    )
+    foreach ($k in $rebootKeys) { if (Test-Path $k) { $pendiente = $true } }
+    $pfr = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue
+    if ($pfr -and $pfr.PendingFileRenameOperations) { $pendiente = $true }
+    $sistema.reinicio_requerido = $pendiente
+} catch {}
+
+# Servicios automaticos que no estan corriendo (equivalente a servicios_fallidos[]).
+$serviciosFallidos = @()
+try {
+    $serviciosFallidos = @(
+        Get-Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.StartType -eq 'Automatic' -and $_.Status -ne 'Running' } |
+            ForEach-Object { $_.Name }
+    )
+} catch {}
+
 # ── Construcción del objeto de salida ───────────────────────────────────────
 # Usamos [ordered] para que el JSON salga en el mismo orden que aquí, no
 # en el aleatorio de un hashtable normal. Estructura PLANA por diseño
@@ -168,23 +269,30 @@ $resultado = [ordered]@{
     _meta = [ordered]@{
         plataforma = 'windows'
         hostname   = $env:COMPUTERNAME
-        version    = '2.1'
+        version    = '2.2'
     }
     timestamp = (Get-Date -Format 'o')
     hostname  = $env:COMPUTERNAME
     os        = "$($osInfo.Caption) $($osInfo.Version)"
     sistema   = $sistema
 
-    cpu = @{
+    cpu = [ordered]@{
         name  = $cpuInfo.Name.Trim()
         cores = $cpuInfo.NumberOfCores
         load  = $cpuInfo.LoadPercentage
+        # Windows no expone load average (1/5/15 min) como Linux: null por paridad.
+        carga_5min  = $null
+        carga_15min = $null
     }
 
-    ram = @{
-        total_gb = [math]::Round($csInfo.TotalPhysicalMemory / 1GB, 2)
-        free_gb  = [math]::Round($osInfo.FreePhysicalMemory / 1MB, 2)
+    ram = [ordered]@{
+        total_gb      = [math]::Round($csInfo.TotalPhysicalMemory / 1GB, 2)
+        free_gb       = [math]::Round($osInfo.FreePhysicalMemory / 1MB, 2)
+        swap_total_gb = $swapTotalGb
+        swap_libre_gb = $swapLibreGb
     }
+
+    gpu = $gpu
 
     discos = @(
         Get-PSDrive -PSProvider FileSystem |
@@ -211,24 +319,31 @@ $resultado = [ordered]@{
 
     seguridad          = $seguridad
     servicios_criticos = $serviciosCriticos
+    servicios_fallidos = $serviciosFallidos
     actualizaciones    = [ordered]@{ pendientes = $updatesPend }
     procesos_top       = $procesosTop
+    procesos_top_mem   = $procesosTopMem
+    usuarios_conectados = $usuarios
     red                = $red
 }
 
 # ── Volcado del JSON ────────────────────────────────────────────────────────
 
 # ── Resolucion de la carpeta de salida (organizada por ticket) ───────────────
-# Prioridad: -OutputDir explicito > reparaciones/<ticket> > reparaciones/sin-ticket.
+# Prioridad: -OutputDir explicito > diagnosticos/tickets/<ticket> > diagnosticos/tickets/sin-ticket.
 $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
 
-if ($PSBoundParameters.ContainsKey('OutputDir')) {
+if ($OutputDir) {
     # El llamante fijo una carpeta concreta (CI, -O del launcher): se respeta.
     $destDir = $OutputDir
     $ruta    = Join-Path $destDir "diagnostico_${env:COMPUTERNAME}_${ts}.json"
 } else {
-    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path $repoRoot 'reparaciones' }
+    # Blindaje: ejecutado de formas en que $PSScriptRoot puede venir vacio (dot-
+    # source, pipe), caeriamos al CWD (p.ej. C:\Windows\System32 como admin). Se
+    # resuelve siempre el directorio real del script para anclar diagnosticos/tickets/.
+    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
+    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path (Join-Path $repoRoot 'diagnosticos') 'tickets' }
     if ($Ticket -and $Ticket -match '^\d+$') {
         $destDir = Join-Path $baseRep ('{0:D5}' -f [int]$Ticket)
         $ruta    = Join-Path $destDir 'diagnostico.json'
@@ -242,7 +357,7 @@ if ($PSBoundParameters.ContainsKey('OutputDir')) {
     } else {
         $destDir = Join-Path $baseRep 'sin-ticket'
         $ruta    = Join-Path $destDir "diagnostico_${env:COMPUTERNAME}_${ts}.json"
-        if (-not $Silent) { Write-Host "  [!] No se ha indicado ticket. Guardando en reparaciones/sin-ticket/" -ForegroundColor Yellow }
+        if (-not $Silent) { Write-Host "  [!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/" -ForegroundColor Yellow }
     }
 }
 
@@ -266,6 +381,7 @@ if (-not $Silent) {
         Write-Host ("   Uptime .......: {0} h" -f $sistema.uptime_horas)
     }
     Write-Host ("   CPU ..........: {0} ({1} cores, carga {2}%)" -f $resultado.cpu.name, $resultado.cpu.cores, $resultado.cpu.load)
+    if ($gpu) { Write-Host ("   GPU ..........: {0}" -f $gpu) }
     Write-Host ("   RAM ..........: {0} GB libres de {1} GB" -f $resultado.ram.free_gb, $resultado.ram.total_gb)
     if ($primerDisco) {
         Write-Host ("   Disco {0} ......: {1} GB libres de {2} GB" -f $primerDisco.drive, $primerDisco.free_gb, $primerDisco.total_gb)
@@ -276,6 +392,12 @@ if (-not $Silent) {
     if ($null -ne $updatesPend) { Write-Host ("   Updates ......: {0} pendientes" -f $updatesPend) }
     if ($svcParados.Count -gt 0) {
         Write-Host ("   [!] Servicios parados: {0}" -f (($svcParados | ForEach-Object { $_.nombre }) -join ', ')) -ForegroundColor Yellow
+    }
+    if ($serviciosFallidos.Count -gt 0) {
+        Write-Host ("   [!] Servicios auto sin arrancar: {0}" -f ($serviciosFallidos -join ', ')) -ForegroundColor Yellow
+    }
+    if ($sistema.reinicio_requerido) {
+        Write-Host "   [!] Reinicio pendiente del sistema" -ForegroundColor Yellow
     }
     Write-Host "   Top procesos (CPU):"
     foreach ($p in ($resultado.procesos_top | Select-Object -First 5)) {

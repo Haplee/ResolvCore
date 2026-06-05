@@ -213,7 +213,13 @@
       "Bash(dir C:\\\\Users\\\\franc\\\\proyecto\\\\ResolvCore\\\\graphify-out\\\\2026-06-03 *)",
       "WebFetch(domain:franvi.mintlify.app)",
       "Bash(grep *)",
-      "Bash(shellcheck -S warning scripts/android/diagnostico.sh)"
+      "Bash(shellcheck -S warning scripts/android/diagnostico.sh)",
+      "PowerShell(foreach \\($f in @\\('scripts/windows/ResolveCore.ps1','scripts/windows/diagnostico.ps1','scripts/windows/optimizacion.ps1'\\)\\) { $errs=$null; $null=[System.Management.Automation.Language.Parser]::ParseFile\\(\\(Resolve-Path $f\\), [ref]$null, [ref]$errs\\); if \\($errs\\) { Write-Host \"$f : $\\($errs.Count\\) PARSE ERRORS\"; $errs | ForEach-Object { Write-Host \"   $\\($_.Message\\) @ line $\\($_.Extent.StartLineNumber\\)\" } } else { Write-Host \"$f : parse OK\" } })",
+      "Read(//c/tmp/**)",
+      "Bash(rm -rf rctest)",
+      "Bash(mkdir -p rctest/android rctest/linux)",
+      "Bash(cp __TRACKED_VAR__/scripts/android/ResolveCore.sh rctest/android/)",
+      "Bash(cp /c/Users/franc/proyecto/ResolvCore/scripts/android/ResolveCore.sh rctest/android/)"
     ]
   }
 }

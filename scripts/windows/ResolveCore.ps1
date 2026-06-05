@@ -64,11 +64,16 @@ if ($diagFlags) {
 }
 if ($optFlags) {
     $optPath = Join-Path $PSScriptRoot 'optimizacion.ps1'
-    $splat = @{}
-    if ($Nivel)        { $splat.Nivel      = $Nivel }
-    if ($DryRun)       { $splat.DryRun     = $true }
-    if ($Undo)         { $splat.Undo       = $true }
-    if ($BackupOnly)   { $splat.BackupOnly = $true }
+    # optimizacion.ps1 aplica una limpieza unica con acta: solo soporta
+    # -Confirm/-StopHogs/-Ticket. -DryRun/-Undo/-BackupOnly no estan
+    # implementados: se rechazan (no aplicar limpieza real ante un -DryRun).
+    if ($DryRun -or $Undo -or $BackupOnly) {
+        Write-Host '[X] -DryRun/-Undo/-BackupOnly no estan implementados en optimizacion.ps1.' -ForegroundColor Yellow
+        Write-Host '    Ejecuta: .\optimizacion.ps1 -Confirm [-StopHogs] [-Ticket N]'
+        exit 2
+    }
+    $splat = @{ Confirm = $true }
+    if ($Nivel -eq 'extreme') { $splat.StopHogs = $true }
     & $optPath @splat
     exit $LASTEXITCODE
 }
@@ -122,15 +127,12 @@ FLAGS DE DIAGNOSTICO (forward a diagnostico.ps1)
 
 FLAGS DE OPTIMIZACION (forward a optimizacion.ps1)
     -Nivel <ligero|estandar|rendimiento|extreme>
-                                    Nivel a aplicar (default: estandar).
-                                      ligero       Limpieza basica.
-                                      estandar     Telemetria + servicios.
-                                      rendimiento  Anterior + disco/red/RAM.
-                                      extreme      Anterior + Cortana/
-                                                   OneDrive/Bing off.
-    -DryRun                         Simula sin aplicar.
-    -Undo                           Deshace cambios via estado_previo.json.
-    -BackupOnly                     Solo backup del registro, no aplica.
+                                    Nivel solicitado. optimizacion.ps1 aplica una
+                                    limpieza unica con acta (.txt/.json); 'extreme'
+                                    ademas activa -StopHogs (cierra procesos de
+                                    alto consumo no criticos).
+    -DryRun / -Undo / -BackupOnly   No implementados en optimizacion.ps1: se
+                                    rechazan. Usa -Confirm [-StopHogs] directamente.
 
 NOTA
     Los flags de diagnostico y optimizacion son mutuamente exclusivos.
@@ -177,7 +179,7 @@ $SERVICIOS_DIR = Join-Path $PROJECT_ROOT "servicios"
 $SYSTEM_ISSUES = @()
 
 # Ticket de MantisBT de la sesion. Se pide una vez al inicio y se reutiliza para
-# que diagnostico e informe se guarden juntos en reparaciones\<ticket>\.
+# que diagnostico e informe se guarden juntos en diagnosticos\tickets\<ticket>\.
 $TICKET_SESION = ''
 
 function Read-TicketSesion {
@@ -185,13 +187,13 @@ function Read-TicketSesion {
     $t = Read-Host "  Numero de ticket MantisBT para esta reparacion (ENTER = sin ticket)"
     if ($t -match '^\d+$') {
         $script:TICKET_SESION = $t
-        Write-Host ("  [i] Sesion asociada al ticket #{0}. Salidas en reparaciones\{1}\" -f $t, ('{0:D5}' -f [int]$t)) -ForegroundColor Cyan
+        Write-Host ("  [i] Sesion asociada al ticket #{0}. Salidas en diagnosticos\tickets\{1}\" -f $t, ('{0:D5}' -f [int]$t)) -ForegroundColor Cyan
     } else {
         $script:TICKET_SESION = ''
         if ($t -ne '') {
             Write-Host "  [!] '$t' no es un numero de ticket valido; sesion sin ticket." -ForegroundColor Yellow
         } else {
-            Write-Host "  [i] Sesion sin ticket (salidas en reparaciones\sin-ticket\)." -ForegroundColor Gray
+            Write-Host "  [i] Sesion sin ticket (salidas en diagnosticos\tickets\sin-ticket\)." -ForegroundColor Gray
         }
     }
     Start-Sleep 1
@@ -676,9 +678,9 @@ function Invoke-Informe {
     }
 
     # Buscar el JSON de diagnostico mas reciente. Si hay ticket de sesion, se
-    # prioriza reparaciones\<ticket>\; si no, la carpeta legacy scripts\diagnosticos.
+    # prioriza diagnosticos\tickets\<ticket>\; si no, la carpeta legacy scripts\diagnosticos.
     $repoRoot = Split-Path -Parent $PROJECT_ROOT
-    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path $repoRoot 'reparaciones' }
+    $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path (Join-Path $repoRoot 'diagnosticos') 'tickets' }
     if ($script:TICKET_SESION) {
         $ticketDir = Join-Path $baseRep ('{0:D5}' -f [int]$script:TICKET_SESION)
     } else {
@@ -758,19 +760,21 @@ function Invoke-Optimizacion {
     Write-Host "    5. VOLVER" -ForegroundColor Gray
     Write-Host ""
 
-    $nivel = Read-Host "  Selecciona (1-5)"
-
-    $nivelOpt = switch ($nivel) {
-        "1" { "ligero" }
-        "2" { "estandar" }
-        "3" { "rendimiento" }
-        "4" { "extreme" }
-        default { $null }
+    # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.
+    $nivelOpt = $null
+    while (-not $nivelOpt) {
+        $nivel = Read-Host "  Selecciona (1-5)"
+        switch ($nivel) {
+            "1" { $nivelOpt = "ligero" }
+            "2" { $nivelOpt = "estandar" }
+            "3" { $nivelOpt = "rendimiento" }
+            "4" { $nivelOpt = "extreme" }
+            "5" { return }
+            default { Write-Host "  Opcion no valida. Introduce 1-5." -ForegroundColor Red }
+        }
     }
 
-    if ($nivel -eq "5" -or -not $nivelOpt) { return }
-
-    if ($nivel -eq "4") {
+    if ($nivelOpt -eq "extreme") {
         Write-Host ""
         Write-Host "  [!] ADVERTENCIA: Escribe 'SI' para confirmar" -ForegroundColor Yellow
         if ((Read-Host) -ne "SI") { return }
@@ -781,9 +785,13 @@ function Invoke-Optimizacion {
 
     $script = Join-Path $SCRIPT_DIR "optimizacion.ps1"
     if (Test-Path $script) {
-        # optimizacion.ps1 exige -Confirm para iniciar la limpieza (evita
-        # ejecuciones accidentales). El tecnico ya eligio nivel arriba.
-        & $script -Nivel $nivelOpt -Confirm
+        # optimizacion.ps1 aplica una limpieza unica con acta; sus parametros
+        # reales son -Confirm/-StopHogs/-Ticket (NO acepta -Nivel). El nivel
+        # elegido se traduce: 'extreme' activa -StopHogs (cierra consumidores).
+        $argsOpt = @('-Confirm')
+        if ($nivelOpt -eq 'extreme') { $argsOpt += '-StopHogs' }
+        if ($script:TICKET_SESION) { $argsOpt += @('-Ticket', $script:TICKET_SESION) }
+        & $script @argsOpt
         Write-Host ""
         Write-Host "  [OK] Completado" -ForegroundColor Green
     }
@@ -1028,8 +1036,9 @@ function Main-Menu {
             default {
                 if ($opcion -ne "") {
                     Write-Host "  Opcion no valida" -ForegroundColor Red
+                    Start-Sleep 1
                 }
-                return
+                continue
             }
         }
     }

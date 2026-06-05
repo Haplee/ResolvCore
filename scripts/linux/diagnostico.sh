@@ -26,7 +26,7 @@ export LC_ALL=C
 
 # ── Argumentos ────────────────────────────────────────────────────────────────
 # --output <dir>  carpeta de salida explicita (back-compat / CI)
-# --ticket <N>    organiza la salida en reparaciones/<NNNNN>/diagnostico.json
+# --ticket <N>    organiza la salida en diagnosticos/tickets/<NNNNN>/diagnostico.json
 # Tambien acepta un dir posicional (uso historico: bash diagnostico.sh /tmp).
 OUTPUT_DIR=""
 TICKET=""
@@ -44,7 +44,7 @@ TS=$(date +%Y%m%d_%H%M%S)
 
 # ── Resolucion de carpeta de salida (organizada por ticket) ──────────────────
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/reparaciones}"
+BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
     FILE="$DEST_DIR/diagnostico_${HOST}_${TS}.json"
@@ -60,7 +60,7 @@ elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
 else
     DEST_DIR="$BASE_REP/sin-ticket"
     FILE="$DEST_DIR/diagnostico_${HOST}_${TS}.json"
-    echo "[!] No se ha indicado ticket. Guardando en reparaciones/sin-ticket/"
+    echo "[!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/"
 fi
 mkdir -p "$DEST_DIR"
 
