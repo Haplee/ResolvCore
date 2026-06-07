@@ -515,8 +515,8 @@ run_informe() {
     local repo_root base_rep diag_dir
     repo_root="$(cd "$(dirname "$SCRIPT_DIR")/.." && pwd)"
     base_rep="${RC_REPARACIONES_DIR:-$repo_root/diagnosticos/tickets}"
-    if [[ -n "$TICKET_SESION" ]] && compgen -G "$base_rep/$(printf '%05d' "$TICKET_SESION")/*.json" >/dev/null 2>&1; then
-        diag_dir="$base_rep/$(printf '%05d' "$TICKET_SESION")"
+    if [[ -n "$TICKET_SESION" ]] && compgen -G "$base_rep/$(printf '%05d' "$TICKET_SESION")/linux/*.json" >/dev/null 2>&1; then
+        diag_dir="$base_rep/$(printf '%05d' "$TICKET_SESION")/linux"
     else
         diag_dir="$(dirname "$SCRIPT_DIR")/diagnosticos"
     fi
@@ -560,7 +560,7 @@ run_informe() {
 
     local gen_args=()
     [[ -n "$json_path" ]] && gen_args+=(--json "$json_path")
-    [[ -n "$TICKET_SESION" ]] && gen_args+=(--ticket "$TICKET_SESION")
+    [[ -n "$TICKET_SESION" ]] && gen_args+=(--ticket "$TICKET_SESION" --plataforma linux)
     if [[ ${#gen_args[@]} -gt 0 ]]; then
         python3 "$gen_script" "${gen_args[@]}" \
             || echo -e "  ${YELLOW}[!] Generador termino con avisos${NC}"

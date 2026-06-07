@@ -1,3 +1,9 @@
+-- NOTA (ResolveCore): este fichero es un DUMP COMPLETO del esquema nativo de
+-- MantisBT (vendor), no una migracion propia de ResolveCore. Sus CREATE TABLE no
+-- llevan IF NOT EXISTS a proposito: esta pensado para bootstrap sobre una BD
+-- vacia (docker-compose). Re-ejecutarlo sobre una BD existente fallara; para eso
+-- usa las migraciones idempotentes de vulnerabilities/migrations/.
+--
 -- MySQL dump 10.13  Distrib 5.7.44, for Linux (x86_64)
 --
 -- Host: localhost    Database: mantis

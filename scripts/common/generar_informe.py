@@ -378,7 +378,9 @@ def main():
     parser.add_argument("--json", default="", help="JSON de diagnostico para pre-rellenar la cabecera.")
     parser.add_argument("--salida", default="", help="Ruta de salida del .txt (opcional).")
     parser.add_argument("--dir-salida", default=_DIR_SALIDA, help="Carpeta de salida (por defecto scripts/diagnosticos).")
-    parser.add_argument("--ticket", default="", help="Numero de ticket MantisBT: guarda en diagnosticos/tickets/<NNNNN>/informe.txt")
+    parser.add_argument("--ticket", default="", help="Numero de ticket MantisBT: guarda en diagnosticos/tickets/<NNNNN>/<plataforma>/informe.txt")
+    parser.add_argument("--plataforma", default="", choices=["", "windows", "linux", "android"],
+                        help="Plataforma (windows|linux|android). Si se omite, se deduce del --json; si no, 'sin-plataforma'.")
     parser.add_argument("--vuln-json", dest="vuln_json", default="",
                         help="JSON de buscar_vulnerabilidades.py: lista KEV/criticas en incidencias.")
     args = parser.parse_args()
@@ -392,11 +394,17 @@ def main():
     if args.salida:
         ruta = args.salida
     elif args.ticket and args.ticket.isdigit():
-        # Organiza la salida por ticket: diagnosticos/tickets/<NNNNN>/informe.txt.
+        # Organiza la salida por ticket y plataforma:
+        # diagnosticos/tickets/<NNNNN>/<plataforma>/informe.txt.
         # Base configurable con RC_REPARACIONES_DIR; por defecto raiz del repo.
+        # La plataforma se toma de --plataforma o se deduce del --json (_meta.plataforma);
+        # si no se conoce, cae a 'sin-plataforma'.
         repo_root = os.path.dirname(os.path.dirname(_AQUI))
         base = os.environ.get("RC_REPARACIONES_DIR") or os.path.join(repo_root, "diagnosticos", "tickets")
-        dest = os.path.join(base, "{0:05d}".format(int(args.ticket)))
+        plat = (args.plataforma or cabecera.get("plataforma", "") or "").lower()
+        if plat not in ("windows", "linux", "android"):
+            plat = "sin-plataforma"
+        dest = os.path.join(base, "{0:05d}".format(int(args.ticket)), plat)
         os.makedirs(dest, exist_ok=True)
         ruta = os.path.join(dest, "informe.txt")
         if os.path.exists(ruta):

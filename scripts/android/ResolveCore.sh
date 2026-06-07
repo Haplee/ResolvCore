@@ -186,7 +186,7 @@ show_help() {
     echo ""
     echo -e "  Resultado:"
     echo -e "    - Genera archivo JSON con todos los datos del dispositivo"
-    echo -e "    - Se guarda en: diagnosticos/diagnostico_<serial>_<fecha>.json"
+    echo -e "    - Se guarda en: diagnosticos/tickets/sin-ticket/android/diagnostico_<serial>_<fecha>.json"
     echo -e "    - Importar en ResolveCore: Diagnostico > Importar JSON"
     echo ""
     echo -e "  ================================================================="

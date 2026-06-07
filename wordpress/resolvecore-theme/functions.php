@@ -3,6 +3,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// ── Email de contacto (fuente unica) ────────────────────────────────────────
+// Centraliza el correo de soporte para no repetirlo por el tema. Se puede
+// sobrescribir con la constante RC_CONTACT_EMAIL en wp-config.php sin tocar codigo.
+function rc_contact_email(): string {
+	return defined( 'RC_CONTACT_EMAIL' ) ? RC_CONTACT_EMAIL : 'fvidalmateo@gmail.com';
+}
+
 // ── Descarga segura de ficheros para área técnicos ─────────────────────────
 // Añade en wp-config.php: define('RC_DOWNLOADS_PATH', '/opt/resolvecore-downloads');
 function rc_handle_technician_download(): void {
@@ -968,6 +975,7 @@ function rc_tech_build_readme(): void {
 	$ticket_line = $ticket_id ? "Incidencia MantisBT: #{$ticket_id}" : 'Incidencia MantisBT: (pendiente)';
 	$fecha       = wp_date( 'Y-m-d H:i' );
 
+	$rc_email = rc_contact_email();
 	$txt = <<<TXT
 ================================================================
   ResolveCore — Kit de soporte para {$cliente}
@@ -1004,7 +1012,7 @@ Cuando la sesión termine, simplemente cierra AnyDesk.
 ----------------------------------------------------------------
 
 Web:    https://resolvecore.website
-Email:  fvidalmateo@gmail.com
+Email:  {$rc_email}
 
 ResolveCore — Solución a tus problemas informáticos.
 TXT;
@@ -1291,7 +1299,7 @@ footer{margin-top:3rem;font-size:.8rem;color:#888;border-top:1px solid #eee;padd
 </style></head><body>
 <button class="noprint" onclick="window.print()">Imprimir / Guardar PDF</button>
 <header>
-	<div><h1>ResolveCore</h1><div>Soporte técnico remoto<br>fvidalmateo@gmail.com</div></div>
+	<div><h1>ResolveCore</h1><div>Soporte técnico remoto<br><?php echo esc_html( rc_contact_email() ); ?></div></div>
 	<div class="meta">
 		<strong>Factura <?php echo esc_html( $num ); ?></strong><br>
 		Fecha: <?php echo esc_html( $fecha ); ?><br>

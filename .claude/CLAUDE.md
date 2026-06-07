@@ -59,7 +59,7 @@ bash ./scripts/linux/diagnostico.sh
 # bash ./scripts/macos/diagnostico.sh
 
 # Optimización + acta de acciones (.txt cliente + .json técnico/flota en
-# reparaciones/<NNNNN>/). --confirm obligatorio; --stop-hogs (Bash) / -StopHogs
+# diagnosticos/tickets/<NNNNN>/<plataforma>/). --confirm obligatorio; --stop-hogs (Bash) / -StopHogs
 # (PS) ademas detiene los top consumidores no críticos. Ver docs/scripting/schema-optimizacion.md
 bash ./scripts/linux/optimizacion.sh --confirm [--ticket N] [--stop-hogs]
 bash ./scripts/android/optimizacion.sh --confirm [--ticket N] [--stop-hogs]
@@ -71,8 +71,8 @@ python scripts/common/buscar_vulnerabilidades.py
 # Generar plantilla de informe (.txt para rellenar a mano; --json opcional pre-rellena cabecera)
 python scripts/common/generar_informe.py [--json diagnostico.json]
 
-# Generar plantilla de factura (.txt para rellenar a mano)
-python scripts/common/generar_factura.py
+# (ARCHIVADO — en _archivo/common/, no en el árbol activo. La facturación se gestiona desde MantisBT.)
+# python scripts/common/generar_factura.py
 
 # (ARCHIVADO — en _archivo/common/, no en el árbol activo. Restaurar con git mv si se necesita.)
 # python scripts/common/escaner_nmap.py --ip 192.168.1.0/24       # escaneo Nmap
@@ -245,7 +245,6 @@ ResolveCore
 │   │   │   └── vuln_source.py
 │   │   ├── __init__.py
 │   │   ├── buscar_vulnerabilidades.py
-│   │   ├── generar_factura.py
 │   │   └── generar_informe.py
 │   ├── linux
 │   │   ├── ResolveCore.sh
@@ -416,8 +415,8 @@ ResolveCore
 - El técnico sube el informe a MantisBT **manualmente** (no hay adjunto automático).
 
 ### 4. Modelo de facturación
-- `scripts/common/generar_factura.py` genera una plantilla de factura `.txt` con
-  campos predefinidos que el técnico rellena a mano y entrega al cliente (sin PDF).
+- La facturación se gestiona desde MantisBT. `generar_factura.py` queda archivado
+  en `_archivo/common/` (ya no forma parte del árbol activo).
 - **Pago por servicio:** factura por intervención al cerrar ticket.
 - **Suscripción:** revisiones programadas vía cron + notificación automática al usuario.
 

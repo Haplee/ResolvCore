@@ -7,8 +7,8 @@
 # espacio liberado en cada paso y detecta procesos de alto consumo.
 #
 # Deja constancia de TODO lo realizado en un acta para técnico y cliente:
-#   diagnosticos/tickets/<NNNNN>/optimizacion.txt   (legible, para el cliente)
-#   diagnosticos/tickets/<NNNNN>/optimizacion.json  (estructurado, técnico/flota)
+#   diagnosticos/tickets/<NNNNN>/linux/optimizacion.txt   (legible, para el cliente)
+#   diagnosticos/tickets/<NNNNN>/linux/optimizacion.json  (estructurado, técnico/flota)
 #
 # Requiere root (sudo) para apt y journalctl.
 #
@@ -61,10 +61,10 @@ BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
-    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
+    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")/linux"
 else
-    DEST_DIR="$BASE_REP/sin-ticket"
-    echo "[!] No se ha indicado ticket. Guardando acta en diagnosticos/tickets/sin-ticket/"
+    DEST_DIR="$BASE_REP/sin-ticket/linux"
+    echo "[!] No se ha indicado ticket. Guardando acta en diagnosticos/tickets/sin-ticket/linux/"
 fi
 mkdir -p "$DEST_DIR"
 

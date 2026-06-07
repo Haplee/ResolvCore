@@ -26,8 +26,14 @@ $g_default_timezone = 'Europe/Madrid';
 
 // ── Seguridad ───────────────────────────────────────────────────────────────
 // El salt cifra los tokens de la API REST. Si se pierde se invalida toda
-// la base de tokens emitidos — ojo al rotarlo.
-$g_crypto_master_salt = getenv( 'MANTIS_SALT' ) ?: 'VYN83XZpOaNhKQ9C3G0J+jePI75myahTH4KW8R8rfao=';
+// la base de tokens emitidos — ojo al rotarlo. NO se hardcodea: debe venir
+// SIEMPRE de la variable de entorno MANTIS_SALT (ver .env.example; generar con
+// `openssl rand -base64 32`). Sin salt no se arranca, por seguridad.
+$g_crypto_master_salt = getenv( 'MANTIS_SALT' );
+if ( ! $g_crypto_master_salt ) {
+	die( 'ResolveCore: falta la variable de entorno MANTIS_SALT (32+ bytes aleatorios). ' .
+	     'Genera uno con: openssl rand -base64 32' );
+}
 
 $g_allow_rest_api        = ON;   // necesario para el dashboard del cliente
 $g_allow_anonymous_login = OFF;

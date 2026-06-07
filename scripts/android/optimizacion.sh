@@ -5,8 +5,8 @@
 # Limpia la caché de las apps (SIN borrar datos ni sesiones), borra temporales
 # de /data/local/tmp, detecta apps de alto consumo en segundo plano y deja
 # constancia de todo lo realizado en un acta para técnico y cliente:
-#   diagnosticos/tickets/<NNNNN>/optimizacion.txt   (legible, para el cliente)
-#   diagnosticos/tickets/<NNNNN>/optimizacion.json  (estructurado, técnico/flota)
+#   diagnosticos/tickets/<NNNNN>/android/optimizacion.txt   (legible, para el cliente)
+#   diagnosticos/tickets/<NNNNN>/android/optimizacion.json  (estructurado, técnico/flota)
 #
 # CAMBIO v3.0: ya NO se usa 'pm clear' (que borraba logins/ajustes de cada app).
 # Ahora 'pm trim-caches' limpia solo la caché y conserva los datos del usuario.
@@ -75,10 +75,10 @@ BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
-    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
+    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")/android"
 else
-    DEST_DIR="$BASE_REP/sin-ticket"
-    echo "[!] No se ha indicado ticket. Guardando acta en diagnosticos/tickets/sin-ticket/"
+    DEST_DIR="$BASE_REP/sin-ticket/android"
+    echo "[!] No se ha indicado ticket. Guardando acta en diagnosticos/tickets/sin-ticket/android/"
 fi
 mkdir -p "$DEST_DIR"
 

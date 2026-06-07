@@ -219,7 +219,19 @@
       "Bash(rm -rf rctest)",
       "Bash(mkdir -p rctest/android rctest/linux)",
       "Bash(cp __TRACKED_VAR__/scripts/android/ResolveCore.sh rctest/android/)",
-      "Bash(cp /c/Users/franc/proyecto/ResolvCore/scripts/android/ResolveCore.sh rctest/android/)"
+      "Bash(cp /c/Users/franc/proyecto/ResolvCore/scripts/android/ResolveCore.sh rctest/android/)",
+      "PowerShell(oh-my-posh print *)",
+      "Bash(shellcheck --version)",
+      "Bash(command -v ruff)",
+      "Bash(command -v flake8)",
+      "Bash(command -v pwsh)",
+      "Bash(command -v powershell.exe)",
+      "Bash(pwsh *)",
+      "Bash(python -c \"import sys; sys.argv=['x','--help']; exec\\(open\\('scripts/common/buscar_vulnerabilidades.py'\\).read\\(\\)\\)\")",
+      "Bash(python scripts/common/generar_informe.py --help)",
+      "Bash(python scripts/common/buscar_vulnerabilidades.py --help)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('scripts/common/adjuntar_informe_mantis.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")"
     ]
   }
 }

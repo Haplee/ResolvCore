@@ -13,7 +13,7 @@
 #     bash deploy-ionos.sh <dominio> <email> <usuario-deploy>
 #
 # Ejemplo:
-#     bash deploy-ionos.sh resolvecore.website fvidalmateo@gmail.com franvi
+#     bash deploy-ionos.sh resolvecore.website admin@resolvecore.website franvi
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
