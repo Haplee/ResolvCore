@@ -60,10 +60,10 @@ BASE_REP="${RC_REPARACIONES_DIR:-$REPO_ROOT/diagnosticos/tickets}"
 if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
-    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
+    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")/android"
 else
-    DEST_DIR="$BASE_REP/sin-ticket"
-    echo "[!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/"
+    DEST_DIR="$BASE_REP/sin-ticket/android"
+    echo "[!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/android/"
 fi
 mkdir -p "$DEST_DIR"
 

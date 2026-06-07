@@ -3,6 +3,9 @@
 *.bash      text eol=lf
 bootstrap-* text eol=lf
 
+# Assets de texto con EOL consistente (evita ruido CRLF/LF entre copias)
+*.svg       text eol=lf
+
 # Windows-native stays CRLF
 *.ps1       text eol=crlf
 *.psm1      text eol=crlf

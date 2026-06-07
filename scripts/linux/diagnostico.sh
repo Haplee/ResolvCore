@@ -49,7 +49,7 @@ if [[ -n "$OUTPUT_DIR" ]]; then
     DEST_DIR="$OUTPUT_DIR"
     FILE="$DEST_DIR/diagnostico_${HOST}_${TS}.json"
 elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
-    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")"
+    DEST_DIR="$BASE_REP/$(printf '%05d' "$TICKET")/linux"
     FILE="$DEST_DIR/diagnostico.json"
     if [[ -f "$FILE" ]]; then
         n=2
@@ -58,9 +58,9 @@ elif [[ "$TICKET" =~ ^[0-9]+$ ]]; then
         echo "[i] Ya existia diagnostico.json; guardando como $(basename "$FILE")"
     fi
 else
-    DEST_DIR="$BASE_REP/sin-ticket"
+    DEST_DIR="$BASE_REP/sin-ticket/linux"
     FILE="$DEST_DIR/diagnostico_${HOST}_${TS}.json"
-    echo "[!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/"
+    echo "[!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/linux/"
 fi
 mkdir -p "$DEST_DIR"
 

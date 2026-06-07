@@ -12,7 +12,7 @@
 
 .PARAMETER OutputDir
     Carpeta de salida explícita del JSON. Por defecto vacío: la salida se
-    organiza por ticket en <repo>\diagnosticos\tickets\<NNNNN>\ (o \sin-ticket\).
+    organiza por ticket en <repo>\diagnosticos\tickets\<NNNNN>\windows\ (o \sin-ticket\windows\).
 
 .EXAMPLE
     .\diagnostico.ps1
@@ -30,8 +30,8 @@ param(
     [string]$OutputDir = '',
 
     # Numero de ticket MantisBT. Si se indica, el JSON se guarda en
-    # <repo>/diagnosticos/tickets/<NNNNN>/diagnostico.json (zero-padded a 5 digitos).
-    # Sin ticket (y sin -OutputDir explicito) cae a diagnosticos/tickets/sin-ticket/.
+    # <repo>/diagnosticos/tickets/<NNNNN>/windows/diagnostico.json (zero-padded a 5 digitos).
+    # Sin ticket (y sin -OutputDir explicito) cae a diagnosticos/tickets/sin-ticket/windows/.
     # Base configurable con la variable de entorno RC_REPARACIONES_DIR.
     [string]$Ticket = '',
 
@@ -48,6 +48,14 @@ param(
     [string]$Token       = $env:RC_FLEET_TOKEN,
     [int]$TicketId       = 0
 )
+
+# ── Blindaje de binding: si -OutputDir recibe algo que parece un nombre de ───
+# parametro (p.ej. "-Ticket" pasado posicionalmente), lo ignoramos para no crear
+# una carpeta literal "-Ticket" junto al script.
+if ($OutputDir -and $OutputDir -match '^-') {
+    Write-Warning "OutputDir '$OutputDir' parece un parametro mal pasado; se ignora."
+    $OutputDir = ''
+}
 
 # ── Aviso de privilegios (no bloqueante) ─────────────────────────────────────
 # Sin Administrador algunas consultas CIM/red quedan incompletas; avisamos en
@@ -345,7 +353,7 @@ if ($OutputDir) {
     $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
     $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path (Join-Path $repoRoot 'diagnosticos') 'tickets' }
     if ($Ticket -and $Ticket -match '^\d+$') {
-        $destDir = Join-Path $baseRep ('{0:D5}' -f [int]$Ticket)
+        $destDir = Join-Path (Join-Path $baseRep ('{0:D5}' -f [int]$Ticket)) 'windows'
         $ruta    = Join-Path $destDir 'diagnostico.json'
         # No sobrescribir: si ya existe, sufijo _vN y aviso.
         if (Test-Path $ruta) {
@@ -355,9 +363,9 @@ if ($OutputDir) {
             if (-not $Silent) { Write-Host "  [i] Ya existia diagnostico.json; guardando como diagnostico_v$n.json" -ForegroundColor Yellow }
         }
     } else {
-        $destDir = Join-Path $baseRep 'sin-ticket'
+        $destDir = Join-Path (Join-Path $baseRep 'sin-ticket') 'windows'
         $ruta    = Join-Path $destDir "diagnostico_${env:COMPUTERNAME}_${ts}.json"
-        if (-not $Silent) { Write-Host "  [!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/" -ForegroundColor Yellow }
+        if (-not $Silent) { Write-Host "  [!] No se ha indicado ticket. Guardando en diagnosticos/tickets/sin-ticket/windows/" -ForegroundColor Yellow }
     }
 }
 
@@ -414,7 +422,7 @@ if (-not $Silent) {
 # avisa pero NO aborta el script: el JSON local ya está a salvo en disco.
 
 if ($ClientEmail -and $Token) {
-    Write-Host "Subiendo diagnóstico a $ApiUrl ..."
+    if (-not $Silent) { Write-Host "Subiendo diagnóstico a $ApiUrl ..." }
 
     $payload = [ordered]@{
         client_email = $ClientEmail
@@ -428,11 +436,11 @@ if ($ClientEmail -and $Token) {
             -ContentType 'application/json; charset=utf-8' `
             -Body ($payload | ConvertTo-Json -Depth 6) `
             -TimeoutSec 15
-        Write-Host "  Subida OK (accion=$($resp.action), score=$($resp.score), host_id=$($resp.host_id))."
+        if (-not $Silent) { Write-Host "  Subida OK (accion=$($resp.action), score=$($resp.score), host_id=$($resp.host_id))." }
     } catch {
         Write-Warning "No se pudo subir el diagnóstico: $($_.Exception.Message)"
         Write-Warning "El JSON local sigue disponible en: $ruta"
     }
 } else {
-    Write-Host "(Subida automática omitida: define -ClientEmail y RC_FLEET_TOKEN para activarla.)"
+    if (-not $Silent) { Write-Host "(Subida automática omitida: define -ClientEmail y RC_FLEET_TOKEN para activarla.)" }
 }
