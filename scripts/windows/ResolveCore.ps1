@@ -689,7 +689,7 @@ function Invoke-Informe {
     $repoRoot = Split-Path -Parent $PROJECT_ROOT
     $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path (Join-Path $repoRoot 'diagnosticos') 'tickets' }
     if ($script:TICKET_SESION) {
-        $ticketDir = Join-Path $baseRep ('{0:D5}' -f [int]$script:TICKET_SESION)
+        $ticketDir = Join-Path (Join-Path $baseRep ('{0:D5}' -f [int]$script:TICKET_SESION)) 'windows'
     } else {
         $ticketDir = $null
     }
@@ -740,7 +740,7 @@ function Invoke-Informe {
 
     $cliArgs = @($genScript)
     if (-not [string]::IsNullOrWhiteSpace($jsonPath)) { $cliArgs += @('--json', $jsonPath) }
-    if ($script:TICKET_SESION) { $cliArgs += @('--ticket', $script:TICKET_SESION) }
+    if ($script:TICKET_SESION) { $cliArgs += @('--ticket', $script:TICKET_SESION, '--plataforma', 'windows') }
 
     try {
         & $py.Source @cliArgs

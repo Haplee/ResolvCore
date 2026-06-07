@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     ResolveCore — Optimización de Windows con acta de acciones.
@@ -9,8 +9,8 @@
     Detecta procesos de alto consumo y programas de arranque (el análogo a
     "apps en segundo plano"). Deja constancia de TODO lo realizado en un acta
     para técnico y cliente:
-        diagnosticos\tickets\<NNNNN>\optimizacion.txt   (legible, para el cliente)
-        diagnosticos\tickets\<NNNNN>\optimizacion.json  (estructurado, técnico/flota)
+        diagnosticos\tickets\<NNNNN>\windows\optimizacion.txt   (legible, para el cliente)
+        diagnosticos\tickets\<NNNNN>\windows\optimizacion.json  (estructurado, técnico/flota)
 
     Idealmente como Administrador para que la limpieza de SoftwareDistribution
     funcione.
@@ -23,7 +23,7 @@
     que NO sean críticos del sistema.
 
 .PARAMETER Ticket
-    Nº de ticket MantisBT: el acta se guarda en diagnosticos\tickets\<NNNNN>\.
+    Nº de ticket MantisBT: el acta se guarda en diagnosticos\tickets\<NNNNN>\windows\.
 
 .EXAMPLE
     .\optimizacion.ps1 -Confirm
@@ -54,6 +54,14 @@ if (-not $Confirm) {
 }
 
 $hostName = $env:COMPUTERNAME
+
+# ── Blindaje de binding: si -OutputDir recibe algo que parece un nombre de ───
+# parametro (p.ej. "-Ticket" pasado posicionalmente), lo ignoramos para no crear
+# una carpeta literal "-Ticket" junto al script.
+if ($OutputDir -and $OutputDir -match '^-') {
+    Write-Warning "OutputDir '$OutputDir' parece un parametro mal pasado; se ignora."
+    $OutputDir = ''
+}
 
 # ── Aviso de privilegios (no bloqueante) ─────────────────────────────────────
 # Sin Administrador la limpieza de SoftwareDistribution (Windows Update) y otras
@@ -184,7 +192,7 @@ if ($OutputDir) {
     $baseRep  = if ($env:RC_REPARACIONES_DIR) { $env:RC_REPARACIONES_DIR } else { Join-Path (Join-Path $repoRoot 'diagnosticos') 'tickets' }
     if ($Ticket -and $Ticket -match '^\d+$') {
         $ticketStr = '{0:D5}' -f [int]$Ticket
-        $destDir   = Join-Path $baseRep $ticketStr
+        $destDir   = Join-Path (Join-Path $baseRep $ticketStr) 'windows'
         $jsonFile  = Join-Path $destDir 'optimizacion.json'
         $txtFile   = Join-Path $destDir 'optimizacion.txt'
         if (Test-Path $jsonFile) {
@@ -196,10 +204,10 @@ if ($OutputDir) {
         }
     } else {
         $ticketStr = 'sin-ticket'
-        $destDir   = Join-Path $baseRep 'sin-ticket'
+        $destDir   = Join-Path (Join-Path $baseRep 'sin-ticket') 'windows'
         $jsonFile  = Join-Path $destDir "optimizacion_${hostName}_${ts}.json"
         $txtFile   = Join-Path $destDir "optimizacion_${hostName}_${ts}.txt"
-        Write-Host "  [!] No se ha indicado ticket. Guardando acta en diagnosticos\tickets\sin-ticket\" -ForegroundColor Yellow
+        Write-Host "  [!] No se ha indicado ticket. Guardando acta en diagnosticos\tickets\sin-ticket\windows\" -ForegroundColor Yellow
     }
 }
 if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }

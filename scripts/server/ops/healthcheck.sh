@@ -32,7 +32,7 @@ fi
 
 RC_DOMAIN="${RC_DOMAIN:-resolvecore.website}"
 MYSQL_CNF="${MYSQL_CNF:-/etc/resolvecore/mysql-backup.cnf}"
-ALERT_TO="${ALERT_TO:-fvidalmateo@gmail.com}"
+ALERT_TO="${ALERT_TO:-admin@resolvecore.website}"   # override real en /etc/resolvecore/env
 MODO="${1:-}"
 
 FALLOS=0
