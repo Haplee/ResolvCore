@@ -178,6 +178,9 @@ class RC_Mantis_API {
 		}
 
 		$filename = $reporter_filename !== '' ? $reporter_filename : basename( $file_path );
+		// Saneamos el nombre: CR/LF y comillas romperían la cabecera Content-Disposition
+		// del multipart (inyección de cabecera). basename ya quita rutas.
+		$filename = str_replace( array( "\r", "\n", '"' ), '', $filename );
 
 		$boundary = wp_generate_password( 24, false );
 		$contents = file_get_contents( $file_path );
