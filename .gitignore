@@ -104,3 +104,6 @@ docs/build/
 
 # Snapshot completo del repo para LLMs (~40 MB). Local-only, jamás versionar.
 repomix-output.xml
+
+# Log de permisos de Claude Code: NUNCA versionar
+.claude/settings.local.json
