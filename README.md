@@ -430,37 +430,25 @@ irm https://resolvecore.website/install.ps1 | iex
 curl -fsSL https://resolvecore.website/install.sh | sudo bash
 ```
 
-**Features UI:**
+**Funcionalidades**
 
-- Hero con gradient mesh animado + auto-detect SO por navegador
-- Estado infraestructura en vivo: MantisBT / Web / Fleet (ping cada 60 s, cached)
-- Terminal mock con chrome (3 dots + prompt + cursor)
-- SHA-256 + tamaño + mtime reales por fichero
-- Troubleshooting expandible (UAC, BOM, BTRFS, ExecutionPolicy)
-- Checklist post-instalación persistido en `localStorage`
-- Widget tickets MantisBT del técnico (filtrados por handler/reporter)
-- **Dashboard ticket activo (pinned, sticky)**: cronómetro intervención, añadir nota a Mantis, subir el informe `.txt` al ticket, AnyDesk launcher (`anydesk:ID` + historial 5 sesiones). La factura la gestiona MantisBT, no el panel.
-- **Command palette (`Ctrl`+`K`)**: búsqueda fuzzy de tabs, acciones, links y tickets
-- **Tail logs en vivo**: últimas 20 entradas `wp_rc_download_log`, refresh 10 s
-- Atajos teclado: `1` `2` `3` tabs · `C` copia oneliner · `Ctrl`+`K` palette · `Esc` cierra
-- Generador README cliente personalizado (cliente + ticket → `.txt` descargable)
-- Admin bar de WordPress oculta para rol Editor
+- **Estado de infraestructura en vivo** — ping a MantisBT, web y Fleet cada 60 s (cacheado).
+- **Bandeja de tickets del técnico** — tickets de MantisBT filtrados por handler/reporter.
+- **Dashboard de ticket activo** (pinned, sticky) — cronómetro de intervención, nota a Mantis, subida del informe `.txt` al ticket y lanzador AnyDesk (`anydesk:ID` + historial de sesiones). La factura la gestiona MantisBT.
+- **Generador de kit de cliente** — cliente + ticket → `README-cliente.txt` descargable.
+- **Productividad** — paleta de comandos (`Ctrl`+`K`), atajos de teclado (`1`/`2`/`3` tabs, `C` copia el one-liner, `Esc` cierra), checklist post-instalación persistido en `localStorage` y troubleshooting expandible (UAC, BOM, BTRFS, ExecutionPolicy).
 
-**Endpoints AJAX nuevos (en `wordpress/resolvecore-theme/functions.php`):**
+**Endpoints AJAX** (`wordpress/resolvecore-theme/functions.php`)
 
-| Acción | Función | Uso |
+| Acción | Función | Cache |
 |---|---|---|
-| `rc_tech_infra_status` | Pings Mantis/Web/Fleet | Cache 60 s |
-| `rc_tech_my_tickets` | Tickets Mantis del user | Cache 2 min |
-| `rc_tech_logs_tail` | Últimas 20 descargas | — |
-| `rc_tech_add_note` | Nota al ticket pinned | `MantisApi::add_note()` |
-| `rc_tech_upload_informe` | Adjunta el informe `.txt` | `MantisApi::attach_file()` |
-| `rc_tech_factura_inline` | Factura HTML imprimible | `template_redirect` |
-| `rc_tech_build_readme` | README cliente personalizado | `admin-post.php` |
+| `rc_tech_infra_status` | Ping a Mantis / Web / Fleet | 60 s |
+| `rc_tech_my_tickets` | Tickets de MantisBT del técnico | 2 min |
+| `rc_tech_add_note` | Nota al ticket activo (`MantisApi::add_note()`) | — |
+| `rc_tech_upload_informe` | Adjunta el informe `.txt` (`MantisApi::attach_file()`) | — |
+| `rc_tech_build_readme` | README de cliente personalizado | — |
 
-**Tabla DB nueva:** `wp_rc_download_log` (id, file_key, user_login, ip, ua, downloaded_at) — creada vía `dbDelta` en `after_setup_theme`. Auditoría completa de descargas técnicos.
-
-**Despliegue VPS:** symlink permanente `/var/www/wp/wp-content/themes/resolvecore-theme` → `/opt/resolvecore-repo/wordpress/resolvecore-theme`. `git pull` actualiza al instante.
+**Despliegue en VPS** — symlink permanente `/var/www/wp/wp-content/themes/resolvecore-theme` → `/opt/resolvecore-repo/wordpress/resolvecore-theme`; `git pull` actualiza al instante.
 
 URL en producción: `https://resolvecore.website/tecnicos/`
 
