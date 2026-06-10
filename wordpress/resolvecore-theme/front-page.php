@@ -2,7 +2,7 @@
 <html <?php language_attributes(); ?>>
 
 <head>
-	<meta charset="<?php bloginfo('charset'); ?>">
+	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta name="description"
 		content="ResolveCore — Solución a tus problemas informáticos. Diagnóstico automatizado, análisis de vulnerabilidades y optimización para Windows, Linux y Android.">
@@ -14,8 +14,8 @@
 		content="Plataforma cross-platform de mantenimiento y optimización para Windows, Linux y Android. Diagnóstico automatizado y análisis de vulnerabilidades.">
 	<meta property="og:type" content="website">
 	<meta property="og:locale" content="es_ES">
-	<meta property="og:url" content="<?php echo esc_url(home_url('/')); ?>">
-	<meta property="og:image" content="<?php echo esc_url(get_template_directory_uri() . '/og-image.png'); ?>">
+	<meta property="og:url" content="<?php echo esc_url( home_url( '/' ) ); ?>">
+	<meta property="og:image" content="<?php echo esc_url( get_template_directory_uri() . '/og-image.png' ); ?>">
 	<meta property="og:image:alt" content="ResolveCore — diagnóstico y optimización cross-platform">
 	<meta property="og:site_name" content="ResolveCore">
 
@@ -24,12 +24,12 @@
 	<meta name="twitter:title" content="ResolveCore">
 	<meta name="twitter:description"
 		content="Plataforma cross-platform de mantenimiento y optimización para Windows, Linux y Android.">
-	<meta name="twitter:image" content="<?php echo esc_url(get_template_directory_uri() . '/og-image.png'); ?>">
+	<meta name="twitter:image" content="<?php echo esc_url( get_template_directory_uri() . '/og-image.png' ); ?>">
 
 	<!-- Theme color + canonical -->
 	<meta name="theme-color" content="#0a0c10">
 	<meta name="color-scheme" content="dark">
-	<link rel="canonical" href="<?php echo esc_url(home_url('/')); ?>">
+	<link rel="canonical" href="<?php echo esc_url( home_url( '/' ) ); ?>">
 
 	<!-- Schema.org JSON-LD -->
 	<script type="application/ld+json">
@@ -2714,12 +2714,12 @@
 
 	<!-- ==================== NAV ==================== -->
 	<nav class="rc-nav" id="rc-nav" aria-label="Navegación principal">
-		<a href="<?php echo esc_url(home_url('/')); ?>" class="rc-nav-logo" aria-label="ResolveCore — ir al inicio">
+		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="rc-nav-logo" aria-label="ResolveCore — ir al inicio">
 			<picture>
 				<source
-					srcset="<?php echo esc_url(get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg'); ?>"
+					srcset="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg' ); ?>"
 					type="image/svg+xml">
-				<img src="<?php echo esc_url(get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png'); ?>"
+				<img src="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png' ); ?>"
 					alt="ResolveCore" class="rc-nav-logo-img" width="180" height="45" fetchpriority="high"
 					decoding="async">
 			</picture>
@@ -2735,16 +2735,16 @@
 					Recursos <span class="rc-nav-dd-caret" aria-hidden="true">▾</span>
 				</button>
 				<ul class="rc-nav-dd-menu" id="rc-dd-recursos" aria-labelledby="rc-dd-btn">
-					<li><a href="<?php echo esc_url(home_url('/docs/')); ?>">Documentación</a></li>
-					<li><a href="<?php echo esc_url(home_url('/changelog/')); ?>">Changelog</a></li>
-					<li><a href="<?php echo esc_url(home_url('/fleet-status/')); ?>">Estado de la flota</a></li>
+					<li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a></li>
+					<li><a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a></li>
+					<li><a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a></li>
 				</ul>
 			</li>
 			<li><a href="#contacto">Contacto</a></li>
 		</ul>
-		<a href="<?php echo esc_url(home_url('/tecnicos/')); ?>" class="rc-nav-access rc-nav-access--tech">⚿ Login
+		<a href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>" class="rc-nav-access rc-nav-access--tech">⚿ Login
 			técnicos</a>
-		<a href="<?php echo esc_url(home_url('/registro/')); ?>" class="rc-nav-access">Acceso clientes →</a>
+		<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-nav-access">Acceso clientes →</a>
 		<a href="#contacto" class="rc-nav-cta">SOLICITAR SOPORTE</a>
 		<button type="button" class="rc-hamburger" id="rc-hamburger" aria-label="Abrir menú" aria-expanded="false"
 			aria-controls="rc-mobile-menu">
@@ -2760,11 +2760,11 @@
 		<a href="#faq">FAQ</a>
 		<a href="#contacto">Contacto</a>
 		<span class="rc-mobile-menu-label">Recursos</span>
-		<a href="<?php echo esc_url(home_url('/docs/')); ?>">Documentación</a>
-		<a href="<?php echo esc_url(home_url('/changelog/')); ?>">Changelog</a>
-		<a href="<?php echo esc_url(home_url('/fleet-status/')); ?>">Estado de la flota</a>
-		<a href="<?php echo esc_url(home_url('/registro/')); ?>" class="rc-mobile-access">Acceso clientes →</a>
-		<a href="<?php echo esc_url(home_url('/tecnicos/')); ?>" class="rc-mobile-access rc-mobile-access--tech">⚿
+		<a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a>
+		<a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a>
+		<a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a>
+		<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-mobile-access">Acceso clientes →</a>
+		<a href="<?php echo esc_url( home_url( '/tecnicos/' ) ); ?>" class="rc-mobile-access rc-mobile-access--tech">⚿
 			Login técnicos</a>
 	</div>
 
@@ -2787,7 +2787,7 @@
 						vulnerabilidades del SO para Windows, Linux y Android.</p>
 					<div class="rc-hero-actions">
 						<a href="#contacto" class="rc-btn-primary">SOLICITAR SOPORTE →</a>
-						<a href="<?php echo esc_url(home_url('/registro/')); ?>" class="rc-btn-outline">CREAR
+						<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>" class="rc-btn-outline">CREAR
 							CUENTA</a>
 					</div>
 				</div>
@@ -2885,23 +2885,23 @@
 			<div class="rc-services-grid rc-reveal">
 				<?php
 				$services = array(
-					array('⬡', '01', 'Diagnóstico automatizado', 'Análisis completo del sistema en segundos. Detecta cuellos de botella, errores de disco y problemas de memoria sin configuración manual.', array('Escaneo de CPU, RAM y almacenamiento', 'Análisis de procesos en tiempo real', 'Informe exportable en PDF/JSON')),
-					array('◈', '02', 'Proyección de vida útil del hardware', 'Algoritmos predictivos que analizan el estado actual de tus componentes y estiman cuándo podrían fallar, con antelación.', array('Temperatura y desgaste de disco (S.M.A.R.T)', 'Historial de uso de batería', 'Alertas preventivas configurables')),
-					array('⬡', '03', 'Análisis de vulnerabilidades del SO', 'Escanea el sistema operativo contra una base de datos de CVEs actualizada, detecta parches pendientes y aplica reparaciones automáticas.', array('Base de datos de vulnerabilidades propia', 'Reparación con un clic', 'Compatible con políticas empresariales')),
-					array('◇', '04', 'Optimización del sistema', 'Limpieza profunda, desfragmentación inteligente, gestión de servicios de inicio y liberación de espacio en disco de forma segura.', array('Limpieza de archivos temporales y caché', 'Gestión de programas de inicio', 'Modo seguro de limpieza')),
-					array('⬡', '05', 'Panel multiplataforma (Beta)', 'Dashboard centralizado en wp-admin que recibe el JSON de diagnóstico de cada agente (Win/Linux/Android) vía REST autenticado, calcula un score 0-100 de salud y agrupa los hosts por cliente y SO.', array('Endpoint REST <code>/wp-json/rc/v1/fleet</code>', 'Score salud + filtros por SO', 'Listado ordenable y exportable')),
-					array('◈', '06', 'Actualizaciones automáticas', 'Mantén todos tus sistemas al día con actualizaciones silenciosas y programadas con control total y rollback instantáneo.', array('Actualizaciones programadas en silencio', 'Rollback instantáneo ante fallos', 'Compatible con entornos sin conexión')),
+					array( '⬡', '01', 'Diagnóstico automatizado', 'Análisis completo del sistema en segundos. Detecta cuellos de botella, errores de disco y problemas de memoria sin configuración manual.', array( 'Escaneo de CPU, RAM y almacenamiento', 'Análisis de procesos en tiempo real', 'Informe exportable en PDF/JSON' ) ),
+					array( '◈', '02', 'Proyección de vida útil del hardware', 'Algoritmos predictivos que analizan el estado actual de tus componentes y estiman cuándo podrían fallar, con antelación.', array( 'Temperatura y desgaste de disco (S.M.A.R.T)', 'Historial de uso de batería', 'Alertas preventivas configurables' ) ),
+					array( '⬡', '03', 'Análisis de vulnerabilidades del SO', 'Escanea el sistema operativo contra una base de datos de CVEs actualizada, detecta parches pendientes y aplica reparaciones automáticas.', array( 'Base de datos de vulnerabilidades propia', 'Reparación con un clic', 'Compatible con políticas empresariales' ) ),
+					array( '◇', '04', 'Optimización del sistema', 'Limpieza profunda, desfragmentación inteligente, gestión de servicios de inicio y liberación de espacio en disco de forma segura.', array( 'Limpieza de archivos temporales y caché', 'Gestión de programas de inicio', 'Modo seguro de limpieza' ) ),
+					array( '⬡', '05', 'Panel multiplataforma (Beta)', 'Dashboard centralizado en wp-admin que recibe el JSON de diagnóstico de cada agente (Win/Linux/Android) vía REST autenticado, calcula un score 0-100 de salud y agrupa los hosts por cliente y SO.', array( 'Endpoint REST <code>/wp-json/rc/v1/fleet</code>', 'Score salud + filtros por SO', 'Listado ordenable y exportable' ) ),
+					array( '◈', '06', 'Actualizaciones automáticas', 'Mantén todos tus sistemas al día con actualizaciones silenciosas y programadas con control total y rollback instantáneo.', array( 'Actualizaciones programadas en silencio', 'Rollback instantáneo ante fallos', 'Compatible con entornos sin conexión' ) ),
 				);
-				foreach ($services as $s):
+				foreach ( $services as $s ) :
 					?>
 					<div class="rc-service-card" onmousemove="cardGlow(event,this)">
-						<div class="rc-service-icon"><?php echo wp_kses_post($s[0]); ?></div>
-						<div class="rc-service-tag">MÓDULO <?php echo esc_html($s[1]); ?></div>
-						<div class="rc-service-title"><?php echo esc_html($s[2]); ?></div>
-						<p class="rc-service-desc"><?php echo esc_html($s[3]); ?></p>
+						<div class="rc-service-icon"><?php echo wp_kses_post( $s[0] ); ?></div>
+						<div class="rc-service-tag">MÓDULO <?php echo esc_html( $s[1] ); ?></div>
+						<div class="rc-service-title"><?php echo esc_html( $s[2] ); ?></div>
+						<p class="rc-service-desc"><?php echo esc_html( $s[3] ); ?></p>
 						<div class="rc-service-features">
-							<?php foreach ($s[4] as $f): ?>
-								<div class="rc-sf-item"><?php echo esc_html($f); ?></div>
+							<?php foreach ( $s[4] as $f ) : ?>
+								<div class="rc-sf-item"><?php echo esc_html( $f ); ?></div>
 							<?php endforeach; ?>
 						</div>
 					</div>
@@ -2925,7 +2925,7 @@
 					<div class="rc-flow-icon">◎</div>
 					<div class="rc-flow-title">SOLICITUD</div>
 					<div class="rc-flow-desc">El cliente crea su cuenta y describe la incidencia desde el <a
-							href="<?php echo esc_url(home_url('/registro/')); ?>">portal de registro</a></div>
+							href="<?php echo esc_url( home_url( '/registro/' ) ); ?>">portal de registro</a></div>
 				</div>
 				<div class="rc-flow-arrow">→</div>
 				<div class="rc-flow-step">
@@ -3155,17 +3155,17 @@
 						'Sí. Todo el código está en github.com/Haplee/ResolveCore bajo GPL v2. Auditable, modificable y libre.',
 					),
 				);
-				foreach ($faqs as $i => $f):
+				foreach ( $faqs as $i => $f ) :
 					$open = $i === 0 ? ' open' : '';
 					?>
 					<details class="rc-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question"
-						<?php echo esc_attr($open); ?>>
+						<?php echo esc_attr( $open ); ?>>
 						<summary class="rc-faq-q" itemprop="name">
-							<span><?php echo esc_html($f[0]); ?></span>
+							<span><?php echo esc_html( $f[0] ); ?></span>
 							<span class="rc-faq-icon" aria-hidden="true">+</span>
 						</summary>
 						<div class="rc-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-							<p itemprop="text"><?php echo esc_html($f[1]); ?></p>
+							<p itemprop="text"><?php echo esc_html( $f[1] ); ?></p>
 						</div>
 					</details>
 				<?php endforeach; ?>
@@ -3292,7 +3292,7 @@
 						<div class="rc-channel-val">@FranVidalMateo →</div>
 					</div>
 				</a>
-				<a class="rc-channel" href="<?php echo esc_url(home_url('/docs/')); ?>"
+				<a class="rc-channel" href="<?php echo esc_url( home_url( '/docs/' ) ); ?>"
 					aria-label="Documentación y autoservicio">
 					<div class="rc-channel-icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
@@ -3432,12 +3432,12 @@
 					<p>Crea tu cuenta de cliente y abre tu primer ticket de soporte desde tu panel. Respuesta inicial en
 						menos de 2 horas.</p>
 				</div>
-				<a href="<?php echo esc_url(home_url('/registro/')); ?>"
+				<a href="<?php echo esc_url( home_url( '/registro/' ) ); ?>"
 					class="rc-btn-primary rc-contact-banner-btn">CREAR CUENTA Y SOLICITAR SOPORTE →</a>
 			</div>
 
 			<?php // Nonce que el modal de seguimiento de tickets (rc-ticket-modal) sigue usando. ?>
-			<?php wp_nonce_field('resolvecore_contact', 'rc_nonce'); ?>
+			<?php wp_nonce_field( 'resolvecore_contact', 'rc_nonce' ); ?>
 		</section>
 
 	</main><!-- /#main-content -->
@@ -3450,15 +3450,15 @@
 					<div class="rc-footer-logo">
 						<picture>
 							<source
-								srcset="<?php echo esc_url(get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg'); ?>"
+								srcset="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.svg' ); ?>"
 								type="image/svg+xml">
-							<img src="<?php echo esc_url(get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png'); ?>"
+							<img src="<?php echo esc_url( get_template_directory_uri() . '/assets/logo/resolvcore-logo-dark.png' ); ?>"
 								alt="ResolveCore" class="rc-footer-logo-img" width="160" height="40" loading="lazy"
 								decoding="async">
 						</picture>
 					</div>
 					<p class="rc-footer-slogan">Solución a tus problemas informáticos.</p>
-					<p class="rc-footer-copy">© <?php echo esc_html(date_i18n('Y')); ?> Francisco Vidal Mateo · TFG
+					<p class="rc-footer-copy">© <?php echo esc_html( date_i18n( 'Y' ) ); ?> Francisco Vidal Mateo · TFG
 						ASIR</p>
 				</div>
 
@@ -3475,9 +3475,9 @@
 				<nav class="rc-footer-col" aria-label="Recursos">
 					<div class="rc-footer-col-title">Recursos</div>
 					<ul>
-						<li><a href="<?php echo esc_url(home_url('/docs/')); ?>">Documentación</a></li>
-						<li><a href="<?php echo esc_url(home_url('/changelog/')); ?>">Changelog</a></li>
-						<li><a href="<?php echo esc_url(home_url('/fleet-status/')); ?>">Estado de la flota</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/docs/' ) ); ?>">Documentación</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/changelog/' ) ); ?>">Changelog</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/fleet-status/' ) ); ?>">Estado de la flota</a></li>
 						<li><a href="https://github.com/Haplee/ResolveCore" target="_blank"
 								rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></li>
 						<li><a href="#contacto">Contacto</a></li>
@@ -3487,9 +3487,9 @@
 				<nav class="rc-footer-col" aria-label="Legal">
 					<div class="rc-footer-col-title">Legal</div>
 					<ul>
-						<li><a href="<?php echo esc_url(home_url('/aviso-legal/')); ?>">Aviso legal</a></li>
-						<li><a href="<?php echo esc_url(home_url('/privacidad/')); ?>">Privacidad (RGPD)</a></li>
-						<li><a href="<?php echo esc_url(home_url('/cookies/')); ?>">Cookies</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/aviso-legal/' ) ); ?>">Aviso legal</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/privacidad/' ) ); ?>">Privacidad (RGPD)</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/cookies/' ) ); ?>">Cookies</a></li>
 					</ul>
 				</nav>
 			</div>
@@ -4636,7 +4636,7 @@
 				fd.append('ticket_id', id);
 				fd.append('token', currentToken);
 
-				fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', { method: 'POST', body: fd })
+				fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', { method: 'POST', body: fd })
 					.then(r => r.json())
 					.then(res => {
 						if (res.success) renderTicket(res.data);

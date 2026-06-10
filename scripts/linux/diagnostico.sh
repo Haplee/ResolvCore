@@ -113,7 +113,7 @@ inodos_uso=$(df -i / 2>/dev/null | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
 
 # Todos los sistemas de ficheros reales (excluye tmpfs/devtmpfs/overlay).
 discos_json=""
-while read -r fs total usado libre pct punto; do
+while read -r fs _ usado libre pct punto; do
     [ -z "$punto" ] && continue
     pct=${pct%\%}
     fs=$(echo "$fs" | sed 's/"/\\"/g'); punto=$(echo "$punto" | sed 's/"/\\"/g')
@@ -222,7 +222,7 @@ gateway=$(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')
 
 # Interfaces de red (nombre/mac/ip). Excluye loopback.
 interfaces_json=""
-while read -r idx iface rest; do
+while read -r _ iface rest; do
     iface=${iface%:}
     [ "$iface" = "lo" ] && continue
     [ -z "$iface" ] && continue
