@@ -19,9 +19,9 @@
 
 | Plataforma | Script                     | Versión | Notas |
 |------------|----------------------------|---------|-------|
-| Windows    | `windows/optimizacion.ps1` | **1.0** | TEMP/WSUS/papelera + procesos + arranque + acta + flota |
-| Linux      | `linux/optimizacion.sh`    | **1.0** | apt/journal/tmp/snap + consumo + acta + flota |
-| Android    | `android/optimizacion.sh`  | **1.0** | pm trim-caches + batterystats + acta + flota |
+| Windows    | `windows/optimizacion.ps1` | **1.1** | TEMP/WSUS/papelera + procesos + arranque + memoria (SysMain/Prefetch) + acta + flota |
+| Linux      | `linux/optimizacion.sh`    | **1.1** | apt/journal/tmp/snap + consumo + memoria (preload/drop_caches/swappiness) + acta + flota |
+| Android    | `android/optimizacion.sh`  | **1.1** | pm trim-caches + batterystats + memoria (am kill-all) + acta + flota |
 
 ---
 
@@ -48,7 +48,7 @@
   "hallazgos_consumo": [
     {
       "nombre": "com.whatsapp",
-      "tipo": "bateria | cpu | memoria | arranque",
+      "tipo": "bateria | cpu | memoria | arranque | estado_previo",
       "detalle": "45.2 mAh estimados",
       "accion": "reportado | detenido"
     }
@@ -72,9 +72,9 @@
 
 | Plataforma | Pasos (`paso`) |
 |------------|----------------|
-| Linux      | `apt_clean`, `journal`, `tmp`, `snap` |
-| Android    | `trim_caches`, `tmp` |
-| Windows    | `temp_usuario`, `temp_sistema`, `temp_local`, `wsus_cache`, `papelera` |
+| Linux      | `apt_clean`, `journal`, `tmp`, `snap`, `preload`, `drop_caches`, `swappiness` |
+| Android    | `trim_caches`, `tmp`, `liberar_ram` |
+| Windows    | `temp_usuario`, `temp_sistema`, `temp_local`, `wsus_cache`, `papelera`, `sysmain`, `prefetch` |
 
 Cada paso mide el espacio liberado antes/después (salvo Android) y registra
 `estado`: `ok` (hecho), `fallo` (error/sin permisos), `omitido` (no aplica).
@@ -94,6 +94,53 @@ sistema:
 - Android: solo apps de terceros (UID ≥ 10000); excluye `com.android.*`, `android`,
   Play Services/GSF y `*.systemui`.
 - Windows: excluye `System Idle csrss wininit winlogon services lsass smss svchost explorer dwm`.
+
+## Optimización de memoria
+
+Requiere privilegios (Administrador en Windows, root en Linux); sin ellos los pasos
+quedan `omitido`. El estado previo se registra en `hallazgos_consumo` con
+`tipo: "estado_previo"` y `accion: "guardado_para_revertir"` para que el técnico
+pueda revertir.
+
+### Windows (`sysmain`, `prefetch`)
+
+Deshabilitan **SysMain (Superfetch)** y **Prefetch** (cambio persistente: servicio
++ registro). Reversión:
+
+```powershell
+Set-Service SysMain -StartupType Automatic; Start-Service SysMain
+Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters' EnablePrefetcher -Value <valor previo>
+```
+
+### Linux (`preload`, `drop_caches`, `swappiness`)
+
+- `preload` — deshabilita el demonio de precarga (≈ Superfetch) **si está
+  instalado** (persistente). Si no existe la unit → `omitido`.
+- `drop_caches` — libera pagecache/dentries/inodes al momento (**transitorio**; el
+  kernel rellena bajo demanda, no necesita revertir). La RAM liberada se reporta en
+  el `resultado` y **no** suma a `espacio_liberado_mb` (esa métrica es disco).
+- `swappiness` — fija `vm.swappiness=10` y lo persiste en
+  `/etc/sysctl.d/99-resolvecore-memoria.conf`.
+
+Reversión:
+
+```bash
+systemctl enable --now preload
+rm -f /etc/sysctl.d/99-resolvecore-memoria.conf
+sysctl -w vm.swappiness=<valor previo>   # por defecto suele ser 60
+```
+
+### Android (`liberar_ram`)
+
+Android no expone preload/Prefetch/swappiness vía ADB sin root. El análogo
+accesible es `am kill-all`, que cierra los procesos en **segundo plano** (no las
+apps en primer plano ni los servicios del sistema). Es **transitorio** (el sistema
+re-arranca lo que necesite, no necesita revertir). La RAM liberada se estima con
+`/proc/meminfo` (`MemAvailable`) antes/después y se reporta en el `resultado`; no
+hay métrica de disco en Android (`espacio_liberado_mb` es `null`).
+
+> Nota: la ganancia de RAM es modesta y discutible en equipos con SSD/RAM
+> suficiente; se aplica por decisión de servicio, no como limpieza universal.
 
 ---
 
@@ -124,4 +171,4 @@ local sigue disponible y el técnico la sube a MantisBT a mano.
 
 ---
 
-*Última actualización: 2026-06-04*
+*Última actualización: 2026-06-09*

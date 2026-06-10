@@ -4,7 +4,9 @@
 #
 # Pasa el autoremove de apt, limpia la caché de paquetes, compacta el journal
 # de systemd, borra ficheros viejos de /tmp y purga snaps antiguos. Mide el
-# espacio liberado en cada paso y detecta procesos de alto consumo.
+# espacio liberado en cada paso y detecta procesos de alto consumo. Optimiza la
+# memoria deshabilitando preload (≈ Superfetch), liberando caché con drop_caches
+# y ajustando vm.swappiness; es reversible y guarda el estado previo en el JSON.
 #
 # Deja constancia de TODO lo realizado en un acta para técnico y cliente:
 #   diagnosticos/tickets/<NNNNN>/linux/optimizacion.txt   (legible, para el cliente)
@@ -18,7 +20,7 @@
 #   sudo bash optimizacion.sh --confirm --stop-hogs     # ademas detiene top consumidores
 #
 # Autor:   Francisco Vidal Mateo (GitHub: Haplee)
-# Versión: 3.0
+# Versión: 3.1
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
@@ -182,6 +184,64 @@ if [ "$N_DETECTADOS" -eq 0 ]; then
 fi
 if [ "$STOP_HOGS" -ne 1 ] && [ "$N_DETECTADOS" -gt 0 ]; then
     info "  (solo reporte; usa --stop-hogs para detenerlos)"
+fi
+
+# ── 6. Optimización de memoria (análogo a SysMain/Prefetch de Windows) ──────
+# Linux no tiene SysMain/Prefetch. El análogo se compone de tres piezas:
+#   - preload      : demonio que precarga apps a RAM (≈ Superfetch). Se deshabilita
+#                    si está instalado. Cambio PERSISTENTE -> estado previo guardado.
+#   - drop_caches  : libera pagecache/dentries/inodes ahora (transitorio; el kernel
+#                    rellena bajo demanda; no necesita revertir).
+#   - vm.swappiness: ajuste PERSISTENTE (sysctl.d) para tender menos a swap.
+# Requiere root. Reversión:
+#   systemctl enable --now preload
+#   rm -f /etc/sysctl.d/99-resolvecore-memoria.conf; sysctl -w vm.swappiness=<previo>
+SYSCTL_FILE="/etc/sysctl.d/99-resolvecore-memoria.conf"
+SWAPPINESS_OBJETIVO=10
+
+# RAM disponible en KiB (para medir drop_caches; NO suma a LIBERADO_KB, que es disco).
+ram_libre_kb() { awk '/^MemAvailable:/{print $2}' /proc/meminfo; }
+
+if [ "$(id -u)" -ne 0 ]; then
+    registra "preload"     "Deshabilitar preload (precarga RAM)" "omitido" "requiere root"
+    registra "drop_caches" "Liberar caché de memoria"            "omitido" "requiere root"
+    registra "swappiness"  "Ajustar vm.swappiness"               "omitido" "requiere root"
+else
+    # preload (análogo a SysMain) — solo si la unit existe
+    if systemctl list-unit-files 2>/dev/null | grep -q '^preload\.service'; then
+        prev_active=$(systemctl is-active preload 2>/dev/null || echo desconocido)
+        prev_enabled=$(systemctl is-enabled preload 2>/dev/null || echo desconocido)
+        [ -n "$HALLAZGOS_JSON" ] && HALLAZGOS_JSON="$HALLAZGOS_JSON,"
+        HALLAZGOS_JSON="$HALLAZGOS_JSON{\"nombre\":\"preload\",\"tipo\":\"estado_previo\",\"detalle\":\"active=$(esc "$prev_active"), enabled=$(esc "$prev_enabled")\",\"accion\":\"guardado_para_revertir\"}"
+        if systemctl disable --now preload >/dev/null 2>&1; then
+            registra "preload" "Deshabilitar preload (precarga RAM)" "ok" "antes: $prev_active/$prev_enabled"
+        else
+            registra "preload" "Deshabilitar preload (precarga RAM)" "fallo" "no se pudo deshabilitar"
+        fi
+    else
+        registra "preload" "Deshabilitar preload (precarga RAM)" "omitido" "preload no instalado"
+    fi
+
+    # drop_caches (libera RAM cacheada ahora; transitorio, no suma a disco)
+    antes_ram=$(ram_libre_kb)
+    sync
+    if echo 3 > /proc/sys/vm/drop_caches 2>/dev/null; then
+        despues_ram=$(ram_libre_kb); dif_ram=$((despues_ram - antes_ram)); [ "$dif_ram" -lt 0 ] && dif_ram=0
+        registra "drop_caches" "Liberar caché de memoria (pagecache/inodes)" "ok" "$(fmt_kb "$dif_ram") de RAM liberada"
+    else
+        registra "drop_caches" "Liberar caché de memoria" "fallo" "no se pudo escribir drop_caches"
+    fi
+
+    # vm.swappiness (persistente vía sysctl.d)
+    prev_sw=$(cat /proc/sys/vm/swappiness 2>/dev/null || echo desconocido)
+    [ -n "$HALLAZGOS_JSON" ] && HALLAZGOS_JSON="$HALLAZGOS_JSON,"
+    HALLAZGOS_JSON="$HALLAZGOS_JSON{\"nombre\":\"vm.swappiness\",\"tipo\":\"estado_previo\",\"detalle\":\"valor previo=$(esc "$prev_sw")\",\"accion\":\"guardado_para_revertir\"}"
+    if sysctl -w "vm.swappiness=$SWAPPINESS_OBJETIVO" >/dev/null 2>&1 \
+       && printf 'vm.swappiness=%s\n' "$SWAPPINESS_OBJETIVO" > "$SYSCTL_FILE" 2>/dev/null; then
+        registra "swappiness" "Ajustar vm.swappiness" "ok" "antes: $prev_sw, ahora: $SWAPPINESS_OBJETIVO"
+    else
+        registra "swappiness" "Ajustar vm.swappiness" "fallo" "no se pudo aplicar/persistir"
+    fi
 fi
 
 # ── Acta JSON ────────────────────────────────────────────────────────────────
