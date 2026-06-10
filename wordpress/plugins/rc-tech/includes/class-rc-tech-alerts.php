@@ -65,6 +65,8 @@ class RC_Tech_Alerts {
     public static function gc(): void {
         global $wpdb;
         $table = $wpdb->prefix . 'rc_tech_alerts';
-        $wpdb->query( "DELETE FROM {$table} WHERE fired_at < DATE_SUB(NOW(), INTERVAL 90 DAY)" );
+        $wpdb->query(
+            $wpdb->prepare( "DELETE FROM %i WHERE fired_at < DATE_SUB(NOW(), INTERVAL 90 DAY)", $table )
+        );
     }
 }

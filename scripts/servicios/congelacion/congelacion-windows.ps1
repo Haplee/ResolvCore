@@ -318,7 +318,7 @@ function Action-Freeze-Or-Thaw {
 
 # ── Dispatch ────────────────────────────────────────────────────────────────
 switch ($Action) {
-    'Status'    { Action-Status | Out-Null; exit 0 }
+    'Status'    { [void](Action-Status); exit 0 }
     'Configure' { Action-Configure; exit 0 }
     'Freeze'    { Action-Freeze-Or-Thaw -Mode 'Freeze' }
     'Thaw'      { Action-Freeze-Or-Thaw -Mode 'Thaw' }

@@ -518,7 +518,7 @@ function Invoke-Vulnerabilidades {
     if (Test-Path $outJson) { Remove-Item $outJson -Force -ErrorAction SilentlyContinue }
 
     try {
-        & $py.Source $script --plataforma windows --max 300 --salida-json $outJson @args
+        & $py.Source $script --plataforma windows --max 300 --salida-json $outJson
         Write-Host ""
         Write-Host "  [OK] Escaneo completado" -ForegroundColor Green
     } catch {

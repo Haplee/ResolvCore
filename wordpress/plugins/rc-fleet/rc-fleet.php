@@ -317,19 +317,25 @@ function rc_fleet_get_public_stats(): array {
     $table = $wpdb->prefix . RC_FLEET_TABLE;
 
     $agg = $wpdb->get_row(
-        "SELECT
-            COUNT(*)                                             AS total,
-            ROUND(AVG(last_score))                               AS avg_score,
-            SUM(last_score >= 80)                                AS buenos,
-            SUM(last_score >= 60 AND last_score < 80)            AS mejorables,
-            SUM(last_score < 60)                                 AS criticos,
-            SUM(last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR))  AS activos_24h,
-            MAX(last_seen)                                       AS ultima_conexion
-         FROM {$table}",
+        $wpdb->prepare(
+            "SELECT
+                COUNT(*)                                             AS total,
+                ROUND(AVG(last_score))                               AS avg_score,
+                SUM(last_score >= 80)                                AS buenos,
+                SUM(last_score >= 60 AND last_score < 80)            AS mejorables,
+                SUM(last_score < 60)                                 AS criticos,
+                SUM(last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR))  AS activos_24h,
+                MAX(last_seen)                                       AS ultima_conexion
+             FROM %i",
+            $table
+        ),
         ARRAY_A
     );
 
-    $by_os_rows = $wpdb->get_results( "SELECT os, COUNT(*) AS n FROM {$table} GROUP BY os", OBJECT_K );
+    $by_os_rows = $wpdb->get_results(
+        $wpdb->prepare( "SELECT os, COUNT(*) AS n FROM %i GROUP BY os", $table ),
+        OBJECT_K
+    );
     $by_os = [];
     foreach ( [ 'windows', 'linux', 'macos', 'android', 'unknown' ] as $o ) {
         $by_os[ $o ] = isset( $by_os_rows[ $o ] ) ? (int) $by_os_rows[ $o ]->n : 0;
@@ -503,13 +509,17 @@ function rc_fleet_admin_page(): void {
                         $params[] = '%' . $wpdb->esc_like( $search ) . '%';
                         $params[] = '%' . $wpdb->esc_like( $search ) . '%'; }
 
-    $sql  = "SELECT id,host_id,client_email,hostname,os,os_version,last_seen,last_score,ticket_id,optim_at FROM {$table} {$where} ORDER BY last_seen DESC LIMIT 200";
-    $rows = $params
-        ? $wpdb->get_results( $wpdb->prepare( $sql, ...$params ) )
-        : $wpdb->get_results( $sql );
+    // %i (identificador de tabla) va primero en el SQL, así que lo anteponemos a
+    // los %s del WHERE. Ahora la query SIEMPRE pasa por prepare().
+    $sql  = "SELECT id,host_id,client_email,hostname,os,os_version,last_seen,last_score,ticket_id,optim_at FROM %i {$where} ORDER BY last_seen DESC LIMIT 200";
+    array_unshift( $params, $table );
+    $rows = $wpdb->get_results( $wpdb->prepare( $sql, ...$params ) );
 
-    $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
-    $by_os = $wpdb->get_results( "SELECT os, COUNT(*) AS n FROM {$table} GROUP BY os", OBJECT_K );
+    $total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i", $table ) );
+    $by_os = $wpdb->get_results(
+        $wpdb->prepare( "SELECT os, COUNT(*) AS n FROM %i GROUP BY os", $table ),
+        OBJECT_K
+    );
 
     $token  = rc_fleet_get_token();
     $masked = $token ? substr( $token, 0, 4 ) . '…' . substr( $token, -4 ) : '— no configurado —';

@@ -55,14 +55,21 @@ Write-Step 2 "Verificando gestor de paquetes..."
 $hasChoco = Get-Command choco -ErrorAction SilentlyContinue
 $hasScoop = Get-Command scoop -ErrorAction SilentlyContinue
 if (-not $hasChoco -and -not $hasScoop) {
-    Write-Step 2 "Instalando Chocolatey..."
-    try {
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
-        Write-Ok "Chocolatey instalado"
-    } catch {
-        Write-Warn "No se pudo instalar Chocolatey: $($_.Exception.Message)"
+    # Preferir winget (firmado, viene con Windows 10/11) sobre descargar y
+    # ejecutar un script remoto con Invoke-Expression (riesgo de RCE si la URL
+    # o el CDN se ven comprometidos).
+    $hasWinget = Get-Command winget -ErrorAction SilentlyContinue
+    if ($hasWinget) {
+        Write-Step 2 "Instalando Chocolatey via winget..."
+        try {
+            winget install --id Chocolatey.Chocolatey --silent --accept-source-agreements --accept-package-agreements
+            $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+            Write-Ok "Chocolatey instalado (winget)"
+        } catch {
+            Write-Warn "No se pudo instalar Chocolatey via winget: $($_.Exception.Message)"
+        }
+    } else {
+        Write-Warn "winget no disponible. Instala Chocolatey manualmente desde https://chocolatey.org/install (verifica el hash del instalador antes de ejecutarlo)."
     }
 } else {
     Write-Ok "Gestor de paquetes disponible: $(if ($hasScoop) {'scoop'} else {'chocolatey'})"

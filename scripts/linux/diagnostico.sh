@@ -467,9 +467,16 @@ if [ -n "$RC_CLIENT_EMAIL" ] && [ -n "$RC_FLEET_TOKEN" ]; then
         info "Subiendo diagnóstico a $RC_FLEET_URL ..."
         # Envolvemos el JSON del diagnóstico en el sobre que espera el endpoint.
         # El fichero ya es un objeto JSON válido, así que se incrusta tal cual.
+        # RC_TICKET_ID solo se incrusta si es un entero: si trae basura (p. ej.
+        # '}, "x": {') rompería o inyectaría campos en el JSON enviado al endpoint.
         ticket_field=""
-        [ -n "$RC_TICKET_ID" ] && ticket_field="\"ticket_id\": ${RC_TICKET_ID},"
-        payload="{\"client_email\": \"${RC_CLIENT_EMAIL}\", ${ticket_field} \"diagnostico\": $(cat "$FILE")}"
+        if [[ "$RC_TICKET_ID" =~ ^[0-9]+$ ]]; then
+            ticket_field="\"ticket_id\": ${RC_TICKET_ID},"
+        fi
+        # Escapamos el email para JSON (backslash y comilla doble) y le quitamos
+        # saltos de línea/CR, para que un valor con comillas no rompa el objeto.
+        email_esc=$(printf '%s' "$RC_CLIENT_EMAIL" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\r\n')
+        payload="{\"client_email\": \"${email_esc}\", ${ticket_field} \"diagnostico\": $(cat "$FILE")}"
 
         http_code=$(curl -sS -o /tmp/rc_fleet_resp.$$ -w '%{http_code}' \
             -X POST "$RC_FLEET_URL" \

@@ -18,6 +18,7 @@ Versión: 2.0
 
 import mimetypes
 import os
+import ssl
 import urllib.error
 import urllib.request
 import uuid
@@ -94,14 +95,24 @@ def attach(ticket_id, file_path, config=None, timeout=HTTP_TIMEOUT):
         data=body,
         method="POST",
         headers={
+            # MantisBT espera el token CRUDO en Authorization (su
+            # ApiTokenAuthentication NO usa prefijo). Añadir "Bearer "/"Token "
+            # provoca 401: por eso va sin prefijo a propósito. Si un proxy
+            # inverso elimina la cabecera Authorization, configúralo para
+            # preservarla (nginx: underscores_in_headers / pasar $http_authorization).
             "Authorization": token,
             "Content-Type": "multipart/form-data; boundary=" + boundary,
             "User-Agent": USER_AGENT,
         },
     )
 
+    # Contexto SSL explícito (coherente con nvd_rest/osv_rest). Si MANTIS_URL es
+    # https y el sistema no tiene las CA raíz (Docker/CI minimal), la verificación
+    # falla; lo detectamos aparte para dar un error claro al técnico.
+    ctx = ssl.create_default_context()
+
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
             return nuevo_attachment_result(
                 200 <= resp.status < 300, ticket_id, file_path.name,
                 status_code=resp.status)
@@ -109,6 +120,15 @@ def attach(ticket_id, file_path, config=None, timeout=HTTP_TIMEOUT):
         return nuevo_attachment_result(
             False, ticket_id, file_path.name,
             status_code=exc.code, error="HTTP " + str(exc.code) + ": " + str(exc.reason))
+    except ssl.SSLError as exc:
+        return nuevo_attachment_result(
+            False, ticket_id, file_path.name,
+            error="SSL (¿faltan certificados CA raíz en el sistema?): " + str(exc))
     except urllib.error.URLError as exc:
+        # URLError envuelve también los errores de verificación de certificado.
+        if isinstance(exc.reason, ssl.SSLError):
+            return nuevo_attachment_result(
+                False, ticket_id, file_path.name,
+                error="SSL (¿faltan certificados CA raíz en el sistema?): " + str(exc.reason))
         return nuevo_attachment_result(
             False, ticket_id, file_path.name, error="red: " + str(exc.reason))

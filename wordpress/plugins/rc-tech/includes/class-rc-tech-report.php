@@ -58,8 +58,12 @@ class RC_Tech_Report {
 
         $wkhtml = self::find_wkhtmltopdf();
         if ( $wkhtml && function_exists( 'shell_exec' ) ) {
+            // --disable-local-file-access: el HTML se genera a partir de datos
+            // del ticket (resumen, notas…), que pueden contener entrada de
+            // usuario. Con acceso a ficheros locales un <img src="file:///etc/passwd">
+            // inyectado se embebería en el PDF (LFI). Lo bloqueamos explícitamente.
             $cmd = sprintf(
-                '%s --quiet --enable-local-file-access %s %s 2>&1',
+                '%s --quiet --disable-local-file-access %s %s 2>&1',
                 escapeshellarg( $wkhtml ),
                 escapeshellarg( $html_path ),
                 escapeshellarg( $pdf_path )

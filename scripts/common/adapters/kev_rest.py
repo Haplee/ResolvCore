@@ -19,6 +19,7 @@ Version: 1.0
 """
 
 import os
+import sys
 import ssl
 import json
 import time
@@ -72,6 +73,11 @@ def cargar_kev():
         texto = _http_get(KEV_URL)
         if texto:
             _guardar_cache(texto)
+        else:
+            # Sin cache y sin descarga: el set vacío resultante haría que NINGÚN
+            # CVE se marque como explotado. Avisamos para no dar falsa calma.
+            print("[!] No se pudo descargar el catálogo CISA KEV: ningún CVE se "
+                  "marcará como explotado activamente.", file=sys.stderr)
     if not texto:
         return set()
     try:

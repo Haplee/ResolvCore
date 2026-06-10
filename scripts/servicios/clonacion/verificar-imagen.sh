@@ -70,11 +70,11 @@ if ! command -v jq &>/dev/null; then
     echo "[OK] jq instalado"
 fi
 
-SHA_CMD=""
+# Array (no string): "shasum -a 256" como string se rompe en xargs y pipes.
 if command -v sha256sum &>/dev/null; then
-    SHA_CMD="sha256sum"
+    SHA_CMD=(sha256sum)
 elif command -v shasum &>/dev/null; then
-    SHA_CMD="shasum -a 256"
+    SHA_CMD=(shasum -a 256)
 else
     echo "Ni sha256sum ni shasum disponibles" >&2
     exit 1
@@ -102,10 +102,12 @@ mantis_note() {
         break
     done
     [[ -z "$url" || -z "$tok" ]] && return
+    local body
+    body=$(jq -n --arg t "$text" '{text: $t}')
     curl -s -X POST "$url/api/rest/issues/$ticket/notes" \
         -H "Authorization: Bearer $tok" \
         -H "Content-Type: application/json" \
-        -d "{\"text\": \"$text\"}" &>/dev/null \
+        -d "$body" &>/dev/null \
         && echo "[OK] Nota creada en ticket #$ticket" \
         || echo "[!] No se pudo crear nota en MantisBT"
 }
@@ -138,10 +140,10 @@ sha256_of() {
     local target="$1"
     if [[ -d "$target" ]]; then
         find "$target" -type f -print0 | LC_ALL=C sort -z \
-            | xargs -0 $SHA_CMD 2>/dev/null \
-            | $SHA_CMD | awk '{print $1}'
+            | xargs -0 "${SHA_CMD[@]}" 2>/dev/null \
+            | "${SHA_CMD[@]}" | awk '{print $1}'
     else
-        $SHA_CMD "$target" | awk '{print $1}'
+        "${SHA_CMD[@]}" "$target" | awk '{print $1}'
     fi
 }
 

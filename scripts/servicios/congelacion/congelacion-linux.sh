@@ -129,10 +129,12 @@ mantis_note() {
         break
     done
     [[ -z "$url" || -z "$tok" ]] && return
+    local body
+    body=$(jq -n --arg t "$text" '{text: $t}')
     curl -s -X POST "$url/api/rest/issues/$ticket/notes" \
         -H "Authorization: Bearer $tok" \
         -H "Content-Type: application/json" \
-        -d "{\"text\": \"$text\"}" &>/dev/null \
+        -d "$body" &>/dev/null \
         && echo "[OK] Nota creada en ticket #$ticket" \
         || echo "[!] No se pudo crear nota en MantisBT"
 }

@@ -58,15 +58,15 @@ def escanear_puertos(host, timeout=1.0):
     abiertos = []
     for puerto, servicio in PUERTOS.items():
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(timeout)
-            if s.connect_ex((host, puerto)) == 0:
-                abiertos.append({
-                    "puerto": puerto,
-                    "servicio": servicio,
-                    "peligroso": puerto in PELIGROSOS,
-                })
-            s.close()
+            # 'with' garantiza el cierre del socket aunque connect_ex lance.
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                if s.connect_ex((host, puerto)) == 0:
+                    abiertos.append({
+                        "puerto": puerto,
+                        "servicio": servicio,
+                        "peligroso": puerto in PELIGROSOS,
+                    })
         except OSError:
             pass
     return abiertos
@@ -97,7 +97,8 @@ def _ecosistema_linux():
     # Deriva el ecosistema OSV de /etc/os-release (Debian:12, Ubuntu, etc.).
     datos = {}
     try:
-        with open("/etc/os-release", encoding="utf-8") as f:
+        # errors="replace": si el fichero tiene un encoding raro no abortamos.
+        with open("/etc/os-release", encoding="utf-8", errors="replace") as f:
             for linea in f:
                 if "=" in linea:
                     clave, valor = linea.strip().split("=", 1)

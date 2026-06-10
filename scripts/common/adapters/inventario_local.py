@@ -17,6 +17,7 @@ Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 Version: 1.0
 """
 
+import re
 import subprocess
 import sys
 
@@ -121,7 +122,10 @@ def _leer_valor(subclave, valor):
 def _adb_base(serial):
     base = ["adb"]
     if serial:
-        base += ["-s", serial]
+        # Solo seriales con el formato habitual de ADB (alfanumérico y .:_-).
+        # Se pasa como argumento de lista (no shell), pero validamos igualmente.
+        if re.match(r"^[A-Za-z0-9._:-]+$", serial):
+            base += ["-s", serial]
     return base
 
 

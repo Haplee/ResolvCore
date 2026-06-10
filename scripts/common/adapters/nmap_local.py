@@ -16,6 +16,7 @@ Autor:   Francisco Vidal Mateo (GitHub: Haplee)
 Versión: 2.0
 """
 
+import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
@@ -26,6 +27,22 @@ from ..domain import nuevo_host, nuevo_servicio
 # para cambiarlos (ej. ["-sV"] para que nmap detecte versiones).
 FLAGS_POR_DEFECTO = ["-T4", "-F", "-n", "-Pn"]
 
+# Flag válida: empieza por '-' y solo lleva letras/dígitos (admite "=valor"
+# sencillo). Rechazamos cosas como --script, -oN /ruta, --script-args, que
+# permitirían ejecutar NSE arbitrario o escribir ficheros si 'flags' viniera
+# de entrada externa (CLI, formulario).
+_FLAG_VALIDA = re.compile(r"^-{1,2}[A-Za-z0-9]+(=[A-Za-z0-9,.:]+)?$")
+_FLAGS_PROHIBIDAS = ("--script", "-o", "--datadir", "--resume", "-iL")
+
+
+def _flags_seguras(flags):
+    for f in flags:
+        if not _FLAG_VALIDA.match(f):
+            return False
+        if any(f.lower().startswith(p) for p in _FLAGS_PROHIBIDAS):
+            return False
+    return True
+
 
 def get_host_info(ip, flags=None):
     """Escanea una IP local con Nmap y devuelve un host (dict de dominio).
@@ -34,6 +51,8 @@ def get_host_info(ip, flags=None):
     """
     if flags is None:
         flags = FLAGS_POR_DEFECTO
+    elif not _flags_seguras(flags):
+        return nuevo_host(ip, error="Flags de Nmap no permitidas (posible inyección de opciones).")
 
     # Sin el binario nmap no hay nada que hacer.
     if not shutil.which("nmap"):

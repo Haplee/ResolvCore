@@ -599,7 +599,7 @@ function rc_cleanup_download_log(): void {
 	}
 	global $wpdb;
 	$table = $wpdb->prefix . 'rc_download_log';
-	$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	delete_option( 'rc_dl_log_schema_ver' );
 	update_option( 'rc_download_log_removed', '1' );
 }
@@ -922,7 +922,9 @@ function rc_tech_my_tickets(): void {
 		wp_send_json_error( array( 'msg' => $res->get_error_message() ) );
 	}
 
-	$issues   = $res['issues'] ?? array();
+	// list_issues() ya devuelve el array PLANO de issues (no envuelto en
+	// ['issues' => ...]); usar $res['issues'] dejaba el panel siempre vacío.
+	$issues   = is_array( $res ) ? $res : array();
 	$filtered = array();
 	foreach ( $issues as $iss ) {
 		$status_id = (int) ( $iss['status']['id'] ?? 0 );

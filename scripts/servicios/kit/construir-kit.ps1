@@ -179,7 +179,7 @@ Write-Ok "README-cliente.txt creado"
 # ── MANIFEST.txt ─────────────────────────────────────────────────────────────
 $manifestPath = Join-Path $kitDir 'MANIFEST.txt'
 $anyDeskVer = try { (Get-Item $AnyDeskPath).VersionInfo.FileVersion } catch { 'desconocida' }
-$diagWinVer  = try { (Select-String '#Requires\|^# Version' $diagWin | Select-Object -First 1).Line } catch { '' }
+$diagWinVer  = try { (Select-String -Pattern '#Requires|^# Version' -Path $diagWin | Select-Object -First 1).Line } catch { '' }
 $manifest = @"
 RESOLVECORE KIT — MANIFEST
 ==========================

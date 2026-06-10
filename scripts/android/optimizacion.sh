@@ -55,6 +55,12 @@ if [ "$CONFIRM" -ne 1 ]; then
     exit 0
 fi
 
+# Validamos el serial antes de interpolarlo en $ADB: un serial con
+# metacaracteres permitiría inyección de comandos al ejecutar $ADB.
+if [ -n "${SERIAL:-}" ] && ! printf '%s' "$SERIAL" | grep -Eq '^[A-Za-z0-9._:-]+$'; then
+    echo "ERROR: serial ADB inválido (solo letras, dígitos y . _ : -)." >&2
+    exit 1
+fi
 ADB="adb${SERIAL:+ -s $SERIAL}"
 
 if ! $ADB get-state >/dev/null 2>&1; then
@@ -122,10 +128,13 @@ else
 fi
 
 # ── 2. /data/local/tmp ──────────────────────────────────────────────────────
-if $ADB shell rm -rf /data/local/tmp/* >/dev/null 2>&1; then
+# Hacemos 'cd' y borramos con ./*: si el directorio está vacío el glob no casa
+# y algunos shells de Android pasan '*' literal a rm (registrando un falso
+# "fallo"). El '|| true' interno absorbe ese caso para no marcar error espurio.
+if $ADB shell 'cd /data/local/tmp && rm -rf ./* 2>/dev/null; true' >/dev/null 2>&1; then
     registra "tmp" "Borrado de /data/local/tmp" "ok" "temporales eliminados"
 else
-    registra "tmp" "Borrado de /data/local/tmp" "fallo" "sin permiso o vacío"
+    registra "tmp" "Borrado de /data/local/tmp" "fallo" "sin permiso o inaccesible"
 fi
 
 # ── 3. Liberación de memoria RAM (análogo a SysMain/drop_caches) ────────────
@@ -157,12 +166,18 @@ fi
 info "Detectando apps de alto consumo de batería en segundo plano..."
 
 # Mapa uid->paquete (una sola pasada). Formato de salida: "package:com.x uid:10123".
-declare -A UID2PKG 2>/dev/null || true
-while IFS= read -r linea; do
-    pkg=$(echo "$linea" | sed -n 's/^package:\([^ ]*\).*/\1/p')
-    uid=$(echo "$linea" | sed -n 's/.*uid:\([0-9]*\).*/\1/p')
-    [ -n "$pkg" ] && [ -n "$uid" ] && UID2PKG[$uid]="$pkg"
-done < <($ADB shell pm list packages -U 2>/dev/null | tr -d '\r')
+# 'declare -A' falla en bash < 4 (Termux en Android antiguo). Si no hay arrays
+# asociativos, saltamos el mapa y caemos al fallback "uid_<n>" más abajo, en vez
+# de abortar el script con un error de subíndice bajo 'set -u'.
+HAS_ASSOC=1
+declare -A UID2PKG 2>/dev/null || HAS_ASSOC=0
+if [ "$HAS_ASSOC" -eq 1 ]; then
+    while IFS= read -r linea; do
+        pkg=$(echo "$linea" | sed -n 's/^package:\([^ ]*\).*/\1/p')
+        uid=$(echo "$linea" | sed -n 's/.*uid:\([0-9]*\).*/\1/p')
+        [ -n "$pkg" ] && [ -n "$uid" ] && UID2PKG[$uid]="$pkg"
+    done < <($ADB shell pm list packages -U 2>/dev/null | tr -d '\r')
+fi
 
 # Top consumidores del bloque de energia estimada (excluye lineas de sistema
 # como Screen/Cell/Idle: solo nos quedamos con las que empiezan por "Uid ").

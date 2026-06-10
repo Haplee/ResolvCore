@@ -68,7 +68,23 @@ fi
 
 if ! command -v anydesk >/dev/null 2>&1; then
     echo "[+] Instalando AnyDesk..."
-    curl -fsSL https://keys.anydesk.com/repos/DEB-GPG-KEY | gpg --dearmor -o /usr/share/keyrings/anydesk.gpg
+    # Descargamos la clave a un fichero temporal para poder VERIFICAR su huella
+    # antes de confiar en ella (sin esto, un MITM podría servir una clave falsa
+    # con la que troyanizar los paquetes del repo).
+    _ad_key=/tmp/anydesk-key.asc
+    curl -fsSL https://keys.anydesk.com/repos/DEB-GPG-KEY -o "$_ad_key"
+    gpg --dearmor < "$_ad_key" > /usr/share/keyrings/anydesk.gpg
+    _ad_fpr=$(gpg --show-keys --with-colons "$_ad_key" 2>/dev/null | awk -F: '/^fpr:/{print $10; exit}')
+    echo "    [i] Fingerprint de la clave AnyDesk: ${_ad_fpr:-desconocido}"
+    # Si se define ANYDESK_GPG_FPR (huella esperada, sin espacios), exigimos que
+    # coincida y abortamos si no; si no se define, solo se muestra para que el
+    # técnico la verifique manualmente contra la publicada por AnyDesk.
+    if [ -n "${ANYDESK_GPG_FPR:-}" ] && [ "${ANYDESK_GPG_FPR}" != "${_ad_fpr}" ]; then
+        echo "[!] La huella de la clave AnyDesk no coincide con ANYDESK_GPG_FPR. Abortando AnyDesk." >&2
+        rm -f "$_ad_key" /usr/share/keyrings/anydesk.gpg
+        exit 1
+    fi
+    rm -f "$_ad_key"
     echo "deb [signed-by=/usr/share/keyrings/anydesk.gpg] http://deb.anydesk.com/ all main" > /etc/apt/sources.list.d/anydesk.list
     apt-get update -q && apt-get install -y -q anydesk
 fi

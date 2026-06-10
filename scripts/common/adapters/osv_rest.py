@@ -21,6 +21,7 @@ Version: 1.0
 
 import ssl
 import json
+import math
 import urllib.error
 import urllib.request
 
@@ -63,15 +64,90 @@ def _id_preferido(vuln):
     return vuln.get("id", "")
 
 
+def _redondear_arriba(valor):
+    # Redondeo "roundup" tal y como lo define la especificacion CVSS v3.1:
+    # redondea hacia arriba al primer decimal.
+    entero = int(round(valor * 100000))
+    if entero % 10000 == 0:
+        return entero / 100000.0
+    return (math.floor(entero / 10000.0) + 1) / 10.0
+
+
+def _cvss3_base(vector):
+    # Calcula el baseScore CVSS v3.0/3.1 a partir del vector
+    # ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"). Devuelve float o None.
+    # Pesos segun la especificacion oficial de FIRST.
+    pesos = {
+        "AV": {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.2},
+        "AC": {"L": 0.77, "H": 0.44},
+        "UI": {"N": 0.85, "R": 0.62},
+        "C": {"H": 0.56, "L": 0.22, "N": 0.0},
+        "I": {"H": 0.56, "L": 0.22, "N": 0.0},
+        "A": {"H": 0.56, "L": 0.22, "N": 0.0},
+    }
+    # PR depende de si el alcance (Scope) cambia.
+    pr_sin_cambio = {"N": 0.85, "L": 0.62, "H": 0.27}
+    pr_con_cambio = {"N": 0.85, "L": 0.68, "H": 0.5}
+
+    campos = {}
+    for parte in vector.split("/"):
+        if ":" in parte:
+            clave, _, val = parte.partition(":")
+            campos[clave] = val
+    # Necesitamos las metricas base obligatorias.
+    obligatorias = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
+    if not all(c in campos for c in obligatorias):
+        return None
+    try:
+        cambio = campos["S"] == "C"
+        pr_tabla = pr_con_cambio if cambio else pr_sin_cambio
+        isc_base = 1 - ((1 - pesos["C"][campos["C"]]) *
+                        (1 - pesos["I"][campos["I"]]) *
+                        (1 - pesos["A"][campos["A"]]))
+        if cambio:
+            impacto = 7.52 * (isc_base - 0.029) - 3.25 * (isc_base - 0.02) ** 15
+        else:
+            impacto = 6.42 * isc_base
+        explotabilidad = (8.22 * pesos["AV"][campos["AV"]] *
+                          pesos["AC"][campos["AC"]] *
+                          pr_tabla[campos["PR"]] *
+                          pesos["UI"][campos["UI"]])
+        if impacto <= 0:
+            return 0.0
+        bruto = (impacto + explotabilidad)
+        if cambio:
+            bruto = 1.08 * bruto
+        return _redondear_arriba(min(bruto, 10.0))
+    except (KeyError, TypeError):
+        return None
+
+
 def _score(vuln):
-    # OSV trae "severity" como lista de vectores CVSS (cadenas), no como numero.
-    # Si encontramos un valor que sea numerico lo usamos; si no, None.
+    # OSV trae "severity" como lista de objetos con "type" y "score". El "score"
+    # es un VECTOR CVSS (cadena), no un numero: hay que calcular el baseScore.
     for sev in vuln.get("severity", []):
+        tipo = sev.get("type", "")
         valor = sev.get("score", "")
+        if not valor:
+            continue
+        # Por compatibilidad, si alguna fuente diera ya un numero, lo aceptamos.
         try:
             return float(valor)
         except (ValueError, TypeError):
-            continue
+            pass
+        if "CVSS_V3" in tipo or valor.startswith("CVSS:3"):
+            base = _cvss3_base(valor)
+            if base is not None:
+                return base
+    # Ultimo recurso: algunos avisos traen el baseScore numerico en
+    # database_specific (p. ej. {"cvss": {"score": 7.5}}).
+    db = vuln.get("database_specific", {})
+    cvss = db.get("cvss") if isinstance(db, dict) else None
+    if isinstance(cvss, dict):
+        try:
+            return float(cvss.get("score"))
+        except (ValueError, TypeError):
+            pass
     return None
 
 

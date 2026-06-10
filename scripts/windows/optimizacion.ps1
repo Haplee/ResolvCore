@@ -137,7 +137,7 @@ try {
 
 # ── 3. Detección de procesos de alto consumo ────────────────────────────────
 # Críticos que NUNCA se detienen, ni con -StopHogs.
-$criticos = @('System','Idle','csrss','wininit','winlogon','services','lsass','smss','svchost','explorer','dwm')
+$criticos = @('System','Idle','csrss','wininit','winlogon','services','lsass','smss','svchost','explorer','dwm','spoolsv')
 $detectados = 0; $detenidos = 0
 
 Write-Host "[+] Detectando procesos de alto consumo..."
@@ -269,7 +269,7 @@ $acta = [ordered]@{
     _meta = [ordered]@{
         plataforma = 'windows'
         hostname   = $hostName
-        version    = '1.0'
+        version    = '1.1'
         tipo       = 'optimizacion'
     }
     timestamp         = (Get-Date -Format 'o')

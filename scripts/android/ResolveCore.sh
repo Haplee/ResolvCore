@@ -12,7 +12,7 @@
 # Probado en:  Android 12–14 (ADB), Termux sobre Android 13.
 #
 # Autor:   Francisco Vidal Mateo (GitHub: Haplee)
-# Versión: 2.0
+# Versión: 2.1
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
@@ -40,6 +40,10 @@ DESCRIPTION
 
 OPTIONS DEL LAUNCHER
     -h, --help        Muestra esta ayuda y sale.
+    --ticket <N>      Ticket MantisBT: organiza las salidas en
+                      diagnosticos/tickets/<NNNNN>/android/. Valido para
+                      diagnostico y optimizacion. En modo menu se pregunta
+                      al arrancar.
 
 FLAGS DE DIAGNOSTICO (forward a diagnostico.sh)
     -O, --output <dir>      Directorio salida JSON.
@@ -69,6 +73,7 @@ EXAMPLES
 
     # Pass-through diagnostico
     bash scripts/android/ResolveCore.sh -O /tmp ABC123
+    bash scripts/android/ResolveCore.sh --ticket 42 ABC123
 
     # Pass-through optimizacion (siempre con --confirm)
     bash scripts/android/ResolveCore.sh rendimiento
@@ -87,10 +92,15 @@ SERIAL_POS=""
 OPT_SERIAL=""
 OPT_DRYRUN=0
 OPT_UNDO=0
+TICKET_CLI=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help) show_usage; exit 0 ;;
+        # --ticket es comun a ambos modulos: no marca modo ni dispara la
+        # exclusividad diagnostico/optimizacion. Antes caia en *) y se
+        # interpretaba como serial ADB (bug).
+        --ticket)     TICKET_CLI="${2:-}"; shift 2 ;;
         -O|--output)  DIAG_FLAGS+=("--output" "${2:-}"); DIAG_HAS_SERIAL_OR_OUTPUT=true; shift 2 ;;
         --serial)     OPT_SERIAL="${2:-}"; OPT_HAS_FLAG=true; shift 2 ;;
         --dry-run)    OPT_DRYRUN=1; OPT_HAS_FLAG=true; shift ;;
@@ -107,6 +117,7 @@ if [[ "$DIAG_HAS_SERIAL_OR_OUTPUT" == "true" && "$OPT_HAS_FLAG" == "true" ]]; th
 fi
 if [[ "$DIAG_HAS_SERIAL_OR_OUTPUT" == "true" ]]; then
     DIAG_CMD=(bash "$SCRIPT_DIR_EARLY/diagnostico.sh" "${DIAG_FLAGS[@]}")
+    [[ -n "$TICKET_CLI" ]] && DIAG_CMD+=(--ticket "$TICKET_CLI")
     [[ -n "$SERIAL_POS" ]] && DIAG_CMD+=("$SERIAL_POS")
     exec "${DIAG_CMD[@]}"
 fi
@@ -124,6 +135,7 @@ if [[ "$OPT_HAS_FLAG" == "true" ]]; then
     OPT_CMD=(bash "$SCRIPT_DIR_EARLY/optimizacion.sh")
     [[ -n "$OPT_SERIAL" ]] && OPT_CMD+=("$OPT_SERIAL")
     OPT_CMD+=(--confirm)
+    [[ -n "$TICKET_CLI" ]] && OPT_CMD+=(--ticket "$TICKET_CLI")
     [[ "$NIVEL_POSITIONAL" == "extreme" ]] && OPT_CMD+=(--stop-hogs)
     exec "${OPT_CMD[@]}"
 fi
@@ -135,6 +147,33 @@ if [[ ! -t 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Ticket de MantisBT de la sesion. Se pide una vez al inicio y se reutiliza para
+# que diagnostico y optimizacion se guarden juntos en diagnosticos/tickets/<ticket>/.
+TICKET_SESION=""
+read_ticket_sesion() {
+    # Si llego --ticket por CLI, se usa sin preguntar.
+    if [[ "$TICKET_CLI" =~ ^[0-9]+$ ]]; then
+        TICKET_SESION="$TICKET_CLI"
+        printf "  [i] Sesion asociada al ticket #%s. Salidas en diagnosticos/tickets/%05d/android/\n" "$TICKET_CLI" "$TICKET_CLI"
+        sleep 1
+        return
+    fi
+    echo ""
+    read -rp "  Numero de ticket MantisBT para esta reparacion (ENTER = sin ticket): " t
+    if [[ "$t" =~ ^[0-9]+$ ]]; then
+        TICKET_SESION="$t"
+        printf "  [i] Sesion asociada al ticket #%s. Salidas en diagnosticos/tickets/%05d/android/\n" "$t" "$t"
+    else
+        TICKET_SESION=""
+        if [[ -n "$t" ]]; then
+            echo "  [!] '$t' no es un numero de ticket valido; sesion sin ticket."
+        else
+            echo "  [i] Sesion sin ticket (salidas en diagnosticos/tickets/sin-ticket/android/)."
+        fi
+    fi
+    sleep 1
+}
 
 # Colores
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -186,7 +225,7 @@ show_help() {
     echo ""
     echo -e "  Resultado:"
     echo -e "    - Genera archivo JSON con todos los datos del dispositivo"
-    echo -e "    - Se guarda en: diagnosticos/tickets/sin-ticket/android/diagnostico_<serial>_<fecha>.json"
+    echo -e "    - Se guarda en: diagnosticos/tickets/<NNNNN>/android/ (o sin-ticket/ si no se indico ticket)"
     echo -e "    - Importar en ResolveCore: Diagnostico > Importar JSON"
     echo ""
     echo -e "  ================================================================="
@@ -457,7 +496,11 @@ run_diagnostico() {
     echo ""
 
     cd "$SCRIPT_DIR" || exit 1
-    bash "$SCRIPT_DIR/diagnostico.sh"
+    if [[ -n "$TICKET_SESION" ]]; then
+        bash "$SCRIPT_DIR/diagnostico.sh" --ticket "$TICKET_SESION"
+    else
+        bash "$SCRIPT_DIR/diagnostico.sh"
+    fi
 
     echo ""
     echo -e "  ${GREEN}[OK] Diagnostico completado${NC}"
@@ -501,10 +544,11 @@ run_optimizacion() {
         esac
     done
 
-    # 'pm clear' vacia tambien ajustes y sesiones de cada app (es destructivo):
-    # exigimos confirmacion explicita del tecnico antes de pasar --confirm.
+    # optimizacion.sh usa 'pm trim-caches' (NO 'pm clear'): vacía SOLO la caché y
+    # conserva datos, logins y sesiones. Pedimos confirmación igualmente porque
+    # también puede forzar el cierre de apps en segundo plano con --stop-hogs.
     echo ""
-    echo -e "  ${YELLOW}[!] ATENCION: esto vacia la cache Y los ajustes/sesiones de cada app.${NC}"
+    echo -e "  ${YELLOW}[!] Esto vacía SOLO la caché de las apps (conserva datos y sesiones).${NC}"
     echo -e "  ${YELLOW}    Confirma con el cliente antes de continuar.${NC}"
     read -rp "  Escribe 'SI' para confirmar: " conf
     if [[ "$conf" != "SI" ]]; then
@@ -518,12 +562,15 @@ run_optimizacion() {
     echo ""
 
     cd "$SCRIPT_DIR" || exit 1
-    # Pasamos el serial detectado (si lo hay) y la flag --confirm obligatoria.
+    # Pasamos el serial detectado (si lo hay), la flag --confirm obligatoria y
+    # el ticket de la sesion para que el acta caiga en la carpeta del ticket.
     SERIAL=$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')
+    OPT_ARGS=(--confirm)
+    [[ -n "$TICKET_SESION" ]] && OPT_ARGS+=(--ticket "$TICKET_SESION")
     if [[ -n "$SERIAL" ]]; then
-        bash "$SCRIPT_DIR/optimizacion.sh" "$SERIAL" --confirm
+        bash "$SCRIPT_DIR/optimizacion.sh" "$SERIAL" "${OPT_ARGS[@]}"
     else
-        bash "$SCRIPT_DIR/optimizacion.sh" --confirm
+        bash "$SCRIPT_DIR/optimizacion.sh" "${OPT_ARGS[@]}"
     fi
 
     echo ""
@@ -537,6 +584,8 @@ run_optimizacion() {
 }
 
 # Programa principal
+read_ticket_sesion
+
 while true; do
     show_banner
     show_menu

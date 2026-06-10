@@ -1113,7 +1113,7 @@ function rc_registro_cliente_email( $email, $nombre, $login, $reset_url ) {
 		$phpmailer->AltBody = $text;
 	};
 	add_action( 'phpmailer_init', $alt_body );
-	$sent = @wp_mail( $email, 'ResolveCore — Activa tu cuenta', $html, $headers );
+	$sent = wp_mail( $email, 'ResolveCore — Activa tu cuenta', $html, $headers );
 	remove_action( 'phpmailer_init', $alt_body );
 
 	if ( ! $sent ) {
@@ -1187,7 +1187,7 @@ function rc_cliente_email_bienvenida( $email, $nombre, $login ) {
 		$phpmailer->AltBody = $text;
 	};
 	add_action( 'phpmailer_init', $alt_body );
-	$sent = @wp_mail( $email, 'ResolveCore — Tu cuenta está lista', $html, $headers );
+	$sent = wp_mail( $email, 'ResolveCore — Tu cuenta está lista', $html, $headers );
 	remove_action( 'phpmailer_init', $alt_body );
 
 	if ( ! $sent ) {

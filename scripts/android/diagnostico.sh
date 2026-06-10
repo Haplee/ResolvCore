@@ -69,6 +69,13 @@ mkdir -p "$DEST_DIR"
 
 # Si nos pasan serial, hablamos solo con ese dispositivo. Si no, ADB
 # escogerá el único conectado (o fallará si hay varios).
+# Validamos el serial: se interpola en la cadena $ADB que luego se ejecuta, así
+# que un serial con metacaracteres (`;`, `$()`...) permitiría inyección de
+# comandos en la máquina del técnico.
+if [ -n "${SERIAL:-}" ] && ! printf '%s' "$SERIAL" | grep -Eq '^[A-Za-z0-9._:-]+$'; then
+    echo "ERROR: serial ADB inválido (solo letras, dígitos y . _ : -)." >&2
+    exit 1
+fi
 ADB="adb${SERIAL:+ -s $SERIAL}"
 
 # Comprobamos que el dispositivo esté autorizado.

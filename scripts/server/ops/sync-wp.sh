@@ -43,7 +43,13 @@ fi
 
 if [ -n "${SOURCE_DIR}" ] && [ -d "${SOURCE_DIR}/.git" ]; then
     log "Modelo B (source repo + rsync) — ${SOURCE_DIR} @ branch ${BRANCH}"
-    git -C "${SOURCE_DIR}" fetch origin
+    # Si el fetch falla (red caída, credenciales), NO hacemos reset --hard: el
+    # script no usa 'set -e', así que sin esta guarda haríamos rollback contra
+    # refs obsoletos, potencialmente a una revisión incorrecta en producción.
+    if ! git -C "${SOURCE_DIR}" fetch origin; then
+        err "git fetch falló en ${SOURCE_DIR}: abortando sin tocar el árbol."
+        exit 1
+    fi
     git -C "${SOURCE_DIR}" reset --hard "origin/${BRANCH}"
 
     rsync -a --delete \
@@ -63,7 +69,10 @@ if [ -n "${SOURCE_DIR}" ] && [ -d "${SOURCE_DIR}/.git" ]; then
 
 elif [ -d "${WP_DIR}/.git" ]; then
     log "Modelo A (git docroot) — branch ${BRANCH}"
-    sudo -u www-data git -C "${WP_DIR}" fetch origin
+    if ! sudo -u www-data git -C "${WP_DIR}" fetch origin; then
+        err "git fetch falló en ${WP_DIR}: abortando sin tocar el árbol."
+        exit 1
+    fi
     sudo -u www-data git -C "${WP_DIR}" reset --hard "origin/${BRANCH}"
 
 else
@@ -72,5 +81,8 @@ else
 fi
 
 sudo -u www-data wp --path="${WP_DIR}" cache flush 2>/dev/null || true
-systemctl reload php8.3-fpm nginx
+# Autodetectamos el servicio php-fpm (la versión no siempre es 8.3 según el VPS).
+PHP_FPM=$(systemctl list-units --type=service --plain --no-legend 'php*-fpm.service' 2>/dev/null | awk '{print $1}' | head -1)
+PHP_FPM="${PHP_FPM:-php8.3-fpm}"
+systemctl reload "$PHP_FPM" nginx
 log "Sync completado (branch=${BRANCH})."

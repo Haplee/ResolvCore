@@ -85,6 +85,11 @@ set -euo pipefail
 # bloque remoto literal evita ese troceo.
 MARKER='# RC_BRANDING_BLOCK'
 
+# Escapamos la ruta del footer para incrustarla en una cadena PHP entre comillas
+# simples: una comilla simple en la ruta rompería la sintaxis y dejaría Mantis
+# con un parse error en todas las páginas.
+REMOTE_FOOTER_ESC=${REMOTE_FOOTER//\'/\\\'}
+
 # 2.1 — Logo + favicon: instalar con permisos del servidor web.
 install -o www-data -g www-data -m 0644 /tmp/rc-logo-light.png "$REMOTE_LOGO"
 install -o www-data -g www-data -m 0644 /tmp/rc-favicon.ico   "$REMOTE_FAVICON"
@@ -139,7 +144,7 @@ $MARKER  (ResolveCore White-Label — mantis-branding.sh)
 \$g_favicon_image       = 'images/rc-favicon.ico';
 \$g_copyright_statement = '';
 \$g_show_version        = OFF;
-\$g_bottom_include_page = '$REMOTE_FOOTER';
+\$g_bottom_include_page = '$REMOTE_FOOTER_ESC';
 # RC_BRANDING_BLOCK_END
 PHP
 echo "    [ok] config_inc.php (bloque de branding sincronizado, backup creado)"

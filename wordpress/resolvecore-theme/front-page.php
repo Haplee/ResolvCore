@@ -4006,8 +4006,8 @@
 			/* Contadores */
 			const stats = document.getElementById('rc-demo-stats');
 			stats.innerHTML = mod.stats.map(s =>
-				'<div class="rc-demo-stat"><div class="rc-demo-stat-num" data-num="' + s.num + '">0</div>'
-				+ '<div class="rc-demo-stat-lbl">' + s.label + '</div></div>').join('');
+				'<div class="rc-demo-stat"><div class="rc-demo-stat-num" data-num="' + escDemo(s.num) + '">0</div>'
+				+ '<div class="rc-demo-stat-lbl">' + escDemo(s.label) + '</div></div>').join('');
 			stats.querySelectorAll('.rc-demo-stat-num').forEach(el => {
 				const n = parseInt(el.dataset.num, 10);
 				if (instant) el.textContent = n; else animateCount(el, n, 1000);
@@ -4020,31 +4020,40 @@
 			else ctx.innerHTML = '';
 		}
 
+		/* Escapa para insertar texto/atributos en innerHTML sin riesgo de XSS,
+		   incluso si rcDemoData pasara algún día a alimentarse de datos dinámicos. */
+		function escDemo(s) {
+			return String(s == null ? '' : s)
+				.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+		}
+
 		function renderDemoVulns(vulns) {
 			const sevLbl = { crit: 'CRÍTICO', high: 'ALTO', med: 'MEDIO' };
 			let h = '<div class="rc-vuln-section" style="margin-top:0">'
 				+ '<div class="rc-vuln-header">VULNERABILIDADES DETECTADAS <span class="rc-vuln-status">SIMULACIÓN</span></div>';
 			vulns.forEach(v => {
+				const sev = escDemo(v.sev), cve = escDemo(v.cve);
 				h += '<div class="rc-vuln-row">'
-					+ '<span class="rc-vuln-sev sev-' + v.sev + '">' + sevLbl[v.sev] + '</span>'
-					+ '<span class="rc-vuln-name"><a href="https://nvd.nist.gov/vuln/detail/' + v.cve
-					+ '" target="_blank" rel="noopener noreferrer">' + v.cve + '</a> — ' + v.desc + '</span>'
-					+ '<button type="button" class="rc-vuln-fix" onclick="fixVuln(this)" data-sev="' + v.sev
-					+ '" data-cve="' + v.cve + '" aria-label="'
-					+ (v.action === 'REPARAR' ? 'Reparar ' : 'Aplicar parche ') + v.cve + '">[' + v.action + ']</button>'
+					+ '<span class="rc-vuln-sev sev-' + sev + '">' + escDemo(sevLbl[v.sev] || '') + '</span>'
+					+ '<span class="rc-vuln-name"><a href="https://nvd.nist.gov/vuln/detail/' + encodeURIComponent(v.cve)
+					+ '" target="_blank" rel="noopener noreferrer">' + cve + '</a> — ' + escDemo(v.desc) + '</span>'
+					+ '<button type="button" class="rc-vuln-fix" onclick="fixVuln(this)" data-sev="' + sev
+					+ '" data-cve="' + cve + '" aria-label="'
+					+ (v.action === 'REPARAR' ? 'Reparar ' : 'Aplicar parche ') + cve + '">[' + escDemo(v.action) + ']</button>'
 					+ '</div>';
 			});
 			return h + '</div>';
 		}
 
 		function renderDemoCompare(cmp) {
-			let h = '<div class="rc-compare"><div class="rc-compare-title">' + cmp.title + '</div>';
+			let h = '<div class="rc-compare"><div class="rc-compare-title">' + escDemo(cmp.title) + '</div>';
 			cmp.rows.forEach(r => {
 				h += '<div class="rc-compare-row">'
-					+ '<span class="rc-compare-lbl">' + r.label + '</span>'
-					+ '<span class="rc-compare-before">' + r.before + '</span>'
+					+ '<span class="rc-compare-lbl">' + escDemo(r.label) + '</span>'
+					+ '<span class="rc-compare-before">' + escDemo(r.before) + '</span>'
 					+ '<span class="rc-compare-arrow" aria-hidden="true">→</span>'
-					+ '<span class="rc-compare-after">' + r.after + '</span></div>';
+					+ '<span class="rc-compare-after">' + escDemo(r.after) + '</span></div>';
 			});
 			return h + '</div>';
 		}

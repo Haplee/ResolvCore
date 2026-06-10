@@ -96,6 +96,43 @@ def _parsear(data):
     return salida
 
 
+# Cuántos CVEs traer como máximo por software. Cada página son 40 resultados y
+# cada petición cuesta una espera de rate limit, así que limitamos el total para
+# no disparar el tiempo de escaneo en software muy documentado (OpenSSL, curl...).
+RESULTADOS_POR_PAGINA = 40
+MAX_RESULTADOS = 200
+
+
+def _buscar(keyword, api_key, espera):
+    # Pagina la NVD para una búsqueda concreta hasta agotar resultados o llegar
+    # a MAX_RESULTADOS. Respeta el rate limit esperando ANTES de cada petición
+    # (si la anterior ya disparó el límite, la pausa llega a tiempo).
+    cabeceras = {"apiKey": api_key} if api_key else {}
+    salida = []
+    indice = 0
+    total = None
+    while True:
+        consulta = urllib.parse.urlencode({
+            "keywordSearch": keyword,
+            "resultsPerPage": RESULTADOS_POR_PAGINA,
+            "startIndex": indice,
+        })
+        time.sleep(espera)  # respetamos el rate limit de la NVD ANTES del GET
+        data = _http_get(NVD_API_URL + "?" + consulta, cabeceras)
+        if data is None:
+            break
+        salida.extend(_parsear(data))
+        if total is None:
+            try:
+                total = int(data.get("totalResults", 0))
+            except (ValueError, TypeError):
+                total = 0
+        indice += RESULTADOS_POR_PAGINA
+        if indice >= total or indice >= MAX_RESULTADOS or not data.get("vulnerabilities"):
+            break
+    return salida
+
+
 def get_vulns(product, version, api_key=None):
     """Devuelve los CVEs de la NVD para product/version. Nunca lanza excepción.
 
@@ -113,15 +150,8 @@ def get_vulns(product, version, api_key=None):
     busqueda = (norm_product + " " + version).strip()
 
     # Probamos primero con producto+versión; si no hay nada, solo producto.
-    consultas = [
-        urllib.parse.urlencode({"keywordSearch": busqueda, "resultsPerPage": 10}),
-        urllib.parse.urlencode({"keywordSearch": norm_product, "resultsPerPage": 10}),
-    ]
-    for consulta in consultas:
-        cabeceras = {"apiKey": api_key} if api_key else {}
-        data = _http_get(NVD_API_URL + "?" + consulta, cabeceras)
-        time.sleep(espera)  # respetamos el rate limit de la NVD
-        resultado = _parsear(data)
+    for keyword in (busqueda, norm_product):
+        resultado = _buscar(keyword, api_key, espera)
         if resultado:
             return resultado
     return []
