@@ -4061,6 +4061,79 @@
 			}, 1100);
 		}
 
+		/* --- Vista JSON de la demo (botón "{ } Ver JSON") --- */
+		let demoJsonOn = false;
+		let demoTermSnapshot = null;
+
+		function buildDemoJson() {
+			const mod = demoModules[demoState.module];
+			const plat = demoPlatforms[demoState.platform];
+			return {
+				_meta: {
+					origen: 'demo-web',
+					plataforma: demoState.platform,
+					modulo: demoState.module,
+					comando: plat.cmd[demoState.module],
+					generado: new Date().toISOString().slice(0, 19),
+					nota: 'Simulación con datos de ejemplo'
+				},
+				salud: mod.score,
+				resumen: mod.stats.map(s => ({ valor: s.num, indicador: s.label })),
+				eventos: mod.lines.map(l => ({ nivel: l[0], mensaje: pickPlat(l[1], demoState.platform) })),
+				vulnerabilidades: mod.vulns.map(v => ({ severidad: v.sev, cve: v.cve, descripcion: v.desc }))
+			};
+		}
+
+		function toggleDemoJson() {
+			if (demoState.running) return;
+			const output = document.getElementById('rc-term-output');
+			const btn = document.getElementById('rc-demo-json');
+			if (!output || !btn) return;
+			if (demoJsonOn) { resetDemoJson(true); return; }
+			demoJsonOn = true;
+			demoTermSnapshot = output.innerHTML;
+			const cmd = document.createElement('span');
+			cmd.className = 'tl-cmd';
+			const p = document.createElement('span');
+			p.className = 'tl-p';
+			p.textContent = demoPlatforms[demoState.platform].prompt + ' ';
+			const t = document.createElement('span');
+			t.className = 'tl-typed';
+			t.textContent = 'cat diagnosticos/tickets/00042/' + demoState.platform + '/diagnostico.json';
+			cmd.appendChild(p); cmd.appendChild(t);
+			const pre = document.createElement('span');
+			pre.className = 'tl-dim';
+			pre.style.whiteSpace = 'pre';
+			pre.textContent = JSON.stringify(buildDemoJson(), null, 2);
+			output.innerHTML = '';
+			output.appendChild(cmd);
+			output.appendChild(pre);
+			output.scrollTop = 0;
+			btn.textContent = '↩ Ver terminal';
+			btn.setAttribute('aria-pressed', 'true');
+			document.getElementById('rc-term-title').textContent = 'resolvecore — json';
+		}
+
+		/* Resetea la vista JSON. Con restore=true vuelve al terminal guardado
+		   (toggle manual); sin argumento solo limpia estado (lo llama runDemo,
+		   que vacía el terminal justo antes). */
+		function resetDemoJson(restore) {
+			const output = document.getElementById('rc-term-output');
+			if (restore && demoJsonOn && demoTermSnapshot !== null && output) {
+				output.innerHTML = demoTermSnapshot;
+				output.scrollTop = output.scrollHeight;
+				document.getElementById('rc-term-title').textContent =
+					'resolvecore — ' + demoModules[demoState.module].title;
+			}
+			demoJsonOn = false;
+			demoTermSnapshot = null;
+			const btn = document.getElementById('rc-demo-json');
+			if (btn) {
+				btn.textContent = '{ } Ver JSON';
+				btn.setAttribute('aria-pressed', 'false');
+			}
+		}
+
 		/* Render inicial sin animación */
 		runDemo(true);
 
