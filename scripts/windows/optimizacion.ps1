@@ -7,8 +7,10 @@
     Vacía las carpetas TEMP del usuario y del sistema, la caché de Windows
     Update y la papelera de reciclaje, midiendo cuánto se libera en cada paso.
     Detecta procesos de alto consumo y programas de arranque (el análogo a
-    "apps en segundo plano"). Deja constancia de TODO lo realizado en un acta
-    para técnico y cliente:
+    "apps en segundo plano"). Optimiza la memoria deshabilitando SysMain
+    (Superfetch) y Prefetch (cambio persistente; guarda el estado previo en el
+    JSON para poder revertir; requiere Administrador). Deja constancia de TODO
+    lo realizado en un acta para técnico y cliente:
         diagnosticos\tickets\<NNNNN>\windows\optimizacion.txt   (legible, para el cliente)
         diagnosticos\tickets\<NNNNN>\windows\optimizacion.json  (estructurado, técnico/flota)
 
@@ -31,7 +33,7 @@
 
 .NOTES
     Autor:   Francisco Vidal Mateo (GitHub: Haplee)
-    Versión: 3.0
+    Versión: 3.1
 #>
 
 param(
@@ -176,6 +178,52 @@ try {
 
 if ($detectados -eq 0) { Write-Host "[+]   (sin procesos destacables por CPU)" }
 if (-not $StopHogs -and $detectados -gt 0) { Write-Host "[+]   (solo reporte; usa -StopHogs para detenerlos)" }
+
+# ── 5. Optimización de memoria: SysMain (Superfetch) + Prefetch ─────────────
+# SysMain precarga apps usadas a RAM; Prefetch cachea el patrón de arranque.
+# Deshabilitarlos libera RAM y reduce escrituras de caché. Cambio PERSISTENTE
+# (servicio + registro), por eso guardamos el estado previo en el JSON para que
+# el técnico pueda revertir:
+#     Set-Service SysMain -StartupType Automatic; Start-Service SysMain
+#     Set-ItemProperty <PrefetchParameters> EnablePrefetcher -Value <valor previo>
+# Requiere Administrador; sin él se omite (no se puede tocar servicio/HKLM).
+$memReg = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters'
+
+if (-not $esAdmin) {
+    Add-Accion -Paso 'sysmain'  -Desc 'Deshabilitar SysMain (Superfetch)' -Estado 'omitido' -Resultado 'requiere Administrador'
+    Add-Accion -Paso 'prefetch' -Desc 'Deshabilitar Prefetch'             -Estado 'omitido' -Resultado 'requiere Administrador'
+} else {
+    # SysMain
+    try {
+        $svc = Get-Service -Name 'SysMain' -ErrorAction Stop
+        $prevStartup = (Get-CimInstance Win32_Service -Filter "Name='SysMain'" -ErrorAction SilentlyContinue).StartMode
+        [void]$hallazgos.Add([ordered]@{
+            nombre  = 'SysMain'
+            tipo    = 'estado_previo'
+            detalle = ("status={0}, startup={1}" -f $svc.Status, $prevStartup)
+            accion  = 'guardado_para_revertir'
+        })
+        if ($svc.Status -eq 'Running') { Stop-Service -Name 'SysMain' -Force -ErrorAction Stop }
+        Set-Service -Name 'SysMain' -StartupType Disabled -ErrorAction Stop
+        Add-Accion -Paso 'sysmain' -Desc 'Deshabilitar SysMain (Superfetch)' -Estado 'ok' -Resultado ("antes: {0}/{1}" -f $svc.Status, $prevStartup)
+    } catch {
+        Add-Accion -Paso 'sysmain' -Desc 'Deshabilitar SysMain (Superfetch)' -Estado 'fallo' -Resultado $_.Exception.Message
+    }
+    # Prefetch (registro)
+    try {
+        $prevPf = (Get-ItemProperty -Path $memReg -Name 'EnablePrefetcher' -ErrorAction SilentlyContinue).EnablePrefetcher
+        [void]$hallazgos.Add([ordered]@{
+            nombre  = 'EnablePrefetcher'
+            tipo    = 'estado_previo'
+            detalle = ("valor previo={0}" -f $(if ($null -ne $prevPf) { $prevPf } else { 'sin definir' }))
+            accion  = 'guardado_para_revertir'
+        })
+        Set-ItemProperty -Path $memReg -Name 'EnablePrefetcher' -Value 0 -Type DWord -ErrorAction Stop
+        Add-Accion -Paso 'prefetch' -Desc 'Deshabilitar Prefetch' -Estado 'ok' -Resultado ("antes: {0}" -f $(if ($null -ne $prevPf) { $prevPf } else { 'sin definir' }))
+    } catch {
+        Add-Accion -Paso 'prefetch' -Desc 'Deshabilitar Prefetch' -Estado 'fallo' -Resultado $_.Exception.Message
+    }
+}
 
 # ── Resolución de la carpeta de salida (organizada por ticket) ──────────────
 $ts = Get-Date -Format 'yyyyMMdd_HHmmss'

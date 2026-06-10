@@ -3,8 +3,10 @@
 # ResolveCore — Optimización de un dispositivo Android vía ADB con acta.
 #
 # Limpia la caché de las apps (SIN borrar datos ni sesiones), borra temporales
-# de /data/local/tmp, detecta apps de alto consumo en segundo plano y deja
-# constancia de todo lo realizado en un acta para técnico y cliente:
+# de /data/local/tmp, libera memoria cerrando procesos en segundo plano
+# (am kill-all, análogo a SysMain/drop_caches), detecta apps de alto consumo en
+# segundo plano y deja constancia de todo lo realizado en un acta para técnico y
+# cliente:
 #   diagnosticos/tickets/<NNNNN>/android/optimizacion.txt   (legible, para el cliente)
 #   diagnosticos/tickets/<NNNNN>/android/optimizacion.json  (estructurado, técnico/flota)
 #
@@ -18,7 +20,7 @@
 #   bash optimizacion.sh --confirm --stop-hogs   # ademas fuerza-cierra top consumidores
 #
 # Autor:   Francisco Vidal Mateo (GitHub: Haplee)
-# Versión: 3.0
+# Versión: 3.1
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -uo pipefail
@@ -126,7 +128,29 @@ else
     registra "tmp" "Borrado de /data/local/tmp" "fallo" "sin permiso o vacío"
 fi
 
-# ── 3. Detección de apps de alto consumo en 2.º plano ───────────────────────
+# ── 3. Liberación de memoria RAM (análogo a SysMain/drop_caches) ────────────
+# Android no expone preload/Prefetch/swappiness sin root. El análogo accesible
+# vía ADB es 'am kill-all': cierra los procesos en SEGUNDO PLANO (no las apps en
+# primer plano ni los servicios del sistema) liberando RAM al momento. Es
+# TRANSITORIO (el sistema re-arranca lo que necesite) y no requiere revertir.
+info "Liberando memoria (am kill-all, cierra procesos en segundo plano)..."
+# RAM disponible en KiB vía /proc/meminfo del dispositivo (best-effort).
+mem_disp_kb() { $ADB shell cat /proc/meminfo 2>/dev/null | tr -d '\r' | awk '/^MemAvailable:/{print $2; exit}'; }
+ram_antes=$(mem_disp_kb)
+if $ADB shell am kill-all >/dev/null 2>&1; then
+    ram_despues=$(mem_disp_kb)
+    if [[ "$ram_antes" =~ ^[0-9]+$ && "$ram_despues" =~ ^[0-9]+$ ]]; then
+        dif_ram=$((ram_despues - ram_antes)); [ "$dif_ram" -lt 0 ] && dif_ram=0
+        res_ram=$(awk "BEGIN{k=$dif_ram; if(k>=1048576) printf \"%.2f GB de RAM liberada\", k/1048576; else printf \"%.1f MB de RAM liberada\", k/1024}")
+    else
+        res_ram="procesos en segundo plano cerrados"
+    fi
+    registra "liberar_ram" "Liberación de memoria (cierra apps en 2.º plano)" "ok" "$res_ram"
+else
+    registra "liberar_ram" "Liberación de memoria" "fallo" "el sistema rechazó am kill-all"
+fi
+
+# ── 4. Detección de apps de alto consumo en 2.º plano ───────────────────────
 # Parseamos el bloque "Estimated power use (mAh)" de batterystats. Las lineas
 # por app vienen como "UID uXXXX: NN ( ... )". Resolvemos UID->paquete con
 # 'pm list packages -U' (best-effort; si no, mostramos el UID crudo).
