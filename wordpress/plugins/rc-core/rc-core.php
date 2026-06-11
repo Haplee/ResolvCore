@@ -294,6 +294,28 @@ function rc_cliente_ticket_en_feedback( $tickets ) {
 
 // ── Render del shortcode ────────────────────────────────────────────────────
 
+add_action(
+	'template_redirect',
+	function () {
+		if ( ! isset( $_POST['rc_solicitar_informe'] ) || ! is_user_logged_in() ) {
+			return;
+		}
+		$user = wp_get_current_user();
+		$res  = rc_cliente_procesar_form( $user );
+
+		if ( ! empty( $res['tipo'] ) && 'ok' === $res['tipo'] ) {
+			$url = add_query_arg(
+				array( 'solicitud' => 'ok', 'ticket_id' => $res['id'] ?? 0 ),
+				wp_get_referer() ?: home_url( '/dashboard/' )
+			);
+			wp_safe_redirect( $url );
+			exit;
+		}
+
+		$GLOBALS['rc_solicitar_resultado'] = $res;
+	}
+);
+
 function rc_cliente_dashboard_render() {
 
 	// Si no está logueado pintamos la pantalla de bienvenida con CTAs.
@@ -301,8 +323,16 @@ function rc_cliente_dashboard_render() {
 		return rc_cliente_render_login();
 	}
 
-	$user      = wp_get_current_user();
-	$resultado = rc_cliente_procesar_form( $user );
+	$user = wp_get_current_user();
+
+	$resultado = isset( $GLOBALS['rc_solicitar_resultado'] ) ? (array) $GLOBALS['rc_solicitar_resultado'] : array();
+	if ( empty( $resultado ) && isset( $_GET['solicitud'] ) && 'ok' === sanitize_key( wp_unslash( $_GET['solicitud'] ) ) ) {
+		$ticket_id = isset( $_GET['ticket_id'] ) ? absint( wp_unslash( $_GET['ticket_id'] ) ) : 0;
+		$resultado = array(
+			'tipo' => 'ok',
+			'msg'  => 'Solicitud creada — informe #' . $ticket_id . '. Te avisamos por email cuando esté listo.',
+		);
+	}
 
 	$tickets = rc_mantis_listar_tickets( $user->user_email );
 	$stats   = rc_cliente_calcular_stats( $tickets );
@@ -403,7 +433,7 @@ function rc_cliente_render_form( $tickets = array() ) {
 	// Abierto por defecto. Solo lo colapsamos si se acaba de enviar ESTE
 	// formulario (no cualquier POST del sitio). El nonce ya lo validó
 	// rc_cliente_procesar_form() antes de llegar aquí.
-	$rc_form_enviado = isset( $_POST['rc_solicitar_informe'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$rc_form_enviado = isset( $_POST['rc_solicitar_informe'] ) || isset( $_GET['solicitud'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 	?>
 	<details id="solicitar" class="rc-cliente-solicitar" <?php echo $rc_form_enviado ? '' : 'open'; ?>>
 		<summary>
@@ -591,6 +621,7 @@ function rc_cliente_procesar_form( $user ) {
 		return array(
 			'tipo' => 'ok',
 			'msg'  => 'Solicitud creada — informe #' . $r['id'] . '. Te avisamos por email cuando esté listo.',
+			'id'   => $r['id'],
 		);
 	}
 
