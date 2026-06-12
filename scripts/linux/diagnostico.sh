@@ -486,6 +486,12 @@ if [ -n "$RC_CLIENT_EMAIL" ] && [ -n "$RC_FLEET_TOKEN" ]; then
 
         if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
             info "Subida OK: $(cat /tmp/rc_fleet_resp.$$)"
+            # El score 0-100 lo calcula el servidor (rc_fleet_score() en rc-fleet)
+            # y viene en la respuesta; aquí solo se extrae y se muestra.
+            score=$(sed -n 's/.*"score":[[:space:]]*\([0-9][0-9]*\).*/\1/p' /tmp/rc_fleet_resp.$$ | head -1)
+            if [ -n "$score" ]; then
+                info "Puntuación de salud (servidor): ${score}/100"
+            fi
         else
             warn "Fallo al subir (HTTP $http_code): $(cat /tmp/rc_fleet_resp.$$ 2>/dev/null)"
             warn "El JSON local sigue disponible en: $FILE"

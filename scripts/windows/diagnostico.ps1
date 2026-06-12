@@ -436,7 +436,14 @@ if ($ClientEmail -and $Token) {
             -ContentType 'application/json; charset=utf-8' `
             -Body ($payload | ConvertTo-Json -Depth 6) `
             -TimeoutSec 15
-        if (-not $Silent) { Write-Host "  Subida OK (accion=$($resp.action), score=$($resp.score), host_id=$($resp.host_id))." }
+        if (-not $Silent) {
+            Write-Host "  Subida OK (accion=$($resp.action), host_id=$($resp.host_id))."
+            # El score 0-100 lo calcula el servidor (rc_fleet_score() en rc-fleet)
+            # y viene en la respuesta; aquí solo se muestra.
+            if ($null -ne $resp.score) {
+                Write-Host "  Puntuación de salud (servidor): $($resp.score)/100"
+            }
+        }
     } catch {
         Write-Warning "No se pudo subir el diagnóstico: $($_.Exception.Message)"
         Write-Warning "El JSON local sigue disponible en: $ruta"
