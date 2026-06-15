@@ -2885,7 +2885,7 @@
 			<div class="rc-services-grid rc-reveal">
 				<?php
 				$services = array(
-					array( '⬡', '01', 'Diagnóstico automatizado', 'Análisis completo del sistema en segundos. Detecta cuellos de botella, errores de disco y problemas de memoria sin configuración manual.', array( 'Escaneo de CPU, RAM y almacenamiento', 'Análisis de procesos en tiempo real', 'Informe exportable en PDF/JSON' ) ),
+					array( '⬡', '01', 'Diagnóstico automatizado', 'Análisis completo del sistema en segundos. Detecta cuellos de botella, errores de disco y problemas de memoria sin configuración manual.', array( 'Escaneo de CPU, RAM y almacenamiento', 'Análisis de procesos en tiempo real', 'Informe técnico en .txt + salida JSON' ) ),
 					array( '◈', '02', 'Proyección de vida útil del hardware', 'Algoritmos predictivos que analizan el estado actual de tus componentes y estiman cuándo podrían fallar, con antelación.', array( 'Temperatura y desgaste de disco (S.M.A.R.T)', 'Historial de uso de batería', 'Alertas preventivas configurables' ) ),
 					array( '⬡', '03', 'Análisis de vulnerabilidades del SO', 'Escanea el sistema operativo contra una base de datos de CVEs actualizada, detecta parches pendientes y aplica reparaciones automáticas.', array( 'Base de datos de vulnerabilidades propia', 'Reparación con un clic', 'Compatible con políticas empresariales' ) ),
 					array( '◇', '04', 'Optimización del sistema', 'Limpieza profunda, desfragmentación inteligente, gestión de servicios de inicio y liberación de espacio en disco de forma segura.', array( 'Limpieza de archivos temporales y caché', 'Gestión de programas de inicio', 'Modo seguro de limpieza' ) ),

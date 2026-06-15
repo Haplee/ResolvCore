@@ -32,7 +32,7 @@ get_header();
 		<ul class="rc-timeline-changes">
 			<li>Script de despliegue VPS idempotente (<code>deploy-ionos.sh</code>): stack nginx + PHP-FPM 8.3 + MariaDB, WordPress y MantisBT con HTTPS Let's Encrypt y hardening (ufw, fail2ban, SSH)</li>
 			<li>Subida de código al VPS automatizada desde Windows (<code>upload-to-vps.ps1</code>)</li>
-			<li>Generador de informe técnico PDF (<code>generate-report.php</code>) — HTML → PDF vía wkhtmltopdf, con adjunto automático al ticket MantisBT</li>
+			<li>Generador de plantilla de informe técnico en texto plano (<code>generar_informe.py</code>) — apartados predefinidos que el técnico rellena a mano y sube él mismo al ticket MantisBT</li>
 			<li>Nuevo plugin <strong>Fleet Panel</strong>: los agentes publican su diagnóstico vía REST y se centralizan en un panel multiplataforma</li>
 			<li>Página pública «Estado de la flota» con métricas agregadas (sin datos personales)</li>
 			<li>Endpoint REST público <code>rc/v1/fleet/stats</code> de estadísticas agregadas</li>
@@ -78,7 +78,7 @@ get_header();
 		<div class="rc-timeline-date">Enero — Abril 2026</div>
 		<span class="rc-timeline-badge rc-badge-fix">BETA</span>
 		<ul class="rc-timeline-changes">
-			<li>Arquitectura del sistema — flujo de 7 fases (solicitud → ticket → diagnóstico → PDF → facturación)</li>
+			<li>Arquitectura del sistema — flujo de 7 fases (solicitud → ticket → diagnóstico → informe → facturación)</li>
 			<li>Prototipo de scripts PowerShell para recopilación de métricas Windows</li>
 			<li>Prototipo de scripts Bash para sistemas Linux</li>
 			<li>Diseño del sistema de diseño (design system): variables CSS, tipografía, dark theme</li>

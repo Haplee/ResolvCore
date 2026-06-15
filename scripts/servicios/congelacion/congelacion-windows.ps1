@@ -221,7 +221,6 @@ function Action-Status {
         timestamp_utc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
     $obj | ConvertTo-Json -Depth 5
-    return $obj
 }
 
 function Action-Configure {
@@ -318,7 +317,7 @@ function Action-Freeze-Or-Thaw {
 
 # ── Dispatch ────────────────────────────────────────────────────────────────
 switch ($Action) {
-    'Status'    { [void](Action-Status); exit 0 }
+    'Status'    { Action-Status; exit 0 }
     'Configure' { Action-Configure; exit 0 }
     'Freeze'    { Action-Freeze-Or-Thaw -Mode 'Freeze' }
     'Thaw'      { Action-Freeze-Or-Thaw -Mode 'Thaw' }

@@ -1060,7 +1060,7 @@ function rc_tech_add_note(): void {
 add_action( 'wp_ajax_rc_tech_add_note', 'rc_tech_add_note' );
 
 /**
- * AJAX: sube informe PDF y lo adjunta al ticket.
+ * AJAX: sube el informe (plantilla .txt rellenada a mano; PDF/HTML legacy) y lo adjunta al ticket.
  * Acepta multipart con file[informe] y ticket_id.
  */
 function rc_tech_upload_informe(): void {
@@ -1084,8 +1084,8 @@ function rc_tech_upload_informe(): void {
 	}
 
 	$mime = mime_content_type( $file['tmp_name'] );
-	if ( ! in_array( $mime, array( 'application/pdf', 'text/html' ), true ) ) {
-		wp_send_json_error( array( 'msg' => 'Solo PDF o HTML.' ) );
+	if ( ! in_array( $mime, array( 'text/plain', 'application/pdf', 'text/html' ), true ) ) {
+		wp_send_json_error( array( 'msg' => 'Solo .txt, PDF o HTML.' ) );
 	}
 
 	if ( ! function_exists( 'rc_mantis_get_api' ) ) {

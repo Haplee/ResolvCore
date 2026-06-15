@@ -376,8 +376,8 @@ get_header();
 			</div>
 
 			<div class="rc-dash-block">
-				<h4>Subir informe (PDF/HTML)</h4>
-				<input type="file" id="rc-informe-file" accept=".pdf,.html" hidden>
+				<h4>Subir informe (.txt / PDF / HTML)</h4>
+				<input type="file" id="rc-informe-file" accept=".txt,.pdf,.html" hidden>
 				<button type="button" class="rc-mini-btn" id="rc-informe-pick">Elegir fichero…</button>
 				<small id="rc-informe-name" class="rc-muted">Ningún fichero</small>
 				<div class="rc-dash-row">

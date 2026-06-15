@@ -77,7 +77,7 @@ body { background: var(--rc-bg); color: var(--rc-text); font-family: var(--rc-sa
 	<div class="rc-ct-hero-inner">
 	<div class="rc-ct-label">// CONTACTO</div>
 	<h1 class="rc-ct-title">Cuéntanos qué <span class="accent">no funciona</span>.</h1>
-	<p class="rc-ct-sub">Soporte técnico remoto para Windows, Linux y Android. Crea tu cuenta y abre un ticket: diagnóstico, parches de seguridad e informe PDF al cerrar.</p>
+	<p class="rc-ct-sub">Soporte técnico remoto para Windows, Linux y Android. Crea tu cuenta y abre un ticket: diagnóstico, parches de seguridad e informe técnico al cerrar.</p>
 
 	<a class="rc-ct-cta" href="<?php echo esc_url( home_url( '/registro/' ) ); ?>">CREAR CUENTA Y ABRIR TICKET →</a>
 
