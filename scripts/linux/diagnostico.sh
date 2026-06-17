@@ -32,6 +32,14 @@ OUTPUT_DIR=""
 TICKET=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -h|--help)
+            echo "Uso: bash $0 [--output <dir>] [--ticket <N>] [dir]"
+            echo ""
+            echo "Genera un diagnostico del sistema en JSON."
+            echo "  --output <dir>   carpeta de salida explicita (back-compat / CI)"
+            echo "  --ticket <N>     organiza la salida en diagnosticos/tickets/<NNNNN>/"
+            echo "  [dir]            dir posicional de salida (uso historico)"
+            exit 0 ;;
         --output)  OUTPUT_DIR="${2:-}"; shift 2 ;;
         --ticket)  TICKET="${2:-}";     shift 2 ;;
         --silent|--install|--auto-install) shift ;;   # aceptados, sin efecto aqui

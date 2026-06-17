@@ -171,7 +171,7 @@ do_status() {
             action: $action,
             subvolumen: $subvol,
             fs_type: $fs,
-            snapper_config: ($config | select(length > 0)),
+            snapper_config: (if ($config | length) > 0 then $config else null end),
             ultimo_snapshot: {
                 numero: $num,
                 fecha:  $date,
