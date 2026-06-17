@@ -23,6 +23,19 @@
 
 set -uo pipefail
 
+# ── Ayuda (antes de exigir adb/dispositivo, para que --help funcione siempre) ─
+case "${1:-}" in
+    -h|--help)
+        echo "Uso: bash $0 [serial] [dir] [--ticket <N>] [--output <dir>]"
+        echo ""
+        echo "Diagnostico de un dispositivo Android via ADB (genera JSON)."
+        echo "  [serial]         serial ADB (primer dispositivo si se omite)"
+        echo "  [dir]            carpeta de salida explicita"
+        echo "  --ticket <N>     organiza la salida en diagnosticos/tickets/<NNNNN>/"
+        echo "  --output <dir>   carpeta de salida explicita"
+        exit 0 ;;
+esac
+
 # ── Dependencias ────────────────────────────────────────────────────────────
 
 if ! command -v adb >/dev/null 2>&1; then

@@ -641,11 +641,11 @@ run_congelacion() {
         read -rp "  Presiona ENTER..." _; return
     fi
 
-    echo -e "    ${CYAN}1.${NC}  Estado actual (status)"
-    echo -e "    ${CYAN}2.${NC}  Configurar snapper (configure)  [root]"
-    echo -e "    ${CYAN}3.${NC}  Crear snapshot del estado limpio (snapshot)"
-    echo -e "    ${YELLOW}4.${NC}  ROLLBACK — restaurar estado anterior  [root, destructivo]"
-    echo -e "    ${GRAY}5.${NC}  Volver"
+    echo -e "    ${CYAN}1.${NC} Estado actual                  (status)"
+    echo -e "    ${CYAN}2.${NC} Configurar snapper             (configure)   [root]"
+    echo -e "    ${CYAN}3.${NC} Crear snapshot estado limpio   (snapshot)"
+    echo -e "    ${YELLOW}4.${NC} ROLLBACK - restaurar anterior  (rollback)    [root, destructivo]"
+    echo -e "    ${GRAY}5.${NC} Volver"
     echo ""
     # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.
     local op=""
@@ -694,9 +694,9 @@ run_clonacion() {
     manifest="$manifest_dir/imagenes-manifest.json"
     mkdir -p "$manifest_dir"
 
-    echo -e "    ${CYAN}1.${NC}  Registrar imagen en manifiesto"
-    echo -e "    ${CYAN}2.${NC}  Verificar integridad de imagen"
-    echo -e "    ${GRAY}3.${NC}  Volver"
+    echo -e "    ${CYAN}1.${NC} Registrar imagen en manifiesto"
+    echo -e "    ${CYAN}2.${NC} Verificar integridad de imagen"
+    echo -e "    ${GRAY}3.${NC} Volver"
     echo ""
     echo -e "  ${GRAY}Manifiesto: $manifest${NC}"
     # Bucle hasta opcion valida: ENTER vacio u opcion invalida re-preguntan.

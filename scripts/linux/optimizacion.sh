@@ -37,6 +37,12 @@ OUTPUT_DIR=""
 STOP_HOGS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -h|--help)
+            echo "Uso: sudo bash $0 --confirm [--ticket N] [--stop-hogs]"
+            echo ""
+            echo "Esto pasa autoremove, vacía caché de apt, journal, /tmp viejo y snaps."
+            echo "Con --stop-hogs ademas detiene los procesos de mayor consumo (no criticos)."
+            exit 0 ;;
         --confirm)   CONFIRM=1; shift ;;
         --stop-hogs) STOP_HOGS=1; shift ;;
         --ticket)    TICKET="${2:-}"; shift 2 ;;
