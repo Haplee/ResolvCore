@@ -446,8 +446,10 @@ function Invoke-Diagnostico {
 
     $script = Join-Path $SCRIPT_DIR "diagnostico.ps1"
     if (Test-Path $script) {
-        $argsDiag = @()
-        if ($script:TICKET_SESION) { $argsDiag += @('-Ticket', $script:TICKET_SESION) }
+        # Hashtable splatting (vincula por NOMBRE). Con array splatting, '-Ticket'
+        # se pasaba posicionalmente y caia en $OutputDir (warning espurio).
+        $argsDiag = @{}
+        if ($script:TICKET_SESION) { $argsDiag.Ticket = $script:TICKET_SESION }
         & $script @argsDiag
         Write-Host ""
         Write-Host "  [OK] Completado" -ForegroundColor Green
@@ -795,9 +797,11 @@ function Invoke-Optimizacion {
         # optimizacion.ps1 aplica una limpieza unica con acta; sus parametros
         # reales son -Confirm/-StopHogs/-Ticket (NO acepta -Nivel). El nivel
         # elegido se traduce: 'extreme' activa -StopHogs (cierra consumidores).
-        $argsOpt = @('-Confirm')
-        if ($nivelOpt -eq 'extreme') { $argsOpt += '-StopHogs' }
-        if ($script:TICKET_SESION) { $argsOpt += @('-Ticket', $script:TICKET_SESION) }
+        # Hashtable splatting (vincula por NOMBRE): evita que '-Ticket'/'-StopHogs'
+        # caigan posicionalmente en $OutputDir (warning espurio con array splat).
+        $argsOpt = @{ Confirm = $true }
+        if ($nivelOpt -eq 'extreme') { $argsOpt.StopHogs = $true }
+        if ($script:TICKET_SESION) { $argsOpt.Ticket = $script:TICKET_SESION }
         & $script @argsOpt
         Write-Host ""
         Write-Host "  [OK] Completado" -ForegroundColor Green

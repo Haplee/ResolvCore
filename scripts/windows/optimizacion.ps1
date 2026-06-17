@@ -58,10 +58,12 @@ if (-not $Confirm) {
 $hostName = $env:COMPUTERNAME
 
 # ── Blindaje de binding: si -OutputDir recibe algo que parece un nombre de ───
-# parametro (p.ej. "-Ticket" pasado posicionalmente), lo ignoramos para no crear
-# una carpeta literal "-Ticket" junto al script.
-if ($OutputDir -and $OutputDir -match '^-') {
-    Write-Warning "OutputDir '$OutputDir' parece un parametro mal pasado; se ignora."
+# parametro pasado posicionalmente ("-Ticket") o el placeholder de la ayuda
+# ("[-StopHogs]" — los corchetes significan "opcional", no se teclean), lo
+# ignoramos para no crear una carpeta basura. Ademas '[' y ']' son comodines en
+# PowerShell y rompen Test-Path/New-Item.
+if ($OutputDir -and $OutputDir -match '^[-\[]') {
+    Write-Warning "OutputDir '$OutputDir' parece un parametro mal pasado o un placeholder de la ayuda; se ignora."
     $OutputDir = ''
 }
 
@@ -91,7 +93,7 @@ function Get-DirSize {
     param([string]$Path)
     if (-not (Test-Path $Path)) { return [int64]0 }
     try {
-        $s = (Get-ChildItem $Path -Recurse -Force -ErrorAction SilentlyContinue |
+        $s = (Get-ChildItem $Path -Recurse -Force -File -ErrorAction SilentlyContinue |
               Measure-Object -Property Length -Sum).Sum
         if ($null -eq $s) { return [int64]0 }
         return [int64]$s
@@ -261,6 +263,8 @@ if ($OutputDir) {
 if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
 
 # ── Acta JSON ────────────────────────────────────────────────────────────────
+# UTF-8 sin BOM, valido para JSON (no rompe el parser del endpoint REST) y .txt.
+$utf8 = New-Object System.Text.UTF8Encoding($false)
 $liberadoMb = [math]::Round($liberadoBytes / 1MB, 1)
 $nOk     = @($acciones | Where-Object { $_.estado -eq 'ok' }).Count
 $nFallo  = @($acciones | Where-Object { $_.estado -eq 'fallo' }).Count
@@ -284,7 +288,7 @@ $acta = [ordered]@{
         consumidores_detenidos  = $detenidos
     }
 }
-$acta | ConvertTo-Json -Depth 6 | Set-Content -Path $jsonFile -Encoding UTF8
+[System.IO.File]::WriteAllText($jsonFile, ($acta | ConvertTo-Json -Depth 6), $utf8)
 
 # ── Acta TXT (legible para el cliente) ───────────────────────────────────────
 $sb = [System.Text.StringBuilder]::new()
@@ -321,7 +325,7 @@ if ($hallazgos.Count -eq 0) {
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("  Este acta es un registro automatico de la intervencion realizada.")
 [void]$sb.AppendLine("  +-------------------------------------------------------------+")
-$sb.ToString() | Set-Content -Path $txtFile -Encoding UTF8
+[System.IO.File]::WriteAllText($txtFile, $sb.ToString(), $utf8)
 
 # ── Resumen en terminal ──────────────────────────────────────────────────────
 Write-Host ""
